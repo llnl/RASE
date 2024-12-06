@@ -22,7 +22,7 @@ The following table provides a list of the basic variables accessible for use wi
     +----------------------------------------------------------------+----------------------------------------------------------------------+
     | secondary_spectrum.realtime                                    | Realtime of the secondary spectrum, if present                       |
     +----------------------------------------------------------------+----------------------------------------------------------------------+
-    | secondary_spectrum.livetim                                     | Livetime of the secondary spectrum, if present                       |
+    | secondary_spectrum.livetime                                    | Livetime of the secondary spectrum, if present                       |
     +----------------------------------------------------------------+----------------------------------------------------------------------+
     | secondary_spectrum.get_counts_as_str()                         | Secondary spectrum as space separated counts for each channel        |
     +----------------------------------------------------------------+----------------------------------------------------------------------+

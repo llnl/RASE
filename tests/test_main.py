@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -37,302 +37,28 @@ from time import sleep
 import pytest
 from PySide6.QtCore import Qt, QTimer, QObject, Signal
 from PySide6.QtGui import QContextMenuEvent
-from PySide6.QtWidgets import QDialogButtonBox, QMenu, QApplication, QMessageBox
+from PySide6.QtWidgets import QDialogButtonBox, QMenu, QApplication, QMessageBox, QDialog
 
 from src.correspondence_table_dialog import CorrespondenceTableDialog as ctd
-from src.detector_dialog import DetectorDialog
-from src.rase import Rase
+from src.detector_dialog import DetectorDialog, DetectorModel
+from src.replay_dialog import ReplayModel
+from src.rase import Rase, SampleSpectraGenerationGUI, ReplayGenerationGUI
 from src.rase_functions import *
 from src.rase_settings import RaseSettings
+from src.results_calculation import calculateScenarioStats
 from src.scenario_group_dialog import GroupSettings as gsd
-from src.table_def import ScenarioGroup, Replay
+from src.table_def import ScenarioGroup, Replay, CorrespondenceTable, BackgroundSpectrum
 from sqlalchemy.orm import close_all_sessions
+from sqlalchemy.orm.session import _sessions
+from src.spectra_generation import SampleSpectraGeneration
+from src.replay_generation import ReplayGeneration
+from src.replay_dialog import ReplayDialog
+# from src.create_shielded_spectra_dialog import ShieldingModule
 # pytest.main(['-s'])
+from .fixtures import (temp_data_dir, db_and_output_folder, generic_nai_spectra, dummy_base_spectrum,
+                       HelpObjectCreation, Helper)
+from itertools import product
 
-
-
-@pytest.fixture(scope='session', autouse=True)
-def temp_data_dir():
-    """Make sure no sample spectra are left after the final test is run"""
-    settings = RaseSettings()
-    original_data_dir = settings.getDataDirectory()
-    settings.setDataDirectory(os.path.join(os.getcwd(),'__temp_test_rase'))
-    yield settings.getDataDirectory()  # anything before this line will be run prior to the tests
-    settings = RaseSettings()
-    settings.setDataDirectory(original_data_dir)
-
-@pytest.fixture(scope="class", autouse=True)
-def db_and_output_folder():
-    settings = RaseSettings()
-    close_all_sessions()
-    """Delete and recreate the database between test classes"""
-    if os.path.isdir(settings.getSampleDirectory()):
-        shutil.rmtree(settings.getSampleDirectory())
-        print(f'Deleting sample dir at {settings.getSampleDirectory()}')
-    if os.path.isfile(settings.getDatabaseFilepath()):
-        os.remove(settings.getDatabaseFilepath())
-        print(f'Deleting DB at {settings.getDatabaseFilepath()}')
-    if os.path.isdir(Path(settings.getDataDirectory())/'gadras_injections'):
-        shutil.rmtree(Path(settings.getDataDirectory())/'gadras_injections')
-        print(f'Deleting gadras pcfs at {Path(settings.getDataDirectory())/"gadras_injections"}')
-    if os.path.isdir(Path(settings.getDataDirectory())/'converted_gadras'):
-        shutil.rmtree(Path(settings.getDataDirectory())/'converted_gadras')
-        print(f'Deleting gadras N42s at {Path(settings.getDataDirectory())/"converted_gadras"}')
-    settings = RaseSettings()
-    close_all_sessions()
-    dataDir = settings.getDataDirectory()
-
-    os.makedirs(dataDir, exist_ok=True)
-    initializeDatabase(settings.getDatabaseFilepath())
-    # hoc = HelpObjectCreation()
-    # hoc.create_default_workflow()
-    # hoc.get_default_workflow()
-    # yield hoc
-    yield
-    close_all_sessions()
-
-class Helper(QObject):
-    finished = Signal()
-
-
-class HelpObjectCreation:
-
-    def get_default_detector_name(self):
-        return 'test_detector'
-
-    def get_default_replay_name(self):
-        return 'dummy_replay'
-
-    def get_default_channel_count(self):
-        return 1024
-
-    def get_default_scen_pars(self):
-        acq_times = self.get_default_acq_times()
-        replications = self.get_default_replications()
-        fd_mode, fd_mode_back = self.get_default_fd_modes()
-        mat_names, back_names = self.get_default_mat_names()
-        doses, doses_back = self.get_default_doses()
-
-        return acq_times, replications, fd_mode, fd_mode_back, mat_names, back_names, doses, doses_back
-
-    def get_default_acq_times(self):
-        return [60, 20]
-
-    def get_default_replications(self):
-        return [3, 3]
-
-    def get_default_fd_modes(self):
-        return [['DOSE'], ['FLUX', 'DOSE']], [['DOSE'], ['DOSE']]
-
-    def get_default_mat_names(self):
-        return [['dummy_mat_1'], ['dummy_mat_2', 'dummy_mat_3']], [['dummy_back_1'], ['dummy_back_2']]
-
-    def get_default_ecal(self):
-        return [[[0,1,0,0]] , [[0,1,0,0],[0,2,0,0]] ], [[[0,1,0,0]],[[0,3,0,0]]]
-
-    def get_default_doses(self):
-        return [[.31], [2.3, 1.1]], [[.08], [.077]]
-
-    def get_default_rt_lt(self):
-        return [[[1200.0, 1189.2]], [[1200.0, 1164.2], [1200.0, 1199.2]]], [[[3600.0, 3598.2]], [[3600.0, 3573.1]]]
-
-    def get_default_sensitivities(self):
-        return [[10000], [300, 400]], [[2300], [2100]]
-
-    def get_default_base_counts(self):
-        n_ch = self.get_default_channel_count()
-        templist = []
-        for n in [2367, 469, 381, 1213, 1107]:
-            temparr = np.array([n] * n_ch)
-            tempcounts = [str(a) for a in temparr[:-1]] + [str(temparr[-1])]
-            templist.append(', '.join(tempcounts))
-        return [[templist[0]], [templist[1], templist[2]]], [[templist[3]], [templist[4]]]
-
-    def get_scengroups(self, session):
-        group_name = 'group_name'
-        if session.query(ScenarioGroup).filter_by(name=group_name).first():
-            return [session.query(ScenarioGroup).filter_by(name=group_name).first()]
-
-        gsd.add_groups(session, group_name)
-        assert session.query(ScenarioGroup).filter_by(name=group_name).first()
-        return [session.query(ScenarioGroup).filter_by(name=group_name).first()]
-
-    def create_base_materials(self, fd_mode, fd_mode_back, mat_names, back_names, doses, doses_back):
-        session = Session()
-
-        for a, f in zip([mat_names, back_names], [get_or_create_material, get_or_create_material]):
-            for s in a:
-                for m in s:
-                    assert f(session, m)
-
-        mat_dose_arr = [[m, d, f] for m, d, f in zip(fd_mode, mat_names, doses)]
-        back_dose_arr = [[m, d, f] for m, d, f in zip(fd_mode_back, back_names, doses_back)]
-
-        scens = []
-        bscens = []
-        for scenlists, m_arr, func in zip([scens, bscens],
-                                          [mat_dose_arr, back_dose_arr],
-                                          [get_or_create_material, get_or_create_material]):
-            for m in m_arr:
-                slist = []
-                for a, b, c in zip(*m):
-                    slist.append((a, func(session, b), c))
-                scenlists.append(slist)
-
-        scenMaterials = []
-        bcgkScenMaterials = []
-        for scen in scens:
-            scenMaterials.append([ScenarioMaterial(material=m, dose=float(d), fd_mode=u) for u, m, d in scen])
-        for bscen in bscens:
-            bcgkScenMaterials.append([ScenarioBackgroundMaterial(material=m, dose=float(d), fd_mode=u)
-                                      for u, m, d in bscen])
-
-        return scenMaterials, bcgkScenMaterials
-
-    def add_default_scens(self):
-        acq_times, replications, fd_mode, fd_mode_back, mat_names, back_names, doses, doses_back = self.get_default_scen_pars()
-        session = Session()
-
-        scenMaterials, bcgkScenMaterials = self.create_base_materials(fd_mode, fd_mode_back, mat_names, back_names,
-                                                                    doses, doses_back)
-
-        for acqTime, replication, baseSpectrum, backSpectrum in zip(acq_times, replications, scenMaterials, bcgkScenMaterials):
-            scen_hash = Scenario.scenario_hash(float(acqTime), baseSpectrum, backSpectrum, [])
-            scen_exists = session.query(Scenario).filter_by(id=scen_hash).first()
-            if scen_exists:
-                root_folder = '.'
-                delete_scenario([scen_hash,], root_folder)
-                assert session.query(Scenario).filter_by(id=scen_hash).first() is None
-            session.add(Scenario(float(acqTime), replication, baseSpectrum, backSpectrum, [], self.get_scengroups(session)))
-
-    def create_empty_detector(self):
-        detector_name = self.get_default_detector_name()
-        session = Session()
-        d_dialog = DetectorDialog(None)
-        if session.query(Detector).filter_by(name=detector_name).first():
-            delete_instrument(session, detector_name)
-        d_dialog._set_detector_name(session, detector_name)
-
-    def add_default_base_spectra(self):
-        session = Session()
-        baseSpectra = []
-        mat_names, back_names = self.get_default_mat_names()
-        fg_rt_lt, bg_rt_lt = self.get_default_rt_lt()
-        fg_fds, bg_fds = self.get_default_fd_modes()
-        fg_sens, bg_sens = self.get_default_sensitivities()
-        fg_bscounts, bg_bscounts = self.get_default_base_counts()
-        fg_ecals, bg_ecals = self.get_default_ecal()
-
-
-        for mats, real_live_times, fd_modes, sensitivities, bscounts, ecals in zip(mat_names + back_names,
-                                                                        fg_rt_lt + bg_rt_lt, fg_fds + bg_fds,
-                                                                        fg_sens + bg_sens, fg_bscounts + bg_bscounts,
-                                                                            fg_ecals+bg_ecals):
-            for m, r_l_t, fd, sens, cnts, ecal in zip(mats, real_live_times, fd_modes, sensitivities, bscounts, ecals):
-                if fd == 'DOSE':
-                    rase_sensitivity = sens
-                    flux_sensitivity = None
-                else:
-                    rase_sensitivity = None
-                    flux_sensitivity = sens
-
-                baseSpectra.append(BaseSpectrum(material=get_or_create_material(session, m),
-                                                filename='.', realtime=r_l_t[0], livetime=r_l_t[1],
-                                                rase_sensitivity=rase_sensitivity, flux_sensitivity=flux_sensitivity,
-                                                baseCounts=cnts, ecal=ecal))
-
-        return baseSpectra
-
-    def get_default_detector_params(self):
-        chan_count = self.get_default_channel_count()
-        ecal0 = 0.1
-        ecal1 = 1
-        ecal2 = 0.0000001
-        ecal3 = 0
-
-        manufacturer = 'manufacturer'
-        instr_id = 'instr_id'
-        class_code = 'class_code'
-        hardware_version = 'hardware_version'
-        resultsTranslator = None
-        txtDetectorDescription = 'txtDetectorDescription'
-
-        spec_properties = [chan_count, ecal0, ecal1, ecal2, ecal3]
-        params = [manufacturer, instr_id, class_code, hardware_version, resultsTranslator, txtDetectorDescription]
-
-
-        return spec_properties, params
-
-    def set_default_detector_params(self):
-        spec_properties, params = self.get_default_detector_params()
-        d_dialog = DetectorDialog(None, self.get_default_detector_name())
-        d_dialog._set_ch_counts_ecal(*spec_properties)
-        d_dialog._set_detector_params(*params)
-
-    def create_default_replay(self):
-        session = Session()
-        name = self.get_default_replay_name()
-        exe_path = f"{Path(__file__).parent / '../tools/fixed_replay.py'}"
-        is_cmd_line = True
-        settings = "INPUTDIR OUTPUTDIR"
-        n42_template_path = None
-        input_filename_suffix = '.n42'
-
-        if session.query(Replay).filter_by(name=name).first():
-            return
-
-        replay = Replay()
-        replay.name = name
-        replay.exe_path = exe_path
-        replay.is_cmd_line = is_cmd_line
-        replay.settings = settings
-        replay.n42_template_path = n42_template_path
-        replay.input_filename_suffix = input_filename_suffix
-        session.add(replay)
-
-    def add_default_replay(self):
-        session = Session()
-        detector = session.query(Detector).filter_by(name=self.get_default_detector_name()).first()
-
-        detector.replay_name = self.get_default_replay_name()
-        detector.replay = session.query(Replay).filter_by(name=self.get_default_replay_name()).first()
-
-    def create_default_detector_scen(self):
-        session = Session()
-
-        self.add_default_scens()
-        self.create_empty_detector()
-        baseSpectra = self.add_default_base_spectra()
-
-        detector = session.query(Detector).filter_by(name=self.get_default_detector_name()).first()
-        for bs in baseSpectra:
-            detector.base_spectra.append(bs)
-        self.set_default_detector_params()
-        self.create_default_replay()
-        self.add_default_replay()
-        session.commit()
-
-    def create_default_corr_table(self):
-        session = Session()
-        table_name = 'default_table'
-        iso = 'dummy_bgnd'
-
-        table = ctd.create_corr_table(session, table_name)
-        ctd.add_corr_table_entry(table, iso)
-
-        session.commit()
-
-    def create_default_workflow(self):
-        self.create_default_detector_scen()
-        self.create_default_corr_table()
-
-    def get_default_workflow(self):
-        session = Session()
-        det_names = [d.name for d in session.query(Detector).filter_by(name=self.get_default_detector_name()).all()]
-        assert det_names
-        scen_ids = [scen.id for scen in session.query(Scenario).all()]
-        assert scen_ids
-        return det_names, scen_ids
 
 # Database testing
 class Test_Database:
@@ -449,7 +175,7 @@ class Test_Inst_Create_Delete:
         assert session.query(Detector).filter_by(name=detector_name).first()
         delete_instrument(session, detector_name)
         assert not session.query(Detector).filter_by(name=detector_name).first()
-        assert len(session.query(BaseSpectrum).all()) == 0
+        assert len(session.query(SampleSpectraSeed).all()) == 0
 
     def test_replay_create_delete(self):
         hoc = HelpObjectCreation()
@@ -469,7 +195,7 @@ class Test_Inst_Create_Delete:
         qtbot.waitForWindowShown(w)
 
         def add_detector():
-            qtbot.keyClicks(w.d_dialog.txtDetector, detector_name)
+            qtbot.keyClicks(w.d_dialog.txtDetector, detector_name+'\t') #tab at end so the keystrokes get registered and saved when the cursor moves to a new text box.
             qtbot.mouseClick(w.d_dialog.buttonBox.button(QDialogButtonBox.Ok), Qt.LeftButton)
 
         QTimer.singleShot(100, add_detector)
@@ -610,34 +336,106 @@ class Test_Scen_Create_Delete:
 
 # Results Calculation testing
 class Test_Workflow:
-
     # qtbot is necessary as an argument or errors will occur with trying to create a RASE widget
     def test_spec_gen(self, qtbot):
         hoc = HelpObjectCreation()
-        w = Rase([])
+
         hoc.create_default_workflow()
-        det_names, scen_ids = hoc.get_default_workflow()
+        sim_context_list = hoc.get_default_workflow()
 
-        assert det_names
-        assert scen_ids
-
-        spec_status = w.genSpectra(scen_ids, det_names, dispProg=False)
-        assert spec_status
+        assert sim_context_list
+        spec_generation = SampleSpectraGeneration(sim_context_list)
+        spec_generation.work()
 
     # Can we run the replay tools and get results?
     def test_run_replay(self, qtbot):
         """Dependent on test_spec_gen running"""
         hoc = HelpObjectCreation()
-        w = Rase([])
         session = Session()
-        det_names, scen_ids = hoc.get_default_workflow()
-        replay = session.query(Replay).filter_by(name=hoc.get_default_replay_name()).first()
 
-        assert det_names
-        assert replay
-        assert scen_ids
+        sim_context_list = hoc.get_default_workflow()
 
-        replay_status = w.runReplay(scen_ids, det_names, dispProg=False)
+        assert sim_context_list
+
+        replay_gen = ReplayGeneration(sim_context_list)
+        replay_gen.runReplay()
+
+class Test_Workflow_GUI:
+
+    def select_scen_det(self, w : Rase, qtbot):
+        for i in range(w.tblScenario.rowCount()):
+            item = w.tblScenario.item(i, 1)
+            assert item is not None
+            rect = w.tblScenario.visualItemRect(item)
+            qtbot.mouseClick(w.tblScenario.viewport(), Qt.LeftButton, stateKey=Qt.KeyboardModifier.ControlModifier, pos=rect.center())
+        item = w.tblDetectorReplay.item(0, 1)
+        assert item is not None
+        rect = w.tblDetectorReplay.visualItemRect(item)
+        qtbot.mouseClick(w.tblDetectorReplay.viewport(), Qt.LeftButton, pos=rect.center())
+        sim_context_list = w.runSelect()
+
+    def handle_ok(self,w,qtbot):
+        messagebox = w.findChild(QMessageBox)
+        ok_button = messagebox.button(QMessageBox.Ok)
+        # QTimer.singleShot(200, helper.finished.emit)
+        qtbot.mouseClick(ok_button, Qt.LeftButton, delay=1)
+
+    def test_select_scen_det(self,qtbot):
+        hoc = HelpObjectCreation()
+        hoc.create_default_workflow()
+        sim_context_list_orig = hoc.get_default_workflow()
+        w = Rase([])
+        w.show()
+        self.select_scen_det(w, qtbot)
+        sim_context_list = w.runSelect()
+        assert set(sim_context_list_orig) == set(sim_context_list)
+
+    # qtbot is necessary as an argument or errors will occur with trying to create a RASE widget
+    def test_spec_gen(self, qtbot):
+        hoc = HelpObjectCreation()
+        hoc.create_default_workflow()
+        # det_names, scen_ids = hoc.get_default_workflow()
+        w = Rase([])
+        w.show()
+        self.select_scen_det(w, qtbot)
+
+        QTimer.singleShot(2000, lambda : self.handle_ok(w,qtbot))
+        spec_status = w.on_btnGenerate_clicked(False)
+        assert spec_status
+
+    def test_replay_adjust_confidences(self,qtbot):
+        hoc = HelpObjectCreation()
+        replay=hoc.create_default_replay()
+        w = ReplayDialog(parent=None, replay=replay)
+        assert not w.cbConfUse.isChecked()
+        w.show()
+        w.cbConfUse.setChecked(True)
+        w.radioConfCont.setChecked(True)
+
+        def handle_conf_table():
+            conftable = w.findChild(QDialog, name='dialogConfidence')
+            confmodel = conftable.findChild(QObject,'tblConfidence').model()
+            confmodel.setDataFromTable([[0,20],[0,1]])
+            conftable.accept()
+
+        RaseSettings().setUseConfidencesInCalcs(True)
+
+        QTimer.singleShot(1000, handle_conf_table)
+        w.btnConfCont.click()
+        assert w.replay.confidence_scale_range
+        w.accept()
+
+    # Can we run the replay tools and get results?
+    def test_run_replay(self, qtbot):
+        """Dependent on test_spec_gen running"""
+        hoc = HelpObjectCreation()
+        # hoc.create_default_workflow()
+        # det_names, scen_ids = hoc.get_default_workflow()
+        w = Rase([])
+        w.show()
+        self.select_scen_det(w, qtbot)
+        QTimer.singleShot(2000, lambda: self.handle_ok(w, qtbot))
+        replay_status = w.on_btnRunReplay_clicked(False)
         assert replay_status
 
     def test_results_calc(self, qtbot):
@@ -645,16 +443,20 @@ class Test_Workflow:
         hoc = HelpObjectCreation()
         w = Rase([])
 
-        det_names, scen_ids = hoc.get_default_workflow()
+        sim_context_list = hoc.get_default_workflow()
+        assert sim_context_list
 
-        assert det_names
-        assert scen_ids
-
-        w.calculateScenarioStats(1, scen_ids, det_names)
-        assert len(w.scenario_stats_df) == 2
-        assert w.scenario_stats_df['PID'][0] == 1.0
-        assert w.scenario_stats_df['PID'][1] == 0.0
-
+        def close_dialog():
+            focused_widget = QApplication.activeModalWidget()
+            assert focused_widget
+            qtbot.keyClick(focused_widget, Qt.Key.Key_Return)
+        QTimer.singleShot(500, close_dialog)
+        QTimer.singleShot(1000, close_dialog)
+        result_super_map, scenario_stats_df = calculateScenarioStats(sim_context_list, gui=w)
+        assert len(scenario_stats_df) == 2
+        assert scenario_stats_df['PID'][0] == 1.0
+        assert scenario_stats_df['PID'][1] == 0.0
+        assert scenario_stats_df['wTP'][0] == 0.25 #0.25 because fixed_replay gives confidence = 5 and the confidence table update makes reported 20 = weight 1.
 
 # Sampling testing
 class Test_Sampling:
@@ -690,23 +492,50 @@ class Test_Sampling:
             assert len(sc) == d.chan_count
         assert max(sum_rip) - min(sum_rip) < min_sqrt_rip
 
+# class Test_Shielding:
+#
+#     def test_shielding_creation(self):
+#         """
+#         Verifies that we can create and delete detectors
+#         """
+#         # can this be ported to fixtures?
+#         session = Session()
+#         bscmodel = BaseSpectraLoadModel()
+#         bscmodel.get_spectra_data(generic_nai_spectra)
+#         bscmodel.accept()
+#         dmodel = DetectorModel('test_from_basespectra')
+#         dmodel.assign_spectra(bscmodel)
+#
+#
+#
+#     def test_it_matmul(self):
+#         shield_default = {'det_name': 'Dummy',
+#                           'ch_num': 1024,
+#                           'ecals': [0, 3, 0, 0]}
+#         shield_mod = ShieldingModule([k for k in shield_default.values()])
+#         matrix_a = np.array([[1,1,1],[2,2,2],[3,3,3]])
+#         matrix_b = np.array([[4,4,4],[5,5,5],[6,6,6]])
+#         matrix_c = np.array([[7,7,7],[8,8,8],[9,9,9]])
+#         assert (np.array([[360,360],[720,720]]) == shield_mod.iterative_matmul((matrix_a[:2, :],
+#                                                                 np.matmul(matrix_c, matrix_b[:, :2])))).all()
+#
+
 class Test_Import_Export:
     hoc = HelpObjectCreation()
     def test_export(self, qtbot):
         settings = RaseSettings()
         file_target = Path(settings.getDataDirectory()) / 'test_export.yaml'
-        w = Rase([])
         hoc = HelpObjectCreation()
         hoc.create_default_workflow()
-        det_names, scen_ids = hoc.get_default_workflow()
-        d_dialog = DetectorDialog(None, det_names[0])
+        sim_context_list = hoc.get_default_workflow()
+        d_dialog = DetectorDialog(None, sim_context_list[0].detector.name)
         d_dialog.on_btnExportDetector_clicked(savefilepath=file_target)
 
     def test_import(self, qtbot):
         settings = RaseSettings()
         file_target = Path(settings.getDataDirectory()) / 'test_export.yaml'
         hoc = HelpObjectCreation()
-        det_names, scen_ids = hoc.get_default_workflow()
+        hoc.get_default_workflow()
         d_dialog = DetectorDialog(None)
         d_dialog.on_btnImportDetector_clicked(importfilepath=file_target)
         d_dialog.accept()
@@ -716,12 +545,56 @@ class Test_Import_Export:
         d_dialog.accept()
 
     def test_delete_new(self):
-        det_names, scen_ids = self.hoc.get_default_workflow()
-        delete_instrument(Session(), det_names[0]+'_Imported')
-        delete_instrument(Session(), det_names[0] + '_Imported_Imported')
+        session= Session()
+        sim_context_list = self.hoc.get_default_workflow()
+        det_name = sim_context_list[0].detector.name
+        delete_instrument(Session(), det_name +'_Imported')
+        delete_instrument(Session(), det_name + '_Imported_Imported')
+        assert not session.query(Detector).filter_by(name=det_name +'_Imported').first()
+        assert not session.query(Detector).filter_by(name=det_name + '_Imported_Imported').first()
 
     def test_open_old(self):
-        det_names, scen_ids = self.hoc.get_default_workflow()
-        d_dialog = DetectorDialog(None, det_names[0])
+        sim_context_list = self.hoc.get_default_workflow()
+        d_dialog = DetectorDialog(None, sim_context_list[0].detector.name)
         d_dialog.show()
         d_dialog.accept()
+
+    def test_import_model(self):
+        session = Session()
+        dmodel = DetectorModel()
+        sim_context_list = self.hoc.get_default_workflow()
+        det_name = sim_context_list[0].detector.name
+        assert not dmodel.reinitialize_detector(det_name +'_extra_nonsense_not_real_detector')
+        settings = RaseSettings()
+        file_target = Path(settings.getDataDirectory()) / 'test_export.yaml'
+        dmodel.import_from_file(file_target)
+        session.query(Detector).filter_by(name=dmodel.detector.name).one() #raise if none
+        dmodel2 = DetectorModel(det_name)
+        assert dmodel2.detector.name == det_name
+
+
+from src.base_spectra_dialog import BaseSpectraLoadModel
+class Test_Model_View:
+
+    def test_create_detector(self, dummy_base_spectrum):
+        session = Session()
+        bscmodel = BaseSpectraLoadModel()
+        bscmodel.get_spectra_data(dummy_base_spectrum)
+        bscmodel.accept()
+        dmodel = DetectorModel('test_from_basespectra')
+        dmodel.assign_spectra(bscmodel)
+        replay = ReplayModel(name='Test')
+        replay.exe_path = f"{Path(__file__).parent / '../tools/fixed_replay.py'}"
+        replay.accept()
+        dmodel.set_replay('Test')
+        dmodel.accept()
+
+
+        # # TODO: API-ify the replay tool and make sure it exists
+        # hoc = HelpObjectCreation()
+        # hoc.create_default_replay()
+        #
+        # dmodel.set_replay(hoc.get_default_replay_name())
+        # dmodel.accept()
+        # test if detector now exists in session
+        assert session.query(Detector).filter_by(name='test_from_basespectra').first() is not None

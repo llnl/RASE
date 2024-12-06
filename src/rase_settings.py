@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -77,7 +77,10 @@ RESULTS_TBL_COLS_KEY = "Results Table Columns"
 RESULTS_TBL_COLS_DEFAULT = []
 
 BASE_SPECTRUM_CREATION_CONFIG_KEY = 'Base Spectrum Creation Configuration File'
-BASE_SPECTRUM_CREATION_CONFIG_DEFAULT = os.path.join(APPLICATION_PATH, 'base_spectra_config.yaml')
+BASE_SPECTRUM_CREATION_CONFIG_DEFAULT = os.path.join(APPLICATION_PATH, 'configs', 'base_spectra_config.yaml')
+
+SHIELDING_PATH_CONFIG_KEY = 'Shielding Configuration File'
+SHIELDING_PATH_CONFIG_DEFAULT = os.path.join(APPLICATION_PATH, 'configs', 'shielding_paths_config.yaml')
 
 WEBID_DRFS_KEY = 'WebID DRFs'
 WEBID_DRFS_DEFAULT = []
@@ -121,10 +124,16 @@ class RaseSettings:
             self.settings.setValue(RESULTS_TBL_COLS_KEY, RESULTS_TBL_COLS_DEFAULT)
 
         if not os.path.isfile(BASE_SPECTRUM_CREATION_CONFIG_DEFAULT):
-            shutil.copyfile(os.path.join(get_bundle_dir(), 'tools', 'base_spectra_config.yaml'),
+            shutil.copyfile(os.path.join(get_bundle_dir(), 'configs', 'base_spectra_config.yaml'),
                             BASE_SPECTRUM_CREATION_CONFIG_DEFAULT)
         if not self.settings.value(BASE_SPECTRUM_CREATION_CONFIG_KEY):
             self.settings.setValue(BASE_SPECTRUM_CREATION_CONFIG_KEY, BASE_SPECTRUM_CREATION_CONFIG_DEFAULT)
+
+        if not os.path.isfile(SHIELDING_PATH_CONFIG_DEFAULT):
+            shutil.copyfile(os.path.join(get_bundle_dir(), 'configs', 'shielding_paths_config.yaml'),
+                            SHIELDING_PATH_CONFIG_DEFAULT)
+        if not self.settings.value(SHIELDING_PATH_CONFIG_KEY):
+            self.settings.setValue(SHIELDING_PATH_CONFIG_KEY, SHIELDING_PATH_CONFIG_DEFAULT)
 
         if not self.settings.value(WEBID_DRFS_KEY):
             self.settings.setValue(WEBID_DRFS_KEY, WEBID_DRFS_DEFAULT)
@@ -156,7 +165,7 @@ class RaseSettings:
         """
         Sets Rase Data directory
         """
-        self.settings.setValue(RASE_DATA_DIR_KEY, path)
+        self.settings.setValue(RASE_DATA_DIR_KEY, str(path))
 
     def getLastDirectory(self):
         """
@@ -307,9 +316,21 @@ class RaseSettings:
 
     def setBaseSpectrumCreationConfig(self, path):
         """
-        Returns path to base spectrum creation configuration file
+        Sets path to base spectrum creation configuration file
         """
         self.settings.setValue(BASE_SPECTRUM_CREATION_CONFIG_KEY, path)
+
+    def getShieldingPathConfig(self):
+        """
+        Returns path to shielding matrix path configuration file
+        """
+        return self.settings.value(SHIELDING_PATH_CONFIG_KEY)
+
+    def setShieldingPathConfig(self, path):
+        """
+        Sets path to shielding matrix path configuration file
+        """
+        self.settings.setValue(SHIELDING_PATH_CONFIG_KEY, path)
 
     def getWebIDDRFsList(self):
         """

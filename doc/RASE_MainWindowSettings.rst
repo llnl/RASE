@@ -23,6 +23,7 @@ The "Tools" menu contains a variety of add-on functionality (some under developm
 
   - Fixing the random seed number in order to generate identical spectra sets on different machines (for example, for a parallel independent analysis)
   - Converting spectra sourced from measurements and converting them into RASE-consumable base spectra formats
+  - Shielded base spectra creation
   - Automated S-curve creation, where an isotope identification vs flux/dose curve is generated automatically based on source and background material selection
 
 The capability to model dynamic, in-motion measurement scenarios is also under development.
@@ -57,6 +58,6 @@ defined and the command line checkbox is checked. Otherwise, it is black.
 .. _rase_mainWindow:
 
 .. figure:: _static/rase_mainWindow.png
-    :scale: 33 %
+    :scale: 70 %
 
     **RASE main window at the first start without pre-defined instruments or scenarios.**

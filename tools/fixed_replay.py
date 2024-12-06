@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -70,8 +70,7 @@ def indent(elem, level=0):
 
 
 def random_ids():
-    isotopes = ['dummy_mat_1']
-    identifications = [(isotopes[randint(0, len(isotopes) - 1)], str(randint(0, 0))) for i in range(0, 1)]
+    identifications = [('Cs-137', '5')]
     return identifications
 
 

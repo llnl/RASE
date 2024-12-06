@@ -42,6 +42,6 @@ Note that there are no checks in place that prevent the user from importing spec
 .. _rase-WorkflowStep4:
 
 .. figure:: _static/rase_WorkflowStep4.png
-    :scale: 35%
+    :scale: 70%
 
     **Populated main RASE window showing how to generate sample spectra.**

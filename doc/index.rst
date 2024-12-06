@@ -13,6 +13,7 @@ Welcome to RASE documentation!
    RASE_introduction
    RASE_Requirements
    Using_RASE
+   RASE_QuickStart
    ReplayToolSettings
    Advanced_topics
    dynamic_doc/Dynamic_RASE

@@ -1,8 +1,10 @@
+from PySide6.QtCore import QCoreApplication
 from .table_def import *
 from .rase_functions import ConvertDurationToSeconds, get_ET_from_file, uncompressCountedZeroes, getSeconds
 import ntpath, sys
 # see base_from_dynamic.py for ideas on how to do this
 
+# translation_tag = 'sf_read'
 
 class BaseSpectraFormatException(Exception):
     pass
@@ -97,19 +99,20 @@ def readSpectrumFile(filepath, sharedObject, tstatus, requireRASESen=True, only_
         if measurement is not None:
             return parseMeasurement(measurement, filepath, sharedObject, tstatus, requireRASESen, only_one_secondary)
         elif rad_measurement is not None:
-            return parseRadMeasurement(root, filepath, sharedObject, tstatus, requireRASESen, only_one_secondary)
+            # for symetrica detectors, only_one_secondary should be False
+            return parseRadMeasurement(root, filepath, sharedObject, tstatus, requireRASESen, only_one_secondary=False)
     except BaseSpectraFormatException as ex:
-        message = f"{str(ex)} in file {ntpath.basename(filepath)}"
+        message = QCoreApplication.translate('sf_read', '{} in file {}').format(str(ex), ntpath.basename(filepath))
         tstatus.append(message)
         return None
-    except:
+    except Exception as e:
         print(sys.exc_info())
     #except : return None
 
 
 def parseMeasurement(measurement, filepath, sharedObject, tstatus, requireRASESen=True, only_one_secondary=True):
     """
-    Pull key data out of older .n42 files
+    Pull key data out of older .n42 files. Does not support neutrons
     @param measurement:
     @param filepath:
     @param sharedObject:
@@ -118,32 +121,39 @@ def parseMeasurement(measurement, filepath, sharedObject, tstatus, requireRASESe
     @param only_one_secondary:
     @return:
     """
+
+
     try:
         specElement = requiredElement('.//Spectrum', measurement)
-        allSpectra = measurement.findall("Spectrum")
+        allSpectra = measurement.findall('Spectrum')
         if len(allSpectra) > 1:
             sharedObject.bkgndSpectrumInFile = True
             specElementBckg = allSpectra[1]
         if only_one_secondary and (len(allSpectra) > 2):
-            raise BaseSpectraFormatException(f'Too many Spectrum elements, expected 1 or 2')
+            raise BaseSpectraFormatException(QCoreApplication.translate('sf_read', 'Too many '
+                                                           'Spectrum elements, expected 1 or 2'))
 
         chanData = requiredElement('.//ChannelData', specElement)
         countsChar = chanData.text.strip("'").strip().split()
         if len(countsChar) < 2:
             countsChar = chanData.text.strip("'").strip().split(',')
         if ("." in countsChar[0]):
-            sharedObject.chanDataType = "float"
+            sharedObject.chanDataType = 'float'
         else:
-            sharedObject.chanDataType = "int"
+            sharedObject.chanDataType = 'int'
         counts = [float(count) for count in countsChar]
-        if not counts: raise BaseSpectraFormatException('Could not parse ChannelData')
+        if not counts:
+            raise BaseSpectraFormatException(QCoreApplication.translate('sf_read',
+                                                                'Could not parse ChannelData'))
         chanDataBckg = None
         countsBckg = None
         if sharedObject.isBckgrndSave and sharedObject.bkgndSpectrumInFile:
             chanDataBckg = requiredElement('.//ChannelData', specElementBckg, 'secondary spectrum')
             countsChar = chanDataBckg.text.strip("'").strip().split()
             countsBckg = [float(count) for count in countsChar]
-            if not countsBckg: raise BaseSpectraFormatException('Could not parse ChannelData (secondary spectrum)')
+            if not countsBckg:
+                raise BaseSpectraFormatException(QCoreApplication.translate('sf_read', 'Could not '
+                                                       'parse ChannelData (secondary spectrum)'))
         # uncompress if needed
         counts = uncompressCountedZeroes(chanData,counts)
         if chanDataBckg is not None:
@@ -182,18 +192,23 @@ def parseMeasurement(measurement, filepath, sharedObject, tstatus, requireRASESe
                 calElement = requiredElement('.//Coefficients', requiredElement('.//Equation', calibrationBckg))
                 ecalBckg = [float(value) for value in calElement.text.split()]
             else:
-                message = "no Background Calibration in file " + ntpath.basename(filepath)
+                message = QCoreApplication.translate('sf_read', 'no Background Calibration in '
+                                                            'file ') + ntpath.basename(filepath)
                 tstatus.append(message)
-            realtimeElementBckg = requiredElement(('.//RealTime','RealTimeDuration'), specElementBckg, 'secondary spectrum')
+            realtimeElementBckg = requiredElement(('.//RealTime', 'RealTimeDuration'),
+                                                  specElementBckg, 'secondary spectrum')
             realtimeBckg = getSeconds(realtimeElementBckg.text.strip())
-            livetimeElementBckg = requiredElement(('.//LiveTimeDuration','LiveTime'), specElementBckg, 'secondary spectrum')
+            livetimeElementBckg = requiredElement(('.//LiveTimeDuration', 'LiveTime'),
+                                                  specElementBckg, 'secondary spectrum')
             livetimeBckg = getSeconds(livetimeElementBckg.text.strip())
 
+        neutrons = 0 # not going to bother adding neutron feature to older format
+        neutron_sensitivity = 0
         return counts, ecal, realtime, livetime, rase_sensitivity, flux_sensitivity, \
-                    countsBckg, ecalBckg, realtimeBckg, livetimeBckg
+                    countsBckg, ecalBckg, realtimeBckg, livetimeBckg, neutrons, neutron_sensitivity
 
     except BaseSpectraFormatException as ex:
-        message = f"{str(ex)} in file {ntpath.basename(filepath)}"
+        message = QCoreApplication.translate('sf_read', '{} in file {}').format(str(ex), ntpath.basename(filepath))
         tstatus.append(message)
         return None
 
@@ -211,23 +226,30 @@ def parseRadMeasurement(root, filepath, sharedObject, tstatus, requireRASESens, 
     """
     try:
         radElement = requiredElement('.//RadMeasurement', root, )
-        allRad = root.findall("RadMeasurement")
+        allRad = root.findall('RadMeasurement')
         if len(allRad) > 1:
             sharedObject.bkgndSpectrumInFile = True
             radElementBckg = allRad[1]
+        else:
+            # TODO: check what issues could arise from loading some spectra with secondary backgrounds and others without
+            sharedObject.bkgndSpectrumInFile = False
+            radElementBckg = None
         if (len(allRad) > 2) and only_one_secondary:
-            raise BaseSpectraFormatException(f'Too many RadMeasurement elements, expected 1 or 2')
+            raise BaseSpectraFormatException(QCoreApplication.translate('sf_read', 'Too many '
+                                             'RadMeasurement elements, expected 1 or 2'))
         specElement = requiredElement('.//Spectrum', radElement)
         chanData = requiredElement('.//ChannelData', specElement)
         countsChar = chanData.text.strip("'").strip().split()
         if len(countsChar) < 2:
             countsChar = chanData.text.strip("'").strip().split(',')
         counts = [float(count) for count in countsChar]
-        if not counts: raise BaseSpectraFormatException('Could not parse ChannelData')
-        if ("." in countsChar[0]):
-            sharedObject.chanDataType = "float"
+        if not counts:
+            raise BaseSpectraFormatException(QCoreApplication.translate('sf_read', 'Could not parse ChannelData'))
+
+        if ('.' in countsChar[0]):
+            sharedObject.chanDataType = 'float'
         else:
-            sharedObject.chanDataType = "int"
+            sharedObject.chanDataType = 'int'
         counts = ','.join(map(str, counts))
         chanDataBckg = None
         countsBckg = None
@@ -236,19 +258,21 @@ def parseRadMeasurement(root, filepath, sharedObject, tstatus, requireRASESens, 
             chanDataBckg = requiredElement('.//ChannelData', specElementBckg, 'secondary spectrum')
             countsChar = chanDataBckg.text.strip("'").strip().split()
             countsBckg = [float(count) for count in countsChar]
-            if not counts: raise BaseSpectraFormatException('Could not parse ChannelData in secondary spectrum')
+            if not counts:
+                raise BaseSpectraFormatException(QCoreApplication.translate('sf_read',
+                                            'Could not parse ChannelData in secondary spectrum'))
             countsBckg = ','.join(map(str, countsBckg))
         realtimeBckg = None
         livetimeBckg = None
         ecalBckg = None
         rase_sensitivity = None
         flux_sensitivity = None
-        calibration = requiredElement('.//EnergyCalibration',root)
-        calElement = requiredElement('.//CoefficientValues',calibration)
+        calibration = requiredElement('.//EnergyCalibration', root)
+        calElement = requiredElement('.//CoefficientValues', calibration)
         ecal = [float(value) for value in calElement.text.split()]
-        realtimeElement = requiredElement(('.//RealTime','.//RealTimeDuration'),radElement)
+        realtimeElement = requiredElement(('.//RealTime', './/RealTimeDuration'),radElement)
         realtime = getSeconds(realtimeElement.text.strip())
-        livetimeElement = requiredElement(('.//LiveTimeDuration','.//LiveTime'),specElement)
+        livetimeElement = requiredElement(('.//LiveTimeDuration', './/LiveTime'),specElement)
         livetime = getSeconds(livetimeElement.text.strip())
         if requireRASESens:
             RASEsensElement = requiredSensitivity(('.//RASE_Sensitivity', './/FLUX_Sensitivity'), specElement)
@@ -265,14 +289,22 @@ def parseRadMeasurement(root, filepath, sharedObject, tstatus, requireRASESens, 
                 flux_sensitivity = float(RASEsensElement[1].text.strip())
         if chanDataBckg is not None:
             ecalBckg = ecal
-            realtimeElementBckg = requiredElement(('.//RealTime','.//RealTimeDuration'),radElementBckg,'secondary spectrum')
+            realtimeElementBckg = requiredElement(('.//RealTime', './/RealTimeDuration'),
+                                                  radElementBckg, 'secondary spectrum')
             realtimeBckg = getSeconds(realtimeElementBckg.text.strip())
-            livetimeElementBckg = requiredElement(('.//LiveTimeDuration','.//LiveTime'), specElementBckg, 'secondary spectrum')
+            livetimeElementBckg = requiredElement(('.//LiveTimeDuration', './/LiveTime'),
+                                                  specElementBckg, 'secondary spectrum')
             livetimeBckg = getSeconds(livetimeElementBckg.text.strip())
-        return counts, ecal, realtime, livetime, rase_sensitivity, flux_sensitivity, countsBckg, ecalBckg, \
-               realtimeBckg, livetimeBckg
+
+        neutron_el = radElement.xpath('GrossCounts[@id="neutrons"]/CountData')
+        neutrons = float(neutron_el[0].text) if neutron_el else 0
+        neutron_sens_el = radElement.xpath('GrossCounts[@id="neutrons"]/neutron_Sensitivity')
+        neutron_sensitivity = float(neutron_sens_el[0].text) if neutron_sens_el else 0
+
+        return counts, ecal, realtime, livetime, rase_sensitivity, flux_sensitivity, countsBckg, \
+               ecalBckg, realtimeBckg, livetimeBckg, neutrons, neutron_sensitivity
     except BaseSpectraFormatException as ex:
-        message = f"{str(ex)} in file {ntpath.basename(filepath)}"
+        message = QCoreApplication.translate('sf_read', '{} in file {}').format(str(ex), ntpath.basename(filepath))
         tstatus.append(message)
         return None
 
@@ -283,10 +315,13 @@ def requiredElement(element, source, extratext=''):
     else:
         for thiselement in element:
             el = source.find(f"{thiselement}")
-            if el is not None: return el
-    if extratext: extratext = f'({extratext})'
+            if el is not None:
+                return el
+    if extratext:
+        extratext = f'({extratext})'
     if el is None:
-        raise BaseSpectraFormatException(f'No {element} in element {source.tag} {extratext}')
+        raise BaseSpectraFormatException(QCoreApplication.translate('sf_read', 'No {} in element '
+                                                   '{} {}').format(element, source.tag, extratext))
     return el
 
 
@@ -298,13 +333,14 @@ def requiredSensitivity(element, source):
     and it will show as red in the scenario list
     """
     if isinstance(element[0], str):
-        el = [source.find(f"{element[0]}")]
+        el = [source.find(f'{element[0]}')]
     else:
         el = [None]
     if isinstance(element[1], str):
-        el.append(source.find(f"{element[1]}"))
+        el.append(source.find(f'{element[1]}'))
     else:
         el.append(None)
     if el == [None, None]:
-        raise BaseSpectraFormatException(f'No {element[0]} or {element[1]} in element {source.tag}')
+        raise BaseSpectraFormatException(QCoreApplication.translate('sf_read', 'No {} or {} in '
+                                       'element {}').format(element[0], element[1], source.tag))
     return el

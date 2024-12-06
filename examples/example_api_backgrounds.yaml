@@ -1,0 +1,45 @@
+# Example yaml file to use with example_api_scurves.py
+
+# Detector Parameters
+detector:
+  name: Generic_NaI
+  base_spec_dir: ./baseSpectra/genericNaI
+  no_secondary: false
+  secondary_type: scenario  # 'base_spec', 'file', 'scenario', or None; if None, "no_secondary" should be set to "True"
+
+# Replay Tool Parameters
+replay:
+#  If using a standalone tool, fill with appropriate names/paths
+#  name: demo_replay
+#  type: standalone
+#  exe_path: ../tools/demo_replay.exe
+#  settings: INPUTDIR OUTPUTDIR
+#  n42_template_path:
+#  input_filename_suffix: .n42
+# If using fullspec, fill these terms appropriately
+  name: Generic_NaI_FullSpec
+  type: gadras_web
+  drf_name: 1x1/NaI Front
+
+# Background
+backgrounds:
+  - units: DOSE
+    name: Bgnd
+    value: 0.065
+  - units: DOSE
+    name: Bgnd
+    value: 0.26
+  - units: DOSE
+    name: Bgnd
+    value: 1.0
+  - units: DOSE
+    name: Bgnd
+    value: 100.
+
+acq_time: 120
+input_reps: 10
+
+
+datadir: ./mydatadir
+output_dir: ./myoutputdir
+export_type: both

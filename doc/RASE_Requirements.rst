@@ -22,13 +22,16 @@ files and utilities:
 Installation and Getting Started
 ================================
 
+For getting started with a functional workflow as fast as possible, see the :ref:`quickstart`.
+
 *  Create a dedicated directory for the RASE software, and place inside it the RASE executable along with the enclosed directories.
 *  Make sure that the following subdirectories (names are arbitrary), and the appropriate content are present along with the executable:
 
 	*  subdirectory for base spectra;
 	*  subdirectory for replay tools;
 	*  subdirectory for the correspondence table and its versions;
-	*  subdirectory for translators.
+	*  subdirectory for translators;
+	*  subdirectory for shielding modules.
 
 *  Upon the first execution of the software, navigate to the Setup --> Preferences menu and set the "RASE Data Directory" field to a working directory where you would like to store RASE output results. Then close RASE and restart it for the change to take effect.
 

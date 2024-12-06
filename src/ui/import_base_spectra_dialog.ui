@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Import Base Spectra</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,10,0,5,0">
+  <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0,5,0">
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
@@ -36,7 +36,7 @@
     </layout>
    </item>
    <item>
-    <widget class="QTableWidget" name="tblSpectra"/>
+    <widget class="QTableView" name="tblSpectra"/>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">

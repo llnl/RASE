@@ -11,9 +11,11 @@ Advanced Topics
    Automatic_s_curve_generation
    Create_base_spectra
    Base_spectra_creation_tool
+   Shielding_generation
    Import_CSV
    n42_templates
    Results_file_format
    Use_distance
    Intrinsic_source_handling
-   RASE-GADRAS_Integration
+   RASE_Neutrons
+   RASE_GADRAS_Integration

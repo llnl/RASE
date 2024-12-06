@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -45,12 +45,12 @@ if not os.path.exists(distpath):
 # Naming convention: <Vendor><Model>-<Notes>_ResultsTranslator.py
 translators = ['ORTEC-CmdLineReplayTool_ResultsTranslator.py',
                'ORTEC-StndAloneGUIReplayTool_ResultsTranslator.py',
-               'SandiaWebID-CmdLine_ResultsTranslator',
+               'SandiaWebID-CmdLine_ResultsTranslator.py',
                ]
 translators = map(lambda x: os.path.join(dirname, x), translators)
 
 for translator in translators:
-    os.system(sys.executable + " -m PyInstaller -a -y -F -c --clean --noupx" +
+    os.system(sys.executable + " -m PyInstaller -y -F -c --clean --noupx" +
           " --distpath " + distpath +
           " --workpath " + buildpath +
           " --specpath=" + dirname +

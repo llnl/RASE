@@ -1,0 +1,30 @@
+<?xml version="1.0"?><?xml-model href="http://physics.nist.gov/N42/2011/schematron/n42.sch" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<RadInstrumentData xmlns="http://physics.nist.gov/N42/2011/N42"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="http://physics.nist.gov/N42/2011/N42 http://physics.nist.gov/N42/2011/n42.xsd"
+n42DocUUID="d72b7fa7-4a20-43d4-b1b2-7e3b8c6620c1">
+<RadInstrumentInformation id="RadInstrumentInformation-1">
+<RadInstrumentManufacturerName>PHDS Co.</RadInstrumentManufacturerName>
+<RadInstrumentModelName>LoPro</RadInstrumentModelName>
+<RadInstrumentClassCode>Radionuclide Identifier</RadInstrumentClassCode>
+<RadInstrumentIdentifier>Serial Number: LP302</RadInstrumentIdentifier>
+</RadInstrumentInformation>
+<RadDetectorInformation id="RadDetectorInformation-1">
+<RadDetectorCategoryCode>Gamma</RadDetectorCategoryCode>
+<RadDetectorKindCode>HPGe</RadDetectorKindCode>
+</RadDetectorInformation>
+<EnergyCalibration id="EnergyCalibration-1">
+<!--Somehow the WinOMNI replay tool expects integer values for the first and second calibration coeff (zeros)-->
+<CoefficientValues>${int(detector.ecal0)} ${detector.ecal1} ${int(detector.ecal2)}</CoefficientValues>
+</EnergyCalibration>
+<RadMeasurement id="">
+	<StartDateTime>2022-08-04T02:52:13-0400</StartDateTime>
+	<RealTimeDuration>PT${int(scenario.acq_time)}S</RealTimeDuration>
+	<LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+	<Spectrum id="RadMeasurement-1Spectrum-1" radDetectorInformationReference="RadDetectorInformation-1" energyCalibrationReference="EnergyCalibration-1">
+	<ChannelData compressionCode="CountedZeroes">
+		${compressed_sample_counts}
+	</ChannelData>
+	</Spectrum>
+</RadMeasurement>
+</RadInstrumentData>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-model href="http://physics.nist.gov/N42/2011/schematron/n42.sch" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<RadInstrumentData xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:TFSs="http://www.thermofisher.com/downloads/N42SchemaAddin" xsi:schemaLocation="http://physics.nist.gov/N42/2011/N42 http://physics.nist.gov/N42/2011/n42.xsd" xmlns="http://physics.nist.gov/N42/2011/N42">
+	<EnergyCalibration id="ENCAL-Foreground">
+		<CoefficientValues>${detector.ecal0} ${detector.ecal1} ${detector.ecal2} ${detector.ecal3}</CoefficientValues>
+	</EnergyCalibration>
+	<RadMeasurement>
+		<MeasurementClassCode>Foreground</MeasurementClassCode>
+		<StartDateTime>2017-6-5T11:59:0</StartDateTime>
+		<RealTimeDuration>PT${scenario.acq_time}S</RealTimeDuration>
+		<Spectrum>
+			<LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+			<ChannelData>${sample_counts}</ChannelData>
+		</Spectrum>
+	</RadMeasurement>
+</RadInstrumentData>

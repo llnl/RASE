@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -33,11 +33,13 @@
 """
 This module allows user to adjust scenario groups
 """
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Slot, QCoreApplication
 from PySide6.QtWidgets import QWidget, QDialog, QLineEdit, QVBoxLayout, QCheckBox,QDialogButtonBox, QPushButton, \
                                     QInputDialog, QMessageBox, QLabel, QScrollArea
 from src.table_def import ScenarioGroup, Session
 
+
+# translation_tag = 'sgrp_d'
 
 class GroupSettings(QDialog):
     """Simple Dialog to allow the user to select which groups a scenario is in.
@@ -81,13 +83,13 @@ class GroupSettings(QDialog):
             if cb.text() == 'default_group' and self.del_groups:
                 cb.setEnabled(False)
 
-        self.btn_newgroup = QPushButton('Add New Group')
+        self.btn_newgroup = QPushButton(self.tr('Add New Group'))
         self.buttonlayout.addWidget(self.btn_newgroup)
         self.btn_newgroup.clicked.connect(self.addCheckbox)
         self.buttonBox = QDialogButtonBox(self)
 
         if self.del_groups:
-            self.btn_deletegroup = QPushButton('Remove Group(s)')
+            self.btn_deletegroup = QPushButton(self.tr('Remove Group(s)'))
             self.buttonlayout.addWidget(self.btn_deletegroup)
             self.btn_deletegroup.clicked.connect(self.delGroup)
             self.buttonBox.setStandardButtons(QDialogButtonBox.Close)
@@ -101,8 +103,8 @@ class GroupSettings(QDialog):
         self.layout.addLayout(self.checklayout)
         self.layout.addLayout(self.buttonlayout)
         if not self.del_groups and self.scens and len(self.scens) > 1:
-            self.info = QLabel('NOTE: A group box is checked if\nany one of the selected scenarios\nis in that '
-                               'group. Pressing OK will\nadd all selected scenarios to the\nselected groups.')
+            self.info = QLabel(self.tr('NOTE: A group box is checked if\nany one of the selected scenarios\nis in '
+                                'that group. Pressing OK will\nadd all selected scenarios to the\nselected groups.'))
             self.layout.addWidget(self.info)
         self.setLayout(self.layout)
 
@@ -110,8 +112,8 @@ class GroupSettings(QDialog):
         return [self.checklayout.itemAt(i).widget() for i in range(self.checklayout.count())]
 
     def addCheckbox(self):
-        newgroup, okPressed = QInputDialog.getText(self, "Add New Scenario Group", "Scenario Group name:",
-                                               QLineEdit.Normal, "")
+        newgroup, okPressed = QInputDialog.getText(self, self.tr('Add New Scenario Group'),
+                                                   self.tr('Scenario Group name:'), QLineEdit.Normal, '')
         collist = [grp.name for grp in self.session.query(ScenarioGroup)]
         if okPressed and (newgroup != '' and newgroup not in collist):
             self.checklayout.addWidget(QCheckBox(newgroup))
@@ -121,13 +123,11 @@ class GroupSettings(QDialog):
     def delGroup(self):
         del_groups = [cb.text() for cb in self._cb_list() if cb.isChecked()]
         if len(del_groups) > 1:
-            answer = QMessageBox(QMessageBox.Question, 'Delete Scenario Groups',
-                                                       'Are you sure you want to delete these scenario groups? '
-                                                       'Scenarios in these groups will not be deleted')
+            answer = QMessageBox(QMessageBox.Question, self.tr('Delete Scenario Groups'), self.tr('Are you sure you '
+                              'want to delete these scenario groups? Scenarios in these groups will not be deleted'))
         else:
-            answer = QMessageBox(QMessageBox.Question, 'Delete Scenario Group',
-                                                       'Are you sure you want to delete this scenario group? '
-                                                       'Scenarios in this group will not be deleted')
+            answer = QMessageBox(QMessageBox.Question, self.tr('Delete Scenario Group'), self.tr('Are you sure you '
+                                     'want to delete this scenario group? Scenarios in this group will not be deleted'))
         answer.addButton(QMessageBox.Yes)
         answer.addButton(QMessageBox.No)
         ans_hold = answer.exec()

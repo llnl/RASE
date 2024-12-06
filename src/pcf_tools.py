@@ -1,12 +1,12 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by L. Bently-Tammero, J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky,
 #            V. Mozin, S. Sangiorgio.
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -44,17 +44,22 @@ import numpy as np
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 from pathlib import Path
+import re
+from PySide6.QtCore import QCoreApplication
+
+# translation_tag = 'pcf_t'
 
 
 class Spectrum(object):
-    """this class contain a spectrum objects
+    """
+    This class contain a spectrum objects
     """
 
     def __init__(self):
         self.title = ''
         self.info = ''
         self.source_list = ''
-        self.date = strftime("%d-%b-%Y %H:%M:%S.00", localtime())
+        self.date = strftime('%d-%b-%Y %H:%M:%S.00', localtime())
         self.tag = 'T'
 
         self.live_time = 0.
@@ -86,13 +91,13 @@ def readpcf(file_name):
 
     # open the input file to read binary using the "with" so the file is
     # properly closed in the event of an exception
-    with open(file_name, "rb") as fid:
+    with open(file_name, 'rb') as fid:
 
         # read two bytes, since this is a short, and it's two bytes long
         chunk = fid.read(2)
         # little endian,signed char (int)... since unpack returns a tuple
         # want first element
-        nrps = struct.unpack("<h", chunk)[0]
+        nrps = struct.unpack('<h', chunk)[0]
         # print(nrps)
         chunk = fid.read(254)  # read the header
         # header = struct.unpack("<254s", chunk)[0]  # little endian string
@@ -102,44 +107,44 @@ def readpcf(file_name):
 
         while not file_eof(fid):
             spect = Spectrum()
-            spect.title = nullstrip(struct.unpack("<60s", fid.read(60))[0])
+            spect.title = nullstrip(struct.unpack('<60s', fid.read(60))[0])
             if spect.title.find('DeviationPairs') > -1:
                 fid.seek(256 - 60, 1)
                 fid.seek(256 * 80, 1)
-                spect.title = nullstrip(struct.unpack("<60s", fid.read(60))[0])
+                spect.title = nullstrip(struct.unpack('<60s', fid.read(60))[0])
 
-            spect.info = nullstrip(struct.unpack("<60s", fid.read(60))[0])
+            spect.info = nullstrip(struct.unpack('<60s', fid.read(60))[0])
             spect.source_list = nullstrip(
-                struct.unpack("<60s", fid.read(60))[0]
+                struct.unpack('<60s', fid.read(60))[0]
             )
             spect.date = nullstrip(
-                struct.unpack("<23s", fid.read(23))[0]
+                struct.unpack('<23s', fid.read(23))[0]
             )
-            spect.tag = nullstrip(struct.unpack("<c", fid.read(1))[0])
+            spect.tag = nullstrip(struct.unpack('<c', fid.read(1))[0])
 
-            spect.live_time = struct.unpack("<f", fid.read(4))[0]
-            spect.real_time = struct.unpack("<f", fid.read(4))[0]
+            spect.live_time = struct.unpack('<f', fid.read(4))[0]
+            spect.real_time = struct.unpack('<f', fid.read(4))[0]
 
             fid.read(4 * 3)  # skip 3 unused 4-byte floating points
 
-            spect.resv1 = struct.unpack("<f", fid.read(4))[0]
-            spect.resv2 = struct.unpack("<f", fid.read(4))[0]
-            spect.resv3 = struct.unpack("<f", fid.read(4))[0]
-            spect.resv4 = struct.unpack("<f", fid.read(4))[0]
+            spect.resv1 = struct.unpack('<f', fid.read(4))[0]
+            spect.resv2 = struct.unpack('<f', fid.read(4))[0]
+            spect.resv3 = struct.unpack('<f', fid.read(4))[0]
+            spect.resv4 = struct.unpack('<f', fid.read(4))[0]
 
             fid.read(4)  # skip energy calibration low-energy term
             fid.read(4)  # skip 1 unused 4-byte floating point
 
-            spect.neutron_counts = struct.unpack("<f", fid.read(4))[0]
+            spect.neutron_counts = struct.unpack('<f', fid.read(4))[0]
 
-            spect.gamma_channels = struct.unpack("<i", fid.read(4))[0]
+            spect.gamma_channels = struct.unpack('<i', fid.read(4))[0]
             if spect.gamma_channels > 0:
                 channels = spect.gamma_channels
 
             # need to read in [channels] number of floats now
             gamma_counts = []
             for ctr in range(channels):
-                gamma_counts.append(struct.unpack("<f", fid.read(4))[0])
+                gamma_counts.append(struct.unpack('<f', fid.read(4))[0])
 
             spect.gamma_counts = np.array(gamma_counts)
             extra = 256 * nrps - 254 - 4 * channels - 2
@@ -159,7 +164,7 @@ def nullstrip(string_in):
     """strip a string of all '\x00' characters
     """
     # fix for python3
-    string_in = string_in.decode("ISO-8859-1")
+    string_in = string_in.decode('ISO-8859-1')
     # nonNullLocations = []
     str_ret = ''
     for str_val in string_in:
@@ -180,7 +185,7 @@ def file_eof(filehandle):
     # if filehandle.read(1) == '':
 
     # use this for python 3.x
-    if filehandle.read(1).decode("ISO-8859-1") == '':
+    if filehandle.read(1).decode('ISO-8859-1') == '':
         return True
     else:
         # move the pointer back one from the current position
@@ -226,7 +231,7 @@ class PCFtoN42Writer:
     def __init__(self, pcf_file_in):
         self.pcf_file_in = Path(pcf_file_in)
         self.pcf = readpcf(pcf_file_in)
-        print(f"Successfully read {len(self.pcf)} spectra")
+        print(QCoreApplication.translate('pcf_t', 'Successfully read {} spectra').format(len(self.pcf)))
 
     def _add_data_to_n42(self, spec_in):
         """returns n42 XML
@@ -250,6 +255,22 @@ class PCFtoN42Writer:
         live_time.text = f"PT{spec_in.live_time}S"
 
         channel_data = ET.SubElement(spectrum, 'ChannelData')
+        # real_time = ET.SubElement(measurement, 'RealTimeDuration')
+        # live_time = ET.SubElement(spectrum, 'LiveTimeDuration')
+        # real_time.text = f"PT{spec_in.real_time}S"
+        # live_time.text = f"PT{spec_in.live_time}S"
+        #
+        # classcode = ET.SubElement(measurement, 'MeasurementClassCode')
+        # classcode.text= 'Foreground'
+        #
+        # gd = re.compile('GD: (.+) urem/h')
+        # gammadose_search = gd.search(spec_in.title).group(1)
+        # if gammadose_search:
+        #     RASE_sens_el = ET.SubElement(spectrum,'RASE_Sensitivity')
+        #     RASE_sens_el.text = str(float(gammadose_search)/100)
+        #
+        #
+        # channel_data = ET.SubElement(spectrum, 'ChannelData')
         channel_data.text = get_channel_data_string(spec_in.gamma_counts)
 
     def generate_n42(self, dir_out, file_list=None):

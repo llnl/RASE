@@ -4,6 +4,34 @@
 RASE Release Notes
 ******************
 
+RASE v3.0
+=========
+
+- RASE API for use with custom python scripts
+
+    - Detector and replay tool creation
+    - Scenario creation and simulation
+    - Auto S-curve
+    - Included example scripts
+
+- Apply shielding effects to base spectra
+
+    - Pre-built shielding libraries for 9 common materials at several thicknesses
+    - Detector response for 512, 1024, 2048, and 3000 channel detectors
+
+- Detector/Replay Tool separation
+
+    - One replay tool may be run with any number of detectors, and vice versa
+
+- Isotope ID weighting by reported confidence
+- Single-bin neutron scaling and sampling from base spectra
+- Support for multi-volume detectors in base spectra creation and spectra generation
+- Code refactor to support RASE internationalization
+- Expanded base spectra configurations and n42 template libraries; updated and expanded replay tool docs
+- Various bug fixes
+- Documentation updates, including a quick start guide
+
+
 RASE v2.4
 =========
 

@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -35,7 +35,7 @@ This module allows user to change program settings such as the data directory
 and sampling algorithm
 """
 
-from PySide6.QtCore import Slot
+from PySide6.QtCore import Slot, QCoreApplication
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
 
 from src import sampling_algos
@@ -45,6 +45,7 @@ import os
 import sys
 import inspect
 
+# translation_tag = 'sett_d'
 
 class SettingsDialog(ui_prefs_dialog.Ui_Dialog, QDialog):
     def __init__(self, parent):
@@ -80,8 +81,8 @@ class SettingsDialog(ui_prefs_dialog.Ui_Dialog, QDialog):
         """
         options = QFileDialog.ShowDirsOnly
         if sys.platform.startswith('win'): options = QFileDialog.DontUseNativeDialog
-        dir = QFileDialog.getExistingDirectory(self, 'Choose RASE Data Directory', self.settings.getDataDirectory(),
-                                               options)
+        dir = QFileDialog.getExistingDirectory(self, self.tr('Choose RASE Data Directory'),
+                                               self.settings.getDataDirectory(), options)
         if dir:
             self.txtDataDir.setText(dir)
             self.dataDirectoryChanged = True

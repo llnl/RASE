@@ -1,0 +1,56 @@
+<?xml version="1.0"?>
+<RadInstrumentData xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="http://physics.nist.gov/N42/2011/N42">
+  <RadInstrumentInformation id="RadInstrumentInformation">
+    <RadInstrumentManufacturerName>Mirion Technologies Inc.</RadInstrumentManufacturerName>
+    <RadInstrumentIdentifier>123456</RadInstrumentIdentifier>
+    <RadInstrumentModelName>SPIR-Pack G</RadInstrumentModelName>
+    <RadInstrumentClassCode>Backpack</RadInstrumentClassCode>
+    <RadInstrumentVersion>
+      <RadInstrumentComponentName>Software</RadInstrumentComponentName>
+      <RadInstrumentComponentVersion>1.7.1.0</RadInstrumentComponentVersion>
+    </RadInstrumentVersion>
+    <RadInstrumentVersion>
+      <RadInstrumentComponentName>Hardware</RadInstrumentComponentName>
+      <RadInstrumentComponentVersion>1</RadInstrumentComponentVersion>
+    </RadInstrumentVersion>
+    <RadInstrumentVersion>
+      <RadInstrumentComponentName>Firmware</RadInstrumentComponentName>
+      <RadInstrumentComponentVersion>1.1.3.0</RadInstrumentComponentVersion>
+    </RadInstrumentVersion>
+  </RadInstrumentInformation>
+  <RadDetectorInformation id="RadDetectorInformation">
+    <RadDetectorCategoryCode>Gamma</RadDetectorCategoryCode>
+    <RadDetectorKindCode>NaI</RadDetectorKindCode>
+    <RadDetectorDepthValue>4</RadDetectorDepthValue>
+    <RadDetectorDiameterValue>2</RadDetectorDiameterValue>
+  </RadDetectorInformation>
+  <EnergyCalibration id="EnergyCalibration">
+    <CoefficientValues>${detector.ecal0} ${detector.ecal1} ${detector.ecal2} ${detector.ecal3}</CoefficientValues>
+  </EnergyCalibration>
+  <RadMeasurement id="Measurement-1">
+    <MeasurementClassCode>Foreground</MeasurementClassCode>
+    <StartDateTime>2023-10-27T12:00:00.000000Z</StartDateTime>
+    <RealTimeDuration>PT${scenario.acq_time}S</RealTimeDuration>
+    <Spectrum id="MeasurementSpectrum"
+              radDetectorInformationReference="RadDetectorInformation"
+              energyCalibrationReference="EnergyCalibration">
+      <LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+      <ChannelData compressionCode="None">
+        ${sample_counts}
+      </ChannelData>
+    </Spectrum>
+	</RadMeasurement>
+  <RadMeasurement id="Background-1">
+    <MeasurementClassCode>Background</MeasurementClassCode>
+    <StartDateTime>2023-10-27T12:00:00.000000Z</StartDateTime>
+    <RealTimeDuration>PT${secondary_spectrum.realtime}S</RealTimeDuration>
+    <Spectrum id="BackgroundSpectrum"
+              radDetectorInformationReference="RadDetectorInformation"
+              energyCalibrationReference="EnergyCalibration">
+      <LiveTimeDuration>PT${secondary_spectrum.livetime}S</LiveTimeDuration>
+      <ChannelData compressionCode="None">
+        ${secondary_spectrum.get_counts_as_str()}
+      </ChannelData>
+    </Spectrum>
+	</RadMeasurement>	
+</RadInstrumentData>

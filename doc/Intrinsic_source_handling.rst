@@ -1,6 +1,5 @@
 .. _intrinsic_source_handling:
 
-
 ************************************************************************
 Working with instruments with an internal (intrinsic) calibration source
 ************************************************************************

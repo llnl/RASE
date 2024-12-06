@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -47,7 +47,7 @@ class HelpDialog(QWebEngineView):
         super().__init__(parent)
 
         self.resize(1200, 800)
-        self.setWindowTitle('RASE Help')
+        self.setWindowTitle(self.tr('RASE Help'))
 
         self.setZoomFactor(1.0)
 

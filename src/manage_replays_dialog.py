@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -36,11 +36,11 @@ This module supports import, export and deletion of user defined replay options
 
 import csv
 
-from PySide6.QtWidgets import QDialog, QFileDialog, QTableWidgetItem, QAbstractItemView
-from PySide6.QtWidgets import QHeaderView, QMessageBox
-from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QDialog, QFileDialog, QTableWidgetItem, QAbstractItemView, QMessageBox
+from PySide6.QtWidgets import QHeaderView
 from sqlalchemy.orm import make_transient
 
+from .rase_functions import delete_replay
 from .table_def import Session, Replay, ReplayTypes
 from .ui_generated import ui_manage_replays_dialog
 from src.rase_settings import RaseSettings
@@ -50,10 +50,11 @@ NUM_COL = 9
 NAME, REPL_PATH, REPL_IS_CMD_LINE, REPL_SETTING, TEMPLATE_PATH, TEMPLATE_SFX, \
 TRANSL_PATH, TRANSL_IS_CMD_LINE, TRANSL_SETTING = range(NUM_COL)
 
+# translation_tag = 'mrep_d'
+
 class ManageReplaysDialog(ui_manage_replays_dialog.Ui_Dialog, QDialog):
-    def __init__(self, parent = None):
+    def __init__(self):
         QDialog.__init__(self)
-        self.parent = parent
         self.session = Session()
         self.settings = RaseSettings()
         self.setupUi(self)
@@ -74,9 +75,9 @@ class ManageReplaysDialog(ui_manage_replays_dialog.Ui_Dialog, QDialog):
             self.tblStandaloneReplays.clear()
         self.tblStandaloneReplays.setColumnCount(NUM_COL)
         self.tblStandaloneReplays.setRowCount(len(replays))
-        self.tblStandaloneReplays.setHorizontalHeaderLabels(['Name', 'Replay exe', 'Cmd Line', 'Settings',
-                                                             'n42 Input Template', 'Filename suffix',
-                                                             'Results Translator Exe', 'Cmd Line', 'Settings'])
+        self.tblStandaloneReplays.setHorizontalHeaderLabels([self.tr('Name'), self.tr('Replay exe'), self.tr('Cmd Line'),
+                                     self.tr('Settings'), self.tr('n42 Input Template'), self.tr('Filename suffix'),
+                                     self.tr('Results Translator Exe'), self.tr('Cmd Line'), self.tr('Settings')])
         self.tblStandaloneReplays.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tblStandaloneReplays.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         for row, replay in enumerate(replays):
@@ -97,7 +98,7 @@ class ManageReplaysDialog(ui_manage_replays_dialog.Ui_Dialog, QDialog):
             self.tblWebReplays.clear()
         self.tblWebReplays.setColumnCount(3)
         self.tblWebReplays.setRowCount(len(replays))
-        self.tblWebReplays.setHorizontalHeaderLabels(['Name', 'URL', 'Instrument DRF'])
+        self.tblWebReplays.setHorizontalHeaderLabels([self.tr('Name'), self.tr('URL'), self.tr('Instrument DRF')])
         self.tblWebReplays.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tblWebReplays.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         for row, replay in enumerate(replays):
@@ -112,8 +113,8 @@ class ManageReplaysDialog(ui_manage_replays_dialog.Ui_Dialog, QDialog):
         """
         dialog = ReplayDialog(self)
         if dialog.exec_():
-            self.session.add(dialog.replay)
-            self.session.commit()
+            # self.session.add(dialog.replay)
+            # self.session.commit()
             self.setReplaysTable()
 
     def on_cellDoubleClicked(self, row, col, table):
@@ -129,7 +130,7 @@ class ManageReplaysDialog(ui_manage_replays_dialog.Ui_Dialog, QDialog):
         Exports to CSV
         """
         # FIXME: works only for the standalone replay tools
-        path = QFileDialog.getSaveFileName(self, 'Save File', self.settings.getDataDirectory(), 'CSV (*.csv)')
+        path = QFileDialog.getSaveFileName(self, self.tr('Save File'), self.settings.getDataDirectory(), 'CSV (*.csv)')
         if path[0]:
             with open(path[0], mode='w', newline='') as stream:
                 writer = csv.writer(stream)
@@ -148,7 +149,7 @@ class ManageReplaysDialog(ui_manage_replays_dialog.Ui_Dialog, QDialog):
         Imports from CSV
         """
         # FIXME: works only for the standalone replay tools
-        path = QFileDialog.getOpenFileName(self, 'Open File', self.settings.getDataDirectory(), 'CSV(*.csv)')
+        path = QFileDialog.getOpenFileName(self, self.tr('Open File'), self.settings.getDataDirectory(), 'CSV(*.csv)')
         if path[0]:
             session = Session()
             # FIXME: This doesn't check in any way that the format of the file is correct
@@ -184,13 +185,15 @@ class ManageReplaysDialog(ui_manage_replays_dialog.Ui_Dialog, QDialog):
             indices.sort(reverse=True)
             for index in indices:
                 name = tbl.item(index, 0).text()
+                replay = self.session.query(Replay).filter_by(name=name).first()
+                if replay.detectors:
+                    r = QMessageBox().question(self, self.tr('Delete Replay'),
+                                               self.tr('Replay \"{}\" is associated with one or more instruments. '
+                                                       'Are you sure you want to delete it?'.format(replay.name)))
+                    if r == QMessageBox.StandardButton.No: continue
                 tbl.removeRow(index)
-                replayDelete = self.session.query(Replay).filter(Replay.name == name)
-                # TODO: confirm with user before deleting if the replay tool is in use
-                replayDelete.delete()
+                delete_replay(self.session, replay.name)
                 self.session.commit()
-                if self.parent:
-                    self.parent.cmbReplay.removeItem(self.parent.cmbReplay.findText(name))
 
     def cloneSelectedReplays(self) -> None:
         """ Clone Selected Replays """
@@ -202,7 +205,9 @@ class ManageReplaysDialog(ui_manage_replays_dialog.Ui_Dialog, QDialog):
                 replay = self.session.query(Replay).filter(Replay.name == name).first()
                 make_transient(replay)
                 replay.id = None  # new primary_key will be created on commit
-                replay.name = replay.name + ' (copy)'
+                while self.session.query(Replay).filter(Replay.name == name).first():
+                    name = name + self.tr(' (copy)')
+                    replay.name = name
                 self.session.add(replay)
                 self.session.commit()
         self.setReplaysTable()

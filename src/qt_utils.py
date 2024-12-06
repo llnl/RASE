@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -30,11 +30,9 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ###############################################################################
-
-from PySide6 import QtCore, QtGui, QtWidgets
-from PySide6.QtCore import Qt, QRect
-import sys
-from PySide6.QtCore import QEventLoop, Slot, QObject, Signal
+from PySide6 import QtGui, QtWidgets
+from PySide6.QtCore import Qt, QEventLoop, Slot, QObject, Signal, QAbstractListModel
+from src.table_def import Session, Detector
 
 
 class QSignalWait(QObject):
@@ -159,3 +157,39 @@ class DoubleAndEmptyValidator(QtGui.QDoubleValidator):
         if value is None:
             return ""
         return str(value)
+
+
+
+class BaseSpectraListModel(QAbstractListModel):
+
+    def __init__(self, data=None,  *args, **kwargs):
+        super(BaseSpectraListModel, self).__init__(*args, **kwargs)
+        self.bs_list = data or []
+
+    def reset_data(self):
+        """
+        Dump old spectra table
+        """
+        self.layoutAboutToBeChanged.emit()
+        self.bs_list.clear()
+        self.layoutChanged.emit()
+
+    def add_spectra(self, base_spectra):
+        self.layoutAboutToBeChanged.emit()
+        self.bs_list = sorted([baseSpectrum.material.name for baseSpectrum in base_spectra])
+        self.layoutChanged.emit()
+
+    def update_fromdetector(self, detector_name=''):
+        self.reset_data()
+        if detector_name != '':
+            session = Session()
+            det = session.query(Detector).filter_by(name=detector_name).first()
+            self.add_spectra(det.base_spectra)
+
+    def rowCount(self, index=None):
+        return len(self.bs_list)
+
+    def data(self, index, role):
+        if role == Qt.DisplayRole:
+            return self.bs_list[index.row()]
+

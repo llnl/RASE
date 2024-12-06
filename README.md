@@ -8,22 +8,42 @@ to obtain nuclide identification response.
 For more information on RASE see:
 * [R. Arlt et al, IEEE NSS Conf Record, 2009](https://doi.org/10.1109/NSSMIC.2009.5402448)
 
+Using RASE and getting started quickly
+--------------------------------------
+RASE is distributed with example detectors, spectra, and tables that are designed to get users up and running as quickly as possible. These files are accessible via the `examples` folder in the RASE .zip release package or in the source code. Please consult the Quick Start Guide in the RASE manual for details on how to use these files. The manual is accessible via the `help` menu or via the pdf version, accessible via the releases tab.
+
+Utilizing the RASE API
+----------------------
+RASE 3.0 is released with an API that enables users to execute key aspects of the RASE workflow using python scripts and .yaml config files. Documentation for the API is in progress; in the meantime, the `example_api_workflow.py`, `example_api_scurves.py`, and `example_api_backgrounds.py` sample scripts in the `demonstrationScripts` directory outline some of the most widely used functionality. Corresponding .yaml files can be found in the `examples` directory as `example_api_backgrounds.yaml` and `example_api_scurves.yaml`. Using the RASE API requires several libraries, detailed below. 
 
 Required Libraries
-----------------------------------
-* Qt6, PySide6
-* declxml, lxml, pyyaml
+------------------
+* BeautifulSoup4
+* declxml
 * isodate
-* SQLAlchemy < 2.0
-* Matplotlib >= 3.5, 
-* Numpy, Pandas, Scipy
-* Uncertainties, LmFit
-* Mako
-* Seaborn
+* lmFit
+* lxml
+* mako
 * marshmallow-sqlalchemy
-* pytest, pytest-qt (for unit testing)
+* matplotlib 
+* numpy
+* pandas
+* pyside6
+* pyyaml
+* qt6
+* requests
+* scikit-learn
+* scipy=
+* seaborn
+* SQLAlchemy
+* tqdm
+* uncertainties
 
-The relevant packages can be conveniently installed using `pip` with the included `requirements.txt` file.
+* pytest (for unit testing)
+* pytest-qt (for unit testing)
+* Sphinx (for docs development)
+
+The relevant packages can be conveniently installed using `pip`.
 
 Creating a standalone executable
 --------------------------------
@@ -60,6 +80,20 @@ To update the documentation:
 
 The documentation is generated in the `doc\_build\` folder
 
+Updating Language Translations Files
+------------------------------------
+
+RASE uses QT Linguist and its related tools to provide translations of the application in different languages.
+
+The process to create a new language file or update and existing one is as follows:
+1. Ensure the source code is ready for translation. See [QT Manual](https://doc.qt.io/qt-6/i18n-source-translation.html)
+2. `cp rase.pyw rase.py`  This  step is necessary due to a bug in QT's `lupdate` code which does not process `.pyw` files correctly.
+3. `pyside6-lupdate -no-obsolete rase.py src/*.py src/ui/*.ui -ts translations/rase_LANG.ts`  where `LANG` should be replaced with the ISO 639 language code. 
+4. Provide translations for the source texts in the `.ts` file using `Qt Linguist` or directly with a text editor. Multiple `.ts` language files can be specified.
+5. Run `lrelease translations/*.ts`
+6. Test by temporarily setting the locale e.g. running the following from the terminal `LC_ALL=it_IT.UTF-8 python rase.pyw`
+7. `rm rase.py`
+
 
 Contributors
 ------------
@@ -78,14 +112,14 @@ Citation
 Please cite use of the RASE software as:
 
 L. Bentley-Tammero, J. P. Brodsky, J. Chavez, S. A. Czyz, G. Kosinovsky, V. Mozin, & S. Sangiorgio. 
-(2024, Jan 10). LLNL/RASE: RASE v2.4 (Version v2.4). Zenodo. http://doi.org/10.5281/zenodo.10480562
+(2024, Dec 5). LLNL/RASE: RASE v3.0 (Version v3.0). Zenodo. http://doi.org/10.5281/zenodo.14285934
 
 
 Acknowledgements
 ----------------
 
 This work was performed by Lawrence Livermore National Laboratory under the auspices
-of the U.S. Department of Energy  under contract DEJAC52J07NA27344,
+of the U.S. Department of Energy under contract DEJAC52J07NA27344,
 and of the U.S. Department of Homeland Security Domestic Nuclear Detection Office
 under contract HSHQDC-15-X-00128.
 
@@ -101,4 +135,4 @@ License
 RASE is released under an MIT license and LGPL License. For more details see the [LICENSE]
 (/LICENSE-MIT) and [LICENSE](/LICENSE-LGPL) files.
 
-LLNL-CODE-858590, LLNL-CODE-829509
+LLNL-CODE-2001375, LLNL-CODE-829509

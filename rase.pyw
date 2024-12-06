@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -31,15 +31,15 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ###############################################################################
 
-"""
-This module defines the top level executable of RASE
-"""
+"""This module defines the top level executable of RASE"""
+import locale
+import platform
 import sys
 import traceback
 import os
 import logging
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QCoreApplication, QTranslator, QLibraryInfo
 from PySide6.QtWidgets import QApplication, QMessageBox
 from src.rase import Rase
 from src.rase_settings import RaseSettings, APPLICATION_PATH
@@ -76,11 +76,11 @@ def log_except_hook(eType, eValue, tracebackobj):
 
     # Tell the user
     msg_box = QMessageBox()
-    msg_box.setText('An unhandled exception occurred.')
-    notice = \
-        """Please report the problem """ \
-        """via email to rase-support@llnl.gov.\n\n""" \
-        """A log has been written to \n "%s".""" % logFile
+    msg_box.setText(QCoreApplication.translate('logger','An unhandled exception occurred.'))
+    notice = QCoreApplication.translate("logger",
+                                        "Please report the problem"
+                                        "via email to rase-support@llnl.gov.\n\n"
+                                        f"A log has been written to \n {logFile}.")
     msg_box.setInformativeText(notice)
     err_msg = ''.join(traceback.format_exception(eType, eValue, tracebackobj))
     msg_box.setDetailedText(err_msg)
@@ -96,9 +96,31 @@ sys.excepthook = log_except_hook
 
 
 if __name__ == '__main__':
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)  # enable highdpi scaling
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)  # use highdpi icons
+    # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)  # enable highdpi scaling
+    # QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)  # use highdpi icons
     app = QApplication(sys.argv)
+
+    # Apparently there is a bug in Qt QLocale.system() function, so I'm using a workaround to get the language
+    if platform.system() == 'Windows':
+        import ctypes
+        windll = ctypes.windll.kernel32
+        lang = locale.windows_locale[windll.GetUserDefaultUILanguage()]
+    else:
+        lang = locale.getdefaultlocale()[0]
+
+    path = QLibraryInfo.path(QLibraryInfo.TranslationsPath)
+    translator = QTranslator(app)
+    if translator.load(f'qtbase_{lang}', path):
+        app.installTranslator(translator)
+
+    tr_path = './translations'
+    translator = QTranslator(app)
+    # This would be the correct implementation if QLocale().system() worked on Mac
+    # if translator.load(QLocale().system(), 'rase', '_', tr_path, '.qm'):
+    #     app.installTranslator(translator)
+    if translator.load(f'rase_{lang}', tr_path):
+        app.installTranslator(translator)
+
     win = Rase(sys.argv)
     win.show()
     app.exec()

@@ -50,14 +50,14 @@ one material to generate a whole new set of scenarios with the desired material.
 .. _rase-WorkflowStep2:
 
 .. figure:: _static/rase_WorkflowStep2-1.png
-    :scale: 33 %
+    :scale: 70 %
 
     **Basic “Add Scenario" dialog.**
 
 |
 
 .. figure:: _static/rase_WorkflowStep2-2.png
-    :scale: 33 %
+    :scale: 70 %
 
     **“Add Scenario" dialog with various additional features.**
 

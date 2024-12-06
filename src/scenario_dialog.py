@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -33,223 +33,168 @@
 """
 This module allows user to create replay scenario
 """
-
 import re
-import hashlib
 from itertools import product
 import numpy as np
+import pandas as pd
 
-from PySide6.QtCore import QModelIndex, Slot, QRegularExpression, Qt, QPoint
-from PySide6.QtWidgets import QDialog, QTableWidgetItem, QLineEdit, QListWidgetItem, QMessageBox, QItemDelegate,  \
-    QComboBox, QMenu, QDialogButtonBox
+from PySide6.QtCore import Slot, QRegularExpression, Qt, QPoint, QAbstractItemModel,\
+    QAbstractListModel, QModelIndex, QAbstractTableModel, QItemSelectionModel, QCoreApplication
+from PySide6.QtWidgets import QDialog,  QLineEdit, QMessageBox, QItemDelegate, QComboBox, QMenu, \
+    QDialogButtonBox, QDataWidgetMapper
+from PySide6.QtGui import QRegularExpressionValidator, QStandardItemModel, QStandardItem, \
+    QAction, QValidator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import FlushError
-from PySide6.QtGui import QRegularExpressionValidator, QStandardItemModel, QStandardItem, QAction, \
-    QValidator
-
 from src.qt_utils import DoubleValidator, IntValidator, RegExpValidator
-from src.table_def import Session, Influence, ScenarioGroup, Material, ScenarioMaterial, ScenarioBackgroundMaterial, \
-    Scenario, Detector, BaseSpectrum
+from src.table_def import Session, Influence, ScenarioGroup, Material, ScenarioMaterial, \
+    ScenarioBackgroundMaterial, Scenario, Detector, BaseSpectrum
 from src.ui_generated import ui_create_scenario_dialog, ui_scenario_range_dialog
+from src.rase_functions import check_groups
 from src.rase_settings import RaseSettings
 from src.scenario_group_dialog import GroupSettings
 from src.help_dialog import HelpDialog
+from src.neutrons import any_neutrons_in_db
 
-UNITS, MATERIAL, INTENSITY = 0, 1, 2
-units_labels = {'DOSE': 'DOSE (\u00B5Sv/h)', 'FLUX': 'FLUX (\u03B3/(cm\u00B2s))'}
+UNITS, MATERIAL, INTENSITY, INTENSITY_NEUTRON = 0, 1, 2, 3
+units_labels = {'DOSE': QCoreApplication.translate('scen_d', 'DOSE (\u00B5Sv/h)'),
+                'FLUX': QCoreApplication.translate('scen_d', 'FLUX (\u03B3/(cm\u00B2s))')}
 
 
 def RegExpSetValidator(parent=None, auto_s=False) -> QRegularExpressionValidator:
     """Returns a Validator for the set range format"""
     if auto_s:
-        reg_ex = QRegularExpression("((\d*\.\d*)|(\d*))")
+        reg_ex = QRegularExpression(r'((\d*\.\d*)|(\d*))')
     else:
         reg_ex = QRegularExpression(
             r'((\d*\.\d+|\d+)-(\d*\.\d+|\d+):(\d*\.\d+|\d+)(((,\d*\.\d+)|(,\d+))*))|(((\d*\.\d+)|(\d+))((,\d*\.\d+)|(,\d+))*)')
     validator = RegExpValidator(reg_ex, parent)
     return validator
 
-class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
-    def __init__(self, rase_gui, id=None, duplicate=[], auto_s=False):
-        QDialog.__init__(self)
-        self.setupUi(self)
-        self.rase_gui = rase_gui
-        self.tblMaterial.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.tblBackground.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.id = id
-        self.auto_s = auto_s
-        self.settings = RaseSettings()
-        self.scenarioHasChanged = False
-        self.groupHasChanged = False
-        self.duplicate = duplicate
-        self.session = Session()
 
-        self.txtAcqTime.setText('30')
-        self.txtAcqTime.setToolTip(
-            "Enter comma-separated values OR range as min-max:step OR range followed by comma-separated values")
+class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
+    def __init__(self, parent, id=None, duplicate_ids=[]):
+        QDialog.__init__(self, parent)
+        self.parent = parent
+        self.setupUi(self)
+
+        self.txtAcqTime.setToolTip(self.tr('Enter comma-separated values OR range as min-max:step OR range followed '
+                                           'by comma-separated values'))
         self.txtAcqTime.setValidator(RegExpSetValidator(self.txtAcqTime))
         self.txtAcqTime.validator().validationChanged.connect(self.handle_validation_change)
 
-        self.txtReplication_2.setText('100')
-        self.txtReplication_2.setValidator(IntValidator(self.txtReplication_2))
-        self.txtReplication_2.validator().setBottom(1)
-        self.txtReplication_2.validator().validationChanged.connect(self.handle_validation_change)
+        self.txtReplication.setValidator(IntValidator(self.txtReplication))
+        self.txtReplication.validator().setBottom(1)
+        self.txtReplication.validator().validationChanged.connect(self.handle_validation_change)
 
-        self.tblMaterial.setHorizontalHeaderItem(INTENSITY, QTableWidgetItem('Intensity'))
-        self.tblBackground.setHorizontalHeaderItem(INTENSITY, QTableWidgetItem('Intensity'))
+        self.model = ScenarioModel(id=id, duplicate_ids=duplicate_ids)
+        self.modelMat = self.model.modelSource
+        self.modelBgnd = self.model.modelBackground
+        self.modelInfl = self.model.modelInfluences
+        self.tblMaterial.setModel(self.modelMat)
+        self.tblBackground.setModel(self.modelBgnd)
+        self.lstInfluences.setModel(self.modelInfl)
+        self.model_lineedits = [self.txtAcqTime, self.txtReplication, self.txtComment]
+        self.tblMaterial.verticalHeader().setVisible(False)
+        self.tblBackground.verticalHeader().setVisible(False)
+        self.settings = RaseSettings()
+        self.model.dataChanged.connect(self.scenarioChanged)  # enables "okay" if valid replication/acq_time
+        for m in [self.model, self.modelMat, self.modelBgnd]:
+            m.dataChanged.connect(self.updateScenariosList)
 
-        self.tblMaterial.customContextMenuRequested.connect(lambda x, table=self.tblMaterial:
-                                                                self.context_auto_range(x, self.tblMaterial))
-        self.tblBackground.customContextMenuRequested.connect(lambda x, table=self.tblBackground:
-                                                                self.context_auto_range(x, self.tblBackground))
+        self.mapper = QDataWidgetMapper()
+        self.mapper.setModel(self.model)
+        self.set_modelmap()
+        self.mapper.toFirst()
 
-        # set material table
-        self.tblMaterial.setItemDelegate(MaterialDoseDelegate(self.tblMaterial, unitsCol=UNITS,
-                                                              materialCol=MATERIAL, intensityCol=INTENSITY,
-                                                              tables=[self.tblMaterial, self.tblBackground]))
-        self.tblMaterial.setRowCount(10)
-        for row in range(self.tblMaterial.rowCount()):
-            self.tblMaterial.setItem(row, UNITS, QTableWidgetItem())
-            self.tblMaterial.setItem(row, INTENSITY, QTableWidgetItem())
-            self.tblMaterial.setItem(row, MATERIAL, QTableWidgetItem())
-            self.tblMaterial.item(row, INTENSITY).setToolTip("Enter comma-separated values OR range as min-max:step OR range followed by comma-separated values")
+        self.tblMaterial.setItemDelegate(MaterialDoseDelegate(self.modelMat, unitsCol=UNITS,
+                                                  materialCol=MATERIAL, intensityCol=INTENSITY,
+                                                  neutronCol=INTENSITY_NEUTRON,
+                                                  tables=[self.modelMat, self.modelBgnd]))
+        self.tblBackground.setItemDelegate(MaterialDoseDelegate(self.modelBgnd, unitsCol=UNITS,
+                                                  materialCol=MATERIAL, intensityCol=INTENSITY,
+                                                  neutronCol=INTENSITY_NEUTRON,
+                                                  tables=[self.modelMat, self.modelBgnd]))
+
+        self.tblMaterial.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tblBackground.setContextMenuPolicy(Qt.CustomContextMenu)
+        session = Session()
+
+        self.tblMaterial.customContextMenuRequested.connect(lambda x, table=self.tblMaterial,
+                               model=self.modelMat: self.context_auto_range(x, table, model))
+        self.tblBackground.customContextMenuRequested.connect(lambda x, table=self.tblBackground,
+                               model=self.modelMat: self.context_auto_range(x, table, model))
+        for row in range(self.modelMat.rowCount(None)):
             self.tblMaterial.setRowHeight(row, 22)
-
-        # set background table
-        self.tblBackground.setItemDelegate(MaterialDoseDelegate(self.tblBackground, unitsCol=UNITS,
-                                                                materialCol=MATERIAL, intensityCol=INTENSITY,
-                                                                auto_s=self.auto_s,
-                                                                tables=[self.tblMaterial, self.tblBackground]))
-        self.tblBackground.setRowCount(10)
-        for row in range(self.tblBackground.rowCount()):
-            self.tblBackground.setItem(row, UNITS, QTableWidgetItem())
-            self.tblBackground.setItem(row, INTENSITY, QTableWidgetItem())
-            self.tblBackground.setItem(row, MATERIAL, QTableWidgetItem())
-            self.tblBackground.item(row, INTENSITY).setToolTip("This material will not be run for detector(s): Symetrica due to containing an internal source for that detector. Set the Intensity to 0.5 to run with that detector.")
+        for row in range(self.modelBgnd.rowCount(None)):
             self.tblBackground.setRowHeight(row, 22)
 
-        # fill influence list
-        for influence in self.session.query(Influence):
-            self.lstInfluences.addItem(QListWidgetItem(influence.name))
-
-        self.comboDetectorSelect.addItems(["all detectors"]+[s.name for s in self.session.query(Detector).all()])
+        # Make it explicitly source the default detector combobox from model to assure consistency
+        self.comboDetectorSelect.addItems([self.modelMat.detector_selection] + [s.name for s in
+                                                              session.query(Detector).all()])
         self.comboDetectorSelect.currentIndexChanged.connect(self.updateTableDelegate)
-
+        self.comboDetectorSelect.currentIndexChanged.connect(self.changeDetectorSelect)
         # display a previous scenario if defined
-        if self.id:
-            if not self.duplicate:
-                self.setWindowTitle("Scenario Edit")
-                scenario = self.session.query(Scenario).get(id)
-                materials = scenario.scen_materials
-                bckg_materials = scenario.scen_bckg_materials
-                influences = scenario.influences
-                for table, mat_list in zip((self.tblMaterial, self.tblBackground),(materials, bckg_materials)):
-                    for rowCount, mat in enumerate(mat_list):
-                        item = QTableWidgetItem(units_labels[mat.fd_mode])
-                        item.setData(Qt.UserRole, mat.fd_mode)
-                        table.setItem(rowCount, UNITS, item)
-                        table.setItem(rowCount, MATERIAL, QTableWidgetItem(mat.material_name))
-                        item = QTableWidgetItem(str(mat.dose))
-                        item.setData(Qt.UserRole, item.text())
-                        table.setItem(rowCount, INTENSITY, item)
-                self.txtComment.setText(scenario.comment)
-                self.txtAcqTime.setText(str(scenario.acq_time))
-                self.txtReplication_2.setText(str(scenario.replication))
-                for influence in influences:
-                    lst = self.lstInfluences.findItems(influence.name, Qt.MatchExactly)[0]
-                    lst.setSelected(True)
-                self.groups = self.getGroups()
+        if id:
+            self.setWindowTitle(self.tr('Scenario Edit'))
+            for inflidx, infl in enumerate(self.modelInfl.influences):
+                influence = session.query(Influence).filter_by(name=infl).first()
+                if influence in self.modelInfl.selected_influences:
+                    self.lstInfluences.selectionModel().select(
+                        self.modelInfl.index(inflidx, 0), QItemSelectionModel.Select)
 
-            else:
-                self.setWindowTitle("Build Scenario from Other Scenario")
-                scens = [self.session.query(Scenario).filter_by(id=scen).first() for scen in self.duplicate]
-                scenario = scens[0]
-                materials = scenario.scen_materials
-                back_materials = scenario.scen_bckg_materials
-                influences = scenario.influences
-                mat_dict = {}
-                back_dict = {}
-                mat_fd = []
-                back_fd = []
-                for mat in materials:
-                    mat_fd.append((mat.material_name, mat.fd_mode))
-                    mat_dict[mat.material_name] = set([mat.dose])
-                for back in back_materials:
-                    back_fd.append((back.material_name, back.fd_mode))
-                    back_dict[back.material_name] = set([back.dose])
-
-                if len(scens) > 1:
-                    for scen in scens[1:]:
-                        mat_dict = self.make_matDict(scen.scen_materials, mat_dict)
-                        back_dict = self.make_matDict(scen.scen_bckg_materials, back_dict)
-                        if influences:
-                            influences.append[scen.influences]
-                        else:
-                            influences = scen.influences
-
-                for table, material_dictionary, fd_list in \
-                        zip((self.tblMaterial, self.tblBackground), (mat_dict, back_dict), (mat_fd, back_fd)):
-                    mat_list_tup = [(k, v) for k, v in material_dictionary.items()]
-                    for rowCount, (mat, fd_mode) in enumerate(zip(mat_list_tup, fd_list)):
-                        doses = [str(d) for d in sorted(mat[1])]
-                        item = QTableWidgetItem(units_labels[fd_mode[1]])
-                        item.setData(Qt.UserRole, fd_mode[1])
-                        table.setItem(rowCount, UNITS, item)
-                        table.setItem(rowCount, MATERIAL, QTableWidgetItem(str(mat[0])))
-                        item = QTableWidgetItem(str(','.join(doses)))
-                        item.setData(Qt.UserRole, item.text())
-                        table.setItem(rowCount, INTENSITY, item)
-                self.txtComment.setText(scenario.comment)
-                self.txtAcqTime.setText(str(scenario.acq_time))
-                for influence in influences:
-                    lst = self.lstInfluences.findItems(influence.name, Qt.MatchExactly)[0]
-                    lst.setSelected(True)
-                self.groups = self.getGroups()
-
-        else:
-            self.groups = []
-
-        if self.auto_s and self.rase_gui.static_background:
-            for rowCount, mat in enumerate(self.rase_gui.static_background):
-                mat = mat[0]
-                item = QTableWidgetItem(units_labels[mat[0]])
-                item.setData(Qt.UserRole, mat[0])
-                self.tblBackground.setItem(rowCount, UNITS, item)
-                self.tblBackground.setItem(rowCount, MATERIAL, QTableWidgetItem(mat[1].name))
-                item = QTableWidgetItem(str(mat[2]))
-                item.setData(Qt.UserRole, item.text())
-                self.tblBackground.setItem(rowCount, INTENSITY, item)
-
-        # signal/slot connections (this has to be done after_ the previous scenario is loaded)
-        self.tblMaterial.cellChanged.connect(self.scenarioChanged)
-        self.tblBackground.cellChanged.connect(self.scenarioChanged)
-        self.tblMaterial.cellChanged.connect(self.updateScenariosList)
-        self.tblBackground.cellChanged.connect(self.updateScenariosList)
-        self.lstInfluences.itemSelectionChanged.connect(self.scenarioChanged)
+        self.lstInfluences.selectionModel().selectionChanged.connect(self.handle_influence_select)
         self.txtComment.textChanged.connect(self.scenarioChanged)
         self.txtAcqTime.textChanged.connect(self.scenarioChanged)
-        self.txtReplication_2.textChanged.connect(self.scenarioChanged)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
+        self.txtReplication.textChanged.connect(self.scenarioChanged)
+
+        self.updateScenariosList()
+
+        self.set_neutrons_visible(False)
+        if any_neutrons_in_db():
+            self.set_neutrons_visible(True)
+        if self.modelMat.any_neutrons_in_table() or self.modelBgnd.any_neutrons_in_table():
+            self.set_neutrons_visible(True)
+
+
+    def set_modelmap(self):
+        col_names = ['acq_time', 'replication', 'comment']
+        for w, c in zip(self.model_lineedits, col_names):
+            self.mapper.addMapping(w, self.model.column_dict[c])
+
+    def set_neutrons_visible(self,visible):
+        self.tblMaterial.setColumnHidden(INTENSITY_NEUTRON, not visible)
+        self.tblBackground.setColumnHidden(INTENSITY_NEUTRON, not visible)
+
+    def get_neutrons_visible(self):
+        a = self.tblMaterial.isColumnHidden(INTENSITY_NEUTRON)
+        b = self.tblBackground.isColumnHidden(INTENSITY_NEUTRON)
+        assert bool(a) == bool(b)
+        return not (a and b)
+
+    def handleEditingFinished(self):
+        # must grab lineedits at the beginning to make sure that the scenario update doesn't
+        # replace the values in the process
+        linetexts = [lineedit.text() for lineedit in self.model_lineedits]
+        # for scenario model (the line edits)
+        for linetext, line_edit in zip(linetexts, self.model_lineedits):
+            column = self.model_lineedits.index(line_edit)
+            self.model.setData(self.model.index(0, column), linetext, Qt.EditRole)
+        # for the table models
+        for table, model in zip([self.tblMaterial, self.tblBackground], [self.modelMat, self.modelBgnd]):
+            if table.indexWidget(table.currentIndex()) is not None:
+                model.setData(table.currentIndex(),
+                              table.indexWidget(table.currentIndex()).currentText(), Qt.EditRole)
 
     def make_matDict(self, mats, m_dict):
         for mat in mats:
             m_dict[mat.material_name].update([mat.dose])
         return m_dict
 
-    def getGroups(self):
-        if self.id:
-            if not self.duplicate:
-                scen_edit = self.session.query(Scenario).filter_by(id=self.id).first()
-                return [grp.name for grp in scen_edit.scenario_groups]
-            else:
-                scens = [self.session.query(Scenario).filter_by(id=scen).first() for scen in self.duplicate]
-                grps = set()
-                for scen in scens:
-                    grps.update([grp.name for grp in scen.scenario_groups])
-                return grps
-        else:
-            return []
+    @Slot()
+    def handle_influence_select(self, index):
+        self.modelInfl.setSelectedInfluences([r.row() for r in
+                                       self.lstInfluences.selectionModel().selectedIndexes()])
 
     @Slot(QValidator.State)
     def handle_validation_change(self, state):
@@ -257,6 +202,10 @@ class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
             color = 'red'
         elif state == QValidator.Intermediate:
             color = 'gold'
+            # need to force this, setData isn't called for intermediate states
+            self.model.set_attributes({'acq_time': self.txtAcqTime.text(),
+                                       'replication': self.txtReplication.text(),
+                                        'comment': self.txtComment.text()})
         elif state == QValidator.Acceptable:
             color = 'green'
         sender = self.sender().parent()
@@ -269,19 +218,10 @@ class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
         Updates an internal flag related to changed scenario
         Enables and Disables OK button if scenario values are acceptable or not
         """
-        self.scenarioHasChanged = True
-
-        if self.txtAcqTime.hasAcceptableInput() and self.txtReplication_2.hasAcceptableInput():
+        if self.txtAcqTime.hasAcceptableInput() and self.txtReplication.hasAcceptableInput():
             self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(True)
         else:
             self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
-
-    @Slot()
-    def groupChanged(self):
-        """
-        Listens for group changed
-        """
-        self.groupHasChanged = True
 
     @Slot(int)
     def updateTableDelegate(self, index):
@@ -289,32 +229,33 @@ class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
             selected_detname = None
         else:
             selected_detname = self.comboDetectorSelect.currentText()
-        self.tblMaterial.setItemDelegate(MaterialDoseDelegate(self.tblMaterial, unitsCol=UNITS,
-                                                              materialCol=MATERIAL, intensityCol=INTENSITY,
-                                                              selected_detname=selected_detname,
-                                                              tables=[self.tblMaterial, self.tblBackground]))
-        self.tblBackground.setItemDelegate(MaterialDoseDelegate(self.tblBackground, unitsCol=UNITS,
-                                                                materialCol=MATERIAL, intensityCol=INTENSITY,
-                                                                selected_detname=selected_detname, auto_s=self.auto_s,
-                                                                tables=[self.tblMaterial, self.tblBackground]))
+        self.tblMaterial.setItemDelegate(MaterialDoseDelegate(self.modelMat, unitsCol=UNITS,
+                                                  materialCol=MATERIAL, intensityCol=INTENSITY,
+                                                  selected_detname=selected_detname,
+                                                  tables=[self.modelMat, self.modelBgnd]))
+        self.tblBackground.setItemDelegate(MaterialDoseDelegate(self.modelBgnd, unitsCol=UNITS,
+                                                  materialCol=MATERIAL, intensityCol=INTENSITY,
+                                                  selected_detname=selected_detname,
+                                                  tables=[self.modelMat, self.modelBgnd]))
+
+    @Slot(int)
+    def changeDetectorSelect(self, index):
+        self.modelMat.detector_selection = self.comboDetectorSelect.itemText(index)
+        self.modelBgnd.detector_selection = self.comboDetectorSelect.itemText(index)
 
     @Slot(QPoint)
-    def context_auto_range(self, point, table):
-        current_cell = table.itemAt(point)
-        # show the context menu only if on an a valid part of the table
-        if current_cell:
-            column = current_cell.column()
-            if column == INTENSITY:
-                autorangeAction = QAction('Auto-Define Range', self)
-                menu = QMenu(table)
-                menu.addAction(autorangeAction)
-                action = menu.exec_(table.mapToGlobal(point))
-                if action == autorangeAction:
-                    auto_list = self.auto_range()
-                    if auto_list:
-                        current_cell.setText(','.join(auto_list))
-                        current_cell.setData(Qt.UserRole, current_cell.text())
-
+    def context_auto_range(self, point, table, model):
+        index = table.indexAt(point)
+        # show the context menu only if on a valid part of the table
+        if index.isValid() and index.column() == INTENSITY:
+            autorangeAction = QAction(self.tr('Auto-Define Range'), self)
+            menu = QMenu(table)
+            menu.addAction(autorangeAction)
+            action = menu.exec_(table.mapToGlobal(point))
+            if action == autorangeAction:
+                auto_list = self.auto_range()
+                if auto_list:
+                    model.setData(index, ','.join(auto_list), Qt.EditRole)
 
     @Slot(bool)
     def auto_range(self):
@@ -324,177 +265,191 @@ class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
             if dialog.points:
                 return dialog.points
 
-
     @Slot()
     def updateScenariosList(self):
-        materialStr=""
-        for row in range(self.tblMaterial.rowCount()):
-            untStr = self.tblMaterial.item(row, UNITS).text()
-            matStr = self.tblMaterial.item(row, MATERIAL).text()
-            intStr = self.tblMaterial.item(row, INTENSITY).data(Qt.UserRole)
-            if matStr and untStr and intStr:
-                if (len(materialStr) > 0):
-                    materialStr = materialStr + "\n "
-                materialStr = materialStr + '{}({})'.format(matStr, ', '.join("{:.5f}".format(float(dose)) for
-                                  dose in self.getSet(self.tblMaterial.item(row, INTENSITY)))) + \
-                                  ', Units: ' + self.tblMaterial.item(row, UNITS).data(Qt.UserRole).title()
-
-        backgroundStr = ""
-        for row in range(self.tblBackground.rowCount()):
-            untStr = self.tblBackground.item(row, UNITS).text()
-            matStr = self.tblBackground.item(row, MATERIAL).text()
-            intStr = self.tblBackground.item(row, INTENSITY).data(Qt.UserRole)
-            if matStr and untStr and intStr:
-                if (len(backgroundStr)>0):
-                    backgroundStr = backgroundStr + "\n "
-                backgroundStr = backgroundStr + '{}({})'.format(matStr, ', '.join("{:.5f}".format(float(dose)) for
-                                  dose in self.getSet(self.tblBackground.item(row, INTENSITY)))) + \
-                                  ', Units: ' + self.tblBackground.item(row, UNITS).data(Qt.UserRole).title()
-        self.txtScenariosList_2.setText(f"Source materials:\n {materialStr} \n\nBackground materials:\n {backgroundStr}")
+        mat_bgnd_strings = []
+        for i, model in enumerate([self.modelMat, self.modelBgnd]):
+            mat_bgnd_strings.append('')
+            for row in range(model.rowCount()):
+                untStr = model.data(model.index(row, UNITS))
+                matStr = model.data(model.index(row, MATERIAL))
+                intStr = model.modelData(model.index(row, INTENSITY))
+                if untStr != '' and matStr != '' and intStr != '':
+                    if len(mat_bgnd_strings[i]) > 0:
+                        mat_bgnd_strings[i] += '\n'
+                    mat_bgnd_strings[i] += '{}({})'.format(matStr, ', '.join('{:.5f}'.format(
+                        float(dose)) for dose in self.model.getSet(intStr)) + self.tr(', Units: ') + untStr)
+        self.txtScenariosList_2.setText(self.tr('Source materials:\n'
+                         '{}\n\nBackground materials:\n{}').format(mat_bgnd_strings[0], mat_bgnd_strings[1]))
 
     @Slot(bool)
     def on_btnGroups_clicked(self, checked):
-        dialog = GroupSettings(self, groups=self.groups)
+        dialog = GroupSettings(self, groups=self.model.groups)
         dialog.setWindowModality(Qt.WindowModal)
         if dialog.exec_():
-            self.groups = dialog.n_groups
+            self.model.setGroupsFromNames(dialog.n_groups)
 
     @Slot()
     def accept(self):
-        if self.auto_s:
-            materials_doses = []
-            for matsT in [self.tblBackground]:
-                for row in range(matsT.rowCount()):
-                    matName = matsT.item(row, MATERIAL).text()
-                    if matName:
-                        matArr = []
-                        for dose in self.getSet(matsT.item(row, 2)):
-                            mat = self.session.query(Material).filter_by(name=matName).first()
-                            fd_mat = matsT.item(row, UNITS).data(Qt.UserRole)
-                            matArr.append((fd_mat, mat, dose))
-                        materials_doses.append(matArr)
+        self.handleEditingFinished()
 
-            self.rase_gui.static_background = materials_doses
-            return QDialog.accept(self)
+        error_message, add_message = self.model.accept()
+        if error_message:
+            QMessageBox.critical(self, self.tr('Error encountered'), error_message)
+        else:
+            if add_message:
+                QMessageBox.information(self, self.tr('Record Exists'), add_message)
+            QDialog.accept(self)
 
-        self.tblMaterial.setCurrentIndex(QModelIndex())  # so that if table item is being edited it will commit the data
 
+class ScenarioModel(QAbstractItemModel):
+    def __init__(self, id=None, duplicate_ids=None, data_src=None, data_bgnd=None, data_infl=None,
+                 *args, **kwargs):
+        super(ScenarioModel, self).__init__(*args, **kwargs)
+        self.id = id
+        self.duplicate_ids = duplicate_ids
+        self.column_dict = self.set_column_dict()
+        self._data = self.reset_data()
+        self.set_scenario_defaults()
+        check_groups()
+        self.groups = self.setGroupsFromId()
+
+        self.modelSource = SourceTableModel(data=data_src, id=id, duplicate_ids=duplicate_ids)
+        self.modelBackground = BgndTableModel(data=data_bgnd, id=id, duplicate_ids=duplicate_ids)
+        self.modelInfluences = ScenInfluencesListModel(data=data_infl, id=id, duplicate_ids=duplicate_ids)
+
+    @property
+    def acq_time(self):
+        return self.data(self.index(0, 0))
+    @acq_time.setter
+    def acq_time(self, value):
+        self.setData(self.index(0, 0), value)
+
+    @property
+    def replication(self):
+        return self.data(self.index(0, 1))
+    @replication.setter
+    def replication(self, value):
+        self.setData(self.index(0, 1), value)
+
+    @property
+    def comment(self):
+        return self.data(self.index(0, 2))
+    @comment.setter
+    def comment(self, value):
+        self.setData(self.index(0, 2), value)
+
+    def accept(self):
+        session = Session()
+        integrity_error = False
+        duplicate = False  #TODO: is this vestigial?
+        error_message = None
+        add_message = None
+
+        if self.replication is None or self.acq_time == []:
+            error_message = self.tr('No specified acquisition time or '
+                                                 'number of replications. No scenarios created.')
+            return error_message, add_message
         # if this is edit rather than create, need to treat differently:
-        if self.id and not self.duplicate:
-            # check if the scenario has been changed by the user
-            # Note that this approach considers a change even if
-            # the user rewrites the previous entry identically
-            if not self.scenarioHasChanged:
-                # update just the group for the same scenario
-                # so as not to change the scenario ID
-                scen = self.session.query(Scenario).get(self.id)
-                self.provide_message_new_groups = False
-                self.add_groups_to_scen(scen, self.groups, add_groups=True)
-                self.session.commit()
-                return QDialog.accept(self)
-            else:
-                # clear the existing scenario first
-                self.scenario_delete()
+        if self.id and not self.duplicate_ids:
+            # check if the scenario has been changed by the user. Note that this approach
+            # considers a change even if the user rewrites the previous entry identically
+            self.scenario_delete()
 
-        # replication and influences
-        replication = int(self.txtReplication_2.text())
-        influences = [] # element type: Influence
-        for index in self.lstInfluences.selectedIndexes():
-            influences.append(self.session.query(Influence).filter_by(
-                name=self.lstInfluences.itemFromIndex(index).text()).first())
-
-        materials_doses = [[],[]]
-        for i, matsT in enumerate([self.tblMaterial, self.tblBackground]):
+        materials_doses = [[], []]
+        for i, matsT in enumerate([self.modelSource, self.modelBackground]):
             for row in range(matsT.rowCount()):
-                matName = matsT.item(row, MATERIAL).text()
-                if matName and matsT.item(row, 2).data(Qt.UserRole):   # skip if no intensity specified
-                    matArr =[]
-                    for dose in self.getSet(matsT.item(row, 2)):
-                        mat = self.session.query(Material).filter_by(name=matName).first()
-                        fd_mat = matsT.item(row, UNITS).data(Qt.UserRole)
-                        matArr.append((fd_mat, mat, dose))
+                matName = matsT.data(matsT.index(row, MATERIAL))
+                if matName and (matsT.data(matsT.index(row, INTENSITY)) or matsT.data(matsT.index(row, INTENSITY_NEUTRON))):  # skip if no intensity specified
+                    matArr = []
+                    for dose in self.getSet(matsT.modelData(matsT.index(row, INTENSITY))):
+                        for ndose in self.getSet(matsT.modelData(matsT.index(row, INTENSITY_NEUTRON))):
+                            mat = session.query(Material).filter_by(name=matName).first()
+                            fd_mat = matsT.modelData(matsT.index(row, UNITS))
+                            ndoseval = ndose if ndose != '' else '0'
+                            matArr.append((fd_mat, mat, dose, ndoseval))
                     materials_doses[i].append(matArr)
 
         # cartesian product to break out scenarios from scenario group
-        integrity_fail = False
-        duplicate = False
-        self.provide_message_new_groups = True
-        for acqTime in self.getSet(self.txtAcqTime):
+        for acqTime in self.getSet(self.acq_time):
+            if integrity_error or duplicate:
+                break
             mm = product(*materials_doses[0])
             bb = product(*materials_doses[1])
             for mat_dose_arr, bckg_mat_dose_arr in product(mm, bb):
-                scenMaterials = [ScenarioMaterial(material=m, dose=float(d), fd_mode=u) for u, m, d in mat_dose_arr]
-                bcgkScenMaterials = [ScenarioBackgroundMaterial(material=m, dose=float(d), fd_mode=u)
-                                                                for u, m, d in bckg_mat_dose_arr]
+                scenMaterials = [ScenarioMaterial(
+                    material=m, dose=float(d), fd_mode=u, neutron_dose=n) for u, m, d, n in mat_dose_arr]
+                bcgkScenMaterials = [ScenarioBackgroundMaterial(
+                    material=m, dose=float(d), fd_mode=u, neutron_dose=n) for u, m, d, n in bckg_mat_dose_arr]
                 scen_groups = []
                 try:
                     for groupname in self.groups:
-                        scen_groups.append(self.session.query(ScenarioGroup).filter_by(name=groupname).first())
+                        scen_groups.append(
+                            session.query(ScenarioGroup).filter_by(name=groupname).first())
                     if not scen_groups:
-                        scen_groups.append(self.session.query(ScenarioGroup).filter_by(name='default_group').first())
+                        scen_groups.append(session.query(ScenarioGroup).filter_by(name='default_group').first())
                     # if just changing groups, add to new group without creating a new scenario
-                    scen_hash = Scenario.scenario_hash(float(acqTime), scenMaterials, bcgkScenMaterials, influences)
-                    scen_exists = self.session.query(Scenario).filter_by(id=scen_hash).first()
+                    # creating duplicate scenarios cause no conflicts with database anymore.
+                    # They simply overwrite the old scenario by doing an "OR" operation with
+                    # the scenario groups
+                    scen_hash = Scenario.scenario_hash(float(acqTime), scenMaterials,
+                                       bcgkScenMaterials, self.modelInfluences.selected_influences)
+                    scen_exists = session.query(Scenario).filter_by(id=scen_hash).first()
                     add_groups = False
                     if scen_exists:
-                        # and (sorted([g.name for g in scen_exists.scenario_groups]) !=
-                        #                 sorted([g.name for g in scen_groups])):
                         for group in scen_groups:
                             if group not in scen_exists.scenario_groups:
                                 add_groups = True
                                 break
                         all_groups = set(g.name for g in scen_exists.scenario_groups + scen_groups)
-                        all_groups.update(self.groups)
-                        # don't allow duplicate scenarios, unless there are other scenarios in the group that are
-                        # simply having their group changed. In which case, pass by those groups without impact.
-                        duplicate = self.add_groups_to_scen(scen_exists, all_groups, add_groups=add_groups)
+                        if add_groups:
+                            self.add_groups_to_scen(scen_exists, all_groups)
+                            add_message = self.tr('At least one '
+                                                   'defined scenario is already in the database; '
+                                                   'adding scenario to additional groups.')
                     else:
-                        self.session.add(Scenario(float(acqTime), replication, scenMaterials, bcgkScenMaterials, influences, scen_groups,
-                                 self.txtComment.text()))
-                # if inputting multiple scenarios with at least one preexisting scenario (i.e.: this only happens when
-                # the loop traverses more than once and the database is accessed again)
+                        session.add(Scenario(float(acqTime), self.replication, scenMaterials,
+                                 bcgkScenMaterials, list(self.modelInfluences.selected_influences),
+                                 scen_groups, self.comment))
+                except AttributeError:
+                    error_message = self.rollback_database(materials_doses, True)
                 except (IntegrityError, FlushError):
-                    self.integrity_message(materials_doses)
-                    integrity_fail = True
+                    error_message = self.rollback_database(materials_doses)
+                    integrity_error = True
                     break
-
         # if inputting a single scenario that already exists
-        if not integrity_fail:
+        if not integrity_error:
             if duplicate:
-                self.integrity_message(materials_doses)
+                error_message = self.rollback_database(materials_doses)
             else:
                 try:
-                    self.session.commit()
-                    return QDialog.accept(self)
+                    session.commit()
+                    return error_message, add_message
                 except (IntegrityError, FlushError):
-                    self.integrity_message(materials_doses)
+                    error_message = self.rollback_database(materials_doses)
+        return error_message, add_message
 
-
-    def add_groups_to_scen(self, scen, all_groups, add_groups=False):
-        """
-        Clear groups associated with a scenario and append new ones
-        """
-        if add_groups:
-            scen.scenario_groups.clear()
-            for groupname in all_groups:
-                scen.scenario_groups.append(self.session.query(ScenarioGroup).filter_by(name=groupname).first())
-                if self.provide_message_new_groups:
-                    QMessageBox.information(self, 'Record Exists',
-                                     'At least one defined scenario is already in the database; '
-                                     'adding scenario to additional groups.')
-                    self.provide_message_new_groups = False
-        elif self.provide_message_new_groups:
-            return True
-        return False
-
+    def rollback_database(self, material_doses, attrib_error=False):
+        session = Session()
+        session.rollback()
+        if attrib_error:
+            error_message = self.tr('Specified something that does not exist (for example, a material that is not in '
+                                             'the database). Please examine your inputs.')
+        elif (material_doses[0] and len(list(product(*material_doses[0]))[0]) > 1) or \
+                (material_doses[1] and len(list(product(*material_doses[1]))[0]) > 1):
+            error_message = self.tr('At least one defined scenario is already in the database! Please change scenarios.')
+        else:
+            error_message = self.tr('This scenario is already in the database! Please change scenario.')
+        return error_message
 
     def scenario_delete(self):
         """
         Clear existing scenario before adding the modified version
         """
-        scenDelete = self.session.query(Scenario).filter(Scenario.id == self.id)
-        matDelete = self.session.query(ScenarioMaterial).filter(ScenarioMaterial.scenario_id == self.id)
-        bckgMatDelete = self.session.query(ScenarioBackgroundMaterial).filter(
+        session = Session()
+        scenDelete = session.query(Scenario).filter(Scenario.id == self.id)
+        matDelete = session.query(ScenarioMaterial).filter(ScenarioMaterial.scenario_id == self.id)
+        bckgMatDelete = session.query(ScenarioBackgroundMaterial).filter(
             ScenarioBackgroundMaterial.scenario_id == self.id)
         scenTableAssocDelete = scenDelete.first()
         scenTableAssocDelete.scenario_groups.clear()
@@ -503,115 +458,10 @@ class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
         bckgMatDelete.delete()
         scenDelete.delete()
 
-
-    def integrity_message(self, materials_doses):
-        if (materials_doses[0] and len(list(product(*materials_doses[0]))) > 1) or \
-                (materials_doses[1] and len(list(product(*materials_doses[1]))) > 1):
-            QMessageBox.critical(self, 'Record Exists',
-                                 'At least one defined scenario is already in the database! '
-                                 'Please change scenarios.')
-        else:
-            QMessageBox.critical(self, 'Record Exists',
-                                 'This scenario is already in the database! Please change scenario.')
-        self.session.rollback()
-
-    # TODO: combine these two methods using a cellChanged.connect()
-    @Slot(int, int)
-    def on_tblMaterial_cellChanged(self, row, col):
-        """
-        Listens for Material table cell changed
-        """
-        if col == UNITS:
-            if self.tblMaterial.item(row, MATERIAL) and self.tblMaterial.item(row, INTENSITY):
-                if not self.tblMaterial.item(row, UNITS).data(Qt.UserRole):
-                    self.tblMaterial.item(row, MATERIAL).setText('')
-                    self.tblMaterial.item(row, INTENSITY).setText('')
-                    self.tblMaterial.item(row, INTENSITY).setData(Qt.UserRole, None)
-                elif self.tblMaterial.item(row, MATERIAL):
-                    units = self.tblMaterial.item(row, UNITS)
-                    matName = self.tblMaterial.item(row, MATERIAL)
-                    doseItem = self.tblMaterial.item(row, INTENSITY)
-                    self.set_otherCols_fromUnit(units, matName, doseItem)
-
-        if col == MATERIAL:
-            units = self.tblMaterial.item(row, UNITS)
-            matName = self.tblMaterial.item(row, MATERIAL).text()
-            doseItem = self.tblMaterial.item(row, INTENSITY)
-            self.set_otherCols_fromMat(units, matName, doseItem)
-
-    @Slot(int, int)
-    def on_tblBackground_cellChanged(self, row, col):
-        """
-        Listens for Material table cell changed
-        """
-        if col == UNITS:
-            if self.tblBackground.item(row, MATERIAL) and self.tblBackground.item(row, INTENSITY):
-                if not self.tblBackground.item(row, UNITS).data(Qt.UserRole):
-                    self.tblBackground.item(row, MATERIAL).setText('')
-                    self.tblBackground.item(row, INTENSITY).setText('')
-                    self.tblBackground.item(row, INTENSITY).setData(Qt.UserRole, None)
-                elif self.tblBackground.item(row, MATERIAL):
-                    units = self.tblBackground.item(row, UNITS)
-                    matName = self.tblBackground.item(row, MATERIAL)
-                    doseItem = self.tblBackground.item(row, INTENSITY)
-                    self.set_otherCols_fromUnit(units, matName, doseItem)
-        if col == MATERIAL:
-            units = self.tblBackground.item(row, UNITS)
-            matName = self.tblBackground.item(row, MATERIAL).text()
-            doseItem = self.tblBackground.item(row, INTENSITY)
-            self.set_otherCols_fromMat(units, matName, doseItem)
-
-    def set_otherCols_fromUnit(self, units, matName, doseItem):
-        textKeep = False
-        if self.comboDetectorSelect.currentIndex() == 0:
-            detector_list = [detector for detector in Session().query(Detector)]
-        else:
-            detector_list = [Session().query(Detector).filter_by(
-                name=self.comboDetectorSelect.currentText()).first()]
-        for detector in detector_list:
-            for baseSpectrum in detector.base_spectra:
-                if baseSpectrum.material.name == matName.text() and not textKeep:
-                    if (units.data(Qt.UserRole) == 'DOSE' and isinstance(baseSpectrum.rase_sensitivity, float)) or \
-                       (units.data(Qt.UserRole) == 'FLUX' and isinstance(baseSpectrum.flux_sensitivity, float)):
-                        textKeep = True
-        if not textKeep:
-            matName.setText('')
-
-    def set_otherCols_fromMat(self, units, matName, doseItem):
-        if matName:
-            # set default value for intensity
-            if not doseItem.text():
-                doseItem.setText('0.1')
-            else:
-                doseItem.setText(doseItem.data(Qt.UserRole))    # in case previous value is from intrinsic source
-            if Session().query(Material).get(matName).include_intrinsic:
-                doseItem.setText('')
-            doseItem.setData(Qt.UserRole, doseItem.text())
-
-            # force units to match what is available in the selected base spectrum
-            if not units.text():
-                textSet = False
-                if self.comboDetectorSelect.currentIndex() == 0:
-                    detector_list = [detector for detector in Session().query(Detector)]
-                else:
-                    detector_list = [Session().query(Detector).filter_by(
-                        name=self.comboDetectorSelect.currentText()).first()]
-                for detector in detector_list:
-                    for baseSpectrum in detector.base_spectra:
-                        if baseSpectrum.material.name == matName and not textSet:
-                            units.tableWidget().blockSignals(True)
-                            if isinstance(baseSpectrum.rase_sensitivity, float):
-                                units.setText(units_labels['DOSE'])
-                                units.setData(Qt.UserRole, 'DOSE')
-                                textSet = True
-                            else:
-                                units.setText(units_labels['FLUX'])
-                                units.setData(Qt.UserRole, 'FLUX')
-                            units.tableWidget().blockSignals(False)
-
-    def getSet(self, dialogField):
+    def getSet(self, data):
         values = []
-        data = dialogField.data(Qt.UserRole) if type(dialogField) is QTableWidgetItem else dialogField.text()
+        if not data:
+            return [0]
         groups = data.split(',')
         for group in groups:
             group = group.strip()
@@ -628,16 +478,522 @@ class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
                 values.append(group)
         return values
 
+    def add_groups_to_scen(self, scen, all_groups):
+        """
+        Clear groups associated with a scenario and append new ones
+        """
+        session = Session()
+        scen.scenario_groups.clear()
+        for groupname in all_groups:
+            scen.scenario_groups.append(session.query(ScenarioGroup).filter_by(name=groupname).first())
+
+    def reset_data(self):
+        df = pd.DataFrame(columns=self.column_dict.keys())
+        df.loc[0] = ''
+        return df
+
+    def rowCount(self, index=None):
+        return 1  # Single row for the class instance
+
+    def columnCount(self, index=None):
+        # Assuming the class variables define the columns
+        return len(self._data.columns)
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not index.isValid():
+            return None
+        # Assuming the class variables define the columns
+        if role == Qt.DisplayRole or role == Qt.EditRole:
+            return str(self._data.iloc[index.row(), index.column()])
+
+    def setData(self, index, value, role=Qt.EditRole):
+        if not index.isValid():
+            return False
+        if role == Qt.EditRole:
+            self._data.iloc[index.row(), index.column()] = value
+            self.update_scenario()
+            return True
+        else:
+            return False
+
+    def setGroupsFromId(self):
+        session = Session()
+        if self.duplicate_ids and isinstance(self.duplicate_ids, list):
+            scens = [session.query(Scenario).filter_by(id=scen).first() for scen in self.duplicate_ids]
+            grps = set()
+            for scen in scens:
+                grps.update([grp.name for grp in scen.scenario_groups])
+            return grps
+        if self.id:
+            scen_edit = session.query(Scenario).filter_by(id=self.id).first()
+            return [grp.name for grp in scen_edit.scenario_groups]
+        return []
+
+    def setGroupsFromNames(self, names=None):
+        """
+        Assign scenario groups based on a list if group names
+        @param names: list
+        @return:
+        """
+        session = Session()
+        self.groups = []
+        if names and isinstance(names, list):
+            for name in names:
+                if session.query(ScenarioGroup).filter_by(name=name).first():
+                    self.groups.append(name)
+
+    def set_attributes(self, attributes: dict):
+        """
+        A utility function for setting several values at once. Necessary for intermediate
+        validator conditions, because setData isn't automatically called in those cases
+        @param attributes:
+        @return:
+        """
+        for key, value in attributes.items():
+            self._data[key][0] = str(value)
+
+    def index(self, row, column, parent=QModelIndex()):
+        if not parent.isValid() and row == 0:
+            # The parent is the root item (single row for the SQLAlchemy instance)
+            parentItem = self._data
+        else:
+            return QModelIndex()
+        if column < len(parentItem.columns):
+            return self.createIndex(row, column, parentItem)
+        return QModelIndex()
+
+    def parent(self, index):
+        return QModelIndex()  # Flat structure, no parent
+
+    def set_column_dict(self):
+        col_list = ['acq_time', 'replication', 'comment']
+        return dict(zip(col_list, range(len(col_list))))
+
+    def set_scenario_defaults(self):
+        session = Session()
+        acqtime = '30'
+        repl = '100'
+        comment = ''
+        if self.duplicate_ids and isinstance(self.duplicate_ids, list):
+            repl_list = []
+            acqtime_list = []
+            comment_list = []
+            for duplicate_id in self.duplicate_ids:
+                scen = session.query(Scenario).filter_by(id=duplicate_id).first()
+                if scen:
+                    repl_list.append(scen.replication)
+                    if str(scen.acq_time) not in acqtime_list:
+                        acqtime_list.append(str(scen.acq_time))
+                    if str(scen.comment) not in comment_list and str(scen.comment) != '':
+                        comment_list.append(str(scen.comment))
+                repl = str(max(repl_list))
+                acqtime = ','.join(acqtime_list) if len(acqtime_list) > 1 else acqtime_list[0]
+                if len(comment_list) == 0:
+                    comment_list = ['']
+                comment = ', '.join(comment_list) if len(comment_list) > 1 else comment_list[0]
+        elif self.id and type(self.id) == str:
+            scen = session.query(Scenario).filter_by(id=self.id).first()
+            if scen:
+                repl = scen.replication
+                acqtime = scen.acq_time
+                comment = scen.comment
+        self._data.acq_time = acqtime
+        self._data.replication = repl
+        self._data.comment = str(comment)
+        self.update_scenario()
+
+    def update_scenario(self):
+        self.dataChanged.emit(self.index(0, 0), self.index(0, self.columnCount() - 1))
+
+
+class SourceTableModel(QAbstractTableModel):
+    def __init__(self, data=None, id=None, duplicate_ids=None, detector_selection='all detectors',
+                 *args, **kwargs):
+        """
+        @param data: numpy array or list of lists
+        @param id: string or None
+        @param duplicate_ids: list of strings (ids)
+        @param args:
+        @param kwargs:
+        """
+        super(SourceTableModel, self).__init__(*args, **kwargs)
+        self._colheaders = [self.tr('Flux/Dose'), self.tr('Source Materials'), self.tr('Intensity'),
+                            self.tr('Neutron Intensity (n/(cm\u00B2s))')]
+        self._data = self._set_empty_data()
+        if data is not None:
+            self.setDataFromTable(data)
+        elif duplicate_ids and isinstance(duplicate_ids, list):
+            self.setDataFromDuplicates(duplicate_ids, attribute='scen_materials')
+        elif id:
+            self.setDataFromId(id=id, attribute='scen_materials')
+        self.detector_selection = detector_selection
+        self.intrinsic_specs = {}
+
+    def assign_data(self, scenmat):
+        self.layoutAboutToBeChanged.emit()
+        row = (self._data == '').all(axis=1).idxmax()
+        self.setData(self.index(row, UNITS), scenmat.fd_mode)
+        self.setData(self.index(row, MATERIAL), scenmat.material_name)
+        self.setData(self.index(row, INTENSITY), str(scenmat.dose))
+        self.setData(self.index(row, INTENSITY_NEUTRON), str(scenmat.neutron_dose))
+        self.layoutChanged.emit()
+
+    def _set_empty_data(self):
+        df = pd.DataFrame(np.empty((10, 4), dtype=str), columns=self._colheaders)
+        return df
+
+    def setDataFromId(self, id=None, attribute=''):
+        session = Session()
+        scen = session.query(Scenario).filter_by(id=id).first()
+        if scen:
+            self.layoutAboutToBeChanged.emit()
+            for scenmat in getattr(scen, attribute):
+                row = (self._data == '').all(axis=1).idxmax()
+                self.setData(self.index(row, UNITS), scenmat.fd_mode)
+                self.setData(self.index(row, MATERIAL), scenmat.material_name)
+                self.setData(self.index(row, INTENSITY), str(scenmat.dose))
+                self.setData(self.index(row, INTENSITY_NEUTRON), str(scenmat.neutron_dose))
+            self.layoutChanged.emit()
+
+    def setDataFromDuplicates(self, duplicate_ids, attribute=''):
+        #handles create new scenario from existing
+        session = Session()
+        duplications = {}
+        for id in duplicate_ids:
+            scen = session.query(Scenario).filter_by(id=id).first()
+            if scen:
+                for scenmat in getattr(scen, attribute):
+                    if scenmat.material_name not in duplications.keys():
+                        duplications[scenmat.material_name] = {}
+                    if scenmat.fd_mode not in duplications[scenmat.material_name].keys():
+                        duplications[scenmat.material_name][scenmat.fd_mode] = []
+                    if str(scenmat.dose) not in duplications[scenmat.material_name][scenmat.fd_mode]:
+                        duplications[scenmat.material_name][scenmat.fd_mode].append((str(scenmat.dose), str(scenmat.neutron_dose)))
+        for material, matdict in duplications.items():
+            for units, doses in matdict.items():
+                row = (self._data == '').all(axis=1).idxmax()
+                self.setData(self.index(row, UNITS), units)
+                self.setData(self.index(row, MATERIAL), material)
+                self.setData(self.index(row, INTENSITY), ','.join(d[0] for d in doses))
+                self.setData(self.index(row, INTENSITY_NEUTRON), ','.join(d[1] for d in doses))
+
+    def setDataFromTable(self, data):
+        """
+        Takes as input anything of the form 'list of lists'. Each list element must have 3 or 4
+        elements, otherwise it will be ignored
+        """
+        for idx, element in enumerate(data):
+            if len(element) not in (3,4):
+                print(self.tr('Index {} failed due to not having 3 or 4 elements.').format(idx))
+                continue
+            if element[0] == '':
+                continue
+            if element[0] not in units_labels.keys():
+                print(self.tr('Index {} failed due to the first element not being the correct units').format(idx))
+                continue
+            self.setData(self.index(idx, UNITS), element[0])
+            self.setData(self.index(idx, MATERIAL), element[1])
+            self.setData(self.index(idx, INTENSITY), element[2])
+            if len(element) == 4:
+                self.setData(self.index(idx, INTENSITY_NEUTRON), element[3])
+            else:
+                self.setData(self.index(idx, INTENSITY_NEUTRON), 0)
+
+    def data(self, index, role=Qt.DisplayRole):
+        row = index.row()
+        col = index.column()
+        if col == INTENSITY and role == Qt.ToolTipRole:
+            return self.tr('Enter comma-separated values OR range as '
+                                        'min-max:step OR range followed by comma-separated values')
+        if role == Qt.DisplayRole or role == Qt.EditRole:
+            if col == UNITS:
+                if self._data.iloc[row, col] == '':
+                    return self._data.iloc[row, col]
+                return units_labels[self._data.iloc[row, col]]
+            elif col == INTENSITY and self._data.iloc[row, col] in self.intrinsic_specs.keys():
+                return self.intrinsic_specs[self._data.iloc[row, col]]
+            return self._data.iloc[row, col]
+
+    @property
+    def model_data(self):
+        return self._data
+
+    def modelData(self, index=None, role=Qt.DisplayRole):
+        if index is None:
+            return self._data
+        if index.column() == MATERIAL:
+            return self.data(index, role)
+        if role == Qt.DisplayRole or role == Qt.EditRole:
+            return str(self._data.iloc[index.row(), index.column()])
+
+    def setData(self, index, value, role=Qt.EditRole):
+        if not index.isValid():
+            return False
+        if role == Qt.EditRole:
+            if index.column() == UNITS:
+                self._data.iloc[index.row(), index.column()] = ''
+                for key, val in units_labels.items():
+                    if value == val or value == key:
+                        self._data.iloc[index.row(), index.column()] = key
+            else:
+                self._data.iloc[index.row(), index.column()] = value
+            if index.column() not in (INTENSITY,INTENSITY_NEUTRON):
+                self.on_CellChange(index)
+            self.update_scenario()
+            return True
+        if role == Qt.CheckStateRole and index.column() not in (INTENSITY,INTENSITY_NEUTRON):
+            if index.column() == UNITS:
+                for key, val in units_labels.items():
+                    if value == val or value == key:
+                        self._data.iloc[index.row(), index.column()] = key
+            else:
+                self._data.iloc[index.row(), index.column()] = value
+            self.on_CellChange(index)
+            self.update_scenario()
+            return True
+        else:
+            return False
+
+    def setDataFromComboBox(self, index, editor: QComboBox):
+        self.intrinsic_specs[editor.currentData(Qt.UserRole)] = editor.currentText()
+        self.setData(index, editor.currentData(Qt.UserRole))
+
+    def rowCount(self, index=None):
+        return self._data.shape[0]
+
+    def columnCount(self, index=None):
+        return self._data.shape[1]
+
+    def index(self, row, column, parent=QModelIndex()):
+        if not parent.isValid():
+            # The parent is the root item (single row for the SQLAlchemy instance)
+            parentItem = self._data
+        else:
+            return QModelIndex()
+        if column < len(parentItem.columns):
+            return self.createIndex(row, column, parentItem)
+        return QModelIndex()
+
+    def headerData(self, section, orientation, role):
+        # section is the index of the column/row.
+        if role == Qt.DisplayRole:
+            if orientation == Qt.Horizontal:
+                return str(self._data.columns[section])
+            if orientation == Qt.Vertical:
+                return str(self._data.index[section])
+        if role == Qt.UserRole:
+            if orientation == Qt.Vertical:
+                return str(self._data.index[section])
+
+    def flags(self, index):
+        if index.column() == 2:
+            return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
+        else:
+            return Qt.ItemIsEnabled | Qt.ItemIsEditable | Qt.ItemIsSelectable
+
+    def on_CellChange(self, index):
+        """
+        Listens for Material table cell changed
+        """
+        if index.column() == UNITS:
+            if self._data.iloc[index.row(), MATERIAL] and self._data.iloc[index.row(), INTENSITY]:
+                if not self._data.iloc[index.row(), UNITS]:
+                    self.setData(self.index(index.row(), MATERIAL), '', Qt.EditRole)
+                    self.setData(self.index(index.row(), INTENSITY), '', Qt.EditRole)
+                elif self._data.iloc[index.row(), MATERIAL]:
+                    self.set_otherCols_fromUnit(index)
+        if index.column() == MATERIAL:
+            self.set_otherCols_fromMat(index)
+
+    def set_otherCols_fromUnit(self, index):
+        units = self._data.iloc[index.row(), UNITS]
+        matName = self._data.iloc[index.row(), MATERIAL]
+        textKeep = False
+        if self.detector_selection == 'all detectors':
+            detector_list = [detector for detector in Session().query(Detector)]
+        else:
+            detector_list = [Session().query(Detector).filter_by(name=self.detector_selection).first()]
+        for detector in detector_list:
+            for baseSpectrum in detector.base_spectra:
+                if baseSpectrum.material.name == matName and not textKeep:
+                    if (units == 'DOSE' and isinstance(baseSpectrum.rase_sensitivity, float)) or \
+                       (units == 'FLUX' and isinstance(baseSpectrum.flux_sensitivity, float)):
+                        textKeep = True
+        if not textKeep:
+            self.setData(self.index(index.row(), MATERIAL), '', Qt.EditRole)
+
+    def set_otherCols_fromMat(self, index):
+        units = self._data.iloc[index.row(), UNITS]
+        matName = self._data.iloc[index.row(), MATERIAL]
+        doseItem = self._data.iloc[index.row(), INTENSITY]
+        if matName:
+            # set default value for intensity
+            if not doseItem:
+                self.setData(self.index(index.row(), INTENSITY), '0.1', Qt.EditRole)
+            if Session().get(Material, matName).include_intrinsic:
+                self.setData(self.index(index.row(), INTENSITY), '', Qt.EditRole)
+            # force units to match what is available in the selected base spectrum
+            if not units:
+                textSet = False
+                if self.detector_selection == 'all detectors':
+                    detector_list = [detector for detector in Session().query(Detector)]
+                else:
+                    detector_list = [Session().query(Detector).filter_by(name=self.detector_selection).first()]
+                for detector in detector_list:
+                    for baseSpectrum in detector.base_spectra:
+                        if baseSpectrum.material.name == matName and not textSet:
+                            self.setData(self.index(index.row(), UNITS), 'DOSE', Qt.EditRole) if \
+                                isinstance(baseSpectrum.rase_sensitivity, float) else \
+                                self.setData(self.index(index.row(), UNITS), 'FLUX', Qt.EditRole)
+
+    def reset_data(self):
+        reset_data = self._set_empty_data()
+        self.setDataFromTable(reset_data)
+        self.update_scenario()
+
+
+    def update_scenario(self):
+        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount(), self.columnCount() - 1))
+
+    def any_neutrons_in_table(self):
+        return not self._data.iloc[:,INTENSITY_NEUTRON].isin(['0.0','']).all()
+
+class BgndTableModel(SourceTableModel):
+    def __init__(self, data=None, id=None, duplicate_ids=None, *args, **kwargs):
+        """
+        @param data: numpy array or list of lists
+        @param args:
+        @param kwargs:
+        """
+        super(BgndTableModel, self).__init__(*args, **kwargs)
+        self._colheaders = [self.tr('Flux/Dose'), self.tr('Background Materials'), self.tr('Intensity'),
+                            self.tr('Neutron Bgnd Scaling Factor')]
+        self._data = self._set_empty_data()
+        if data is not None:
+            self.setDataFromTable(data)
+        elif duplicate_ids and isinstance(duplicate_ids, list):
+            self.setDataFromDuplicates(duplicate_ids, attribute='scen_bckg_materials')
+        elif id:
+            self.setDataFromId(id=id, attribute='scen_bckg_materials')
+        self.detector_selection = 'all detectors'
+
+
+class ScenInfluencesListModel(QAbstractListModel):
+    def __init__(self, data=None, id=None, duplicate_ids=None, *args, **kwargs):
+        """
+        @param data: a list of influence names (list of str)
+        @param id: A single ID (str)
+        @param duplicate_ids: List of IDs (str)
+        @param args:
+        @param kwargs:
+        """
+        super(ScenInfluencesListModel, self).__init__(*args, **kwargs)
+        self.influences = None  # a list of all the influence names in the database
+        self.set_influences()
+        self.selected_influences = set()
+        if data is not None:
+            try:
+                self.setSelectedInfluences([self.influences.index(name)[0] for name in data])
+            except:
+                raise Exception(self.tr('Exception: Named influences do not exist in database'))
+        elif duplicate_ids and isinstance(duplicate_ids, list):
+            self.setDataFromDuplicates(duplicate_ids)
+        elif id:
+            self.setDataFromId(id)
+
+    def reset_data(self):
+        """
+        Dump old spectra table
+        """
+        self.layoutAboutToBeChanged.emit()
+        self.influences.clear()
+        self.layoutChanged.emit()
+
+    def index(self, row, column, parent=QModelIndex()):
+        if not parent.isValid():
+            # The parent is the root item (single row for the SQLAlchemy instance)
+            parentItem = self.influences
+        else:
+            return QModelIndex()
+        if row < len(parentItem):
+            return self.createIndex(row, column, parentItem)
+        return QModelIndex()
+
+    def setDataFromId(self, id=None):
+        session = Session()
+        scen = session.query(Scenario).filter_by(id=id).first()
+        if scen:
+            self.layoutAboutToBeChanged.emit()
+            infl_indicies = []
+            for infl in scen.influences:
+                try:
+                    infl_indicies.append(self.influences.index(infl.name))
+                except:
+                    # if we are importing a scenario which has an influence that doesn't exist in this database
+                    continue
+            self.setSelectedInfluences(infl_indicies)
+            self.layoutChanged.emit()
+
+    def setDataFromDuplicates(self, duplicate_ids=None):  # TODO: refactor with above
+        session = Session()
+        self.layoutAboutToBeChanged.emit()
+        infl_indicies = []
+        for id in duplicate_ids:
+            scen = session.query(Scenario).filter_by(id=id).first()
+            if scen:
+                for infl in scen.influences:
+                    try:
+                        if self.influences.index(infl.name) not in infl_indicies:
+                            infl_indicies.append(self.influences.index(infl.name))
+                    except:
+                        # if we are importing a scenario which has an influence that doesn't exist in this database
+                        continue
+        self.setSelectedInfluences(infl_indicies)
+        self.layoutChanged.emit()
+
+    def setSelectedInfluences(self, infl_indicies=None):
+        if infl_indicies is None:
+            self.selected_influences = set()
+        else:
+            session = Session()
+            self.selected_influences = set(session.query(Influence).filter_by(
+                name=self.influences[idx]).first() for idx in infl_indicies)
+
+    def set_influences(self):
+        self.layoutAboutToBeChanged.emit()
+        session = Session()
+        influences = session.query(Influence).all()
+        self.influences = sorted([influence.name for influence in influences])
+        self.layoutChanged.emit()
+
+    def add_influences(self, new_influences):
+        self.layoutAboutToBeChanged.emit()
+        if type(new_influences) == str:
+            self.influences.append(new_influences)
+        elif len(new_influences) and type(new_influences[0]) == str:
+            self.influences = sorted(new_influences)
+        else:
+            self.influences = sorted([influence.name for influence in new_influences])
+        self.layoutChanged.emit()
+
+    def rowCount(self, index):
+        return len(self.influences)
+
+    def data(self, index, role):
+        if role == Qt.DisplayRole:
+            return self.influences[index.row()]
+
 
 class MaterialDoseDelegate(QItemDelegate):
-    def __init__(self, parent, materialCol, intensityCol=-1, unitsCol=2, selected_detname=None, editable=False,
-                 auto_s=False, tables=None):
+    def __init__(self, parent, materialCol, intensityCol=-1, unitsCol=2, neutronCol=3, selected_detname=None,
+                 editable=False, auto_s=False, tables=None):
         super(MaterialDoseDelegate, self).__init__(parent)
         self.tblMat = parent
         self.tables = tables
         self.matCol = materialCol
         self.intensityCol = intensityCol
         self.unitsCol = unitsCol
+        self.neutronCol = neutronCol
         self.editable = editable
         self.selected_detname = selected_detname
         self.auto_s = auto_s
@@ -646,7 +1002,11 @@ class MaterialDoseDelegate(QItemDelegate):
     def createEditor(self, parent, option, index):
         if index.column() == self.matCol:
             # generate material list
-            fd_units = self.tblMat.item(index.row(), self.unitsCol).data(Qt.UserRole)
+            fd_units = ''
+            for key, val in units_labels.items():
+                if self.tblMat.data(self.tblMat.index(index.row(), UNITS)) == val:
+                    fd_units = key
+                    break
             material_list = []
             if not self.selected_detname:
                 for detector in Session().query(Detector):
@@ -669,16 +1029,16 @@ class MaterialDoseDelegate(QItemDelegate):
                 for row in range(table.rowCount()):
                     if row == index.row() and table is self.tblMat:
                         continue
-                    item = table.item(row, self.matCol)
+                    item = table.data(table.index(row, self.matCol))
                     # remove any materials already used
-                    if item and item.text() in material_list:
-                        material_list.remove(item.text())
+                    if item in material_list:
+                        material_list.remove(item)
                     # check if at least one material include intrinsic source
-                    if item and item.text() and Session().query(Material).get(item.text()).include_intrinsic:
+                    if item and Session().get(Material, item).include_intrinsic:
                         intrinsic_material_present = True
             if intrinsic_material_present:  # only one material with intrinsic source is allowed
                 for material in material_list:
-                    if Session().query(Material).get(material).include_intrinsic:
+                    if Session().get(Material, material).include_intrinsic:
                         material_list.remove(material)
 
             #create and populate comboEdit
@@ -689,7 +1049,7 @@ class MaterialDoseDelegate(QItemDelegate):
             comboEdit.addItem('')
             comboEdit.addItems(material_list)
             return comboEdit
-        elif index.column() == self.intensityCol:
+        elif index.column() in [self.intensityCol, self.neutronCol]:
             return self.intensityEditor(parent, index)
         elif index.column() == self.unitsCol:
             return self.comboEditor(parent, index, units_labels)
@@ -697,9 +1057,13 @@ class MaterialDoseDelegate(QItemDelegate):
             return super(MaterialDoseDelegate, self).createEditor(parent, option, index)
 
     def intensityEditor(self, parent, index):
-        mat_name = self.tblMat.item(index.row(), self.matCol).text()
-        if mat_name and Session().query(Material).get(mat_name).include_intrinsic:
-            fd_units = self.tblMat.item(index.row(), self.unitsCol).data(Qt.UserRole)
+        mat_name = self.tblMat.data(self.tblMat.index(index.row(), self.matCol), Qt.DisplayRole)
+        if mat_name and Session().get(Material, mat_name).include_intrinsic:
+            fd_units = ''
+            for key, val in units_labels.items():
+                if self.tblMat.data(self.tblMat.index(index.row(), UNITS)) == val:
+                    fd_units = key
+                    break
             intensity_labels = {}
             for base_spectrum in Session().query(BaseSpectrum).filter_by(material_name=mat_name):
                 if self.selected_detname and base_spectrum.detector_name != self.selected_detname:
@@ -724,23 +1088,17 @@ class MaterialDoseDelegate(QItemDelegate):
 
     def setModelData(self, editor, model, index):
         if index.column() == self.unitsCol:
-            self.tblMat.item(index.row(), self.unitsCol).setText(editor.currentText())
-            self.tblMat.item(index.row(), self.unitsCol).setData(Qt.UserRole, editor.currentData(Qt.UserRole))
+            self.tblMat.setData(index, editor.currentData(Qt.UserRole))
         if index.column() == self.matCol:
-            self.tblMat.item(index.row(), self.matCol).setText(editor.currentText())
-        if index.column() == self.intensityCol:
-            item = self.tblMat.item(index.row(), self.intensityCol)
+            self.tblMat.setData(index, editor.currentText())
+        if index.column() in [self.intensityCol, self.neutronCol]:
             if type(editor) == QLineEdit:
-                item.setText(editor.text())
-                item.setData(Qt.UserRole, editor.text())
+                self.tblMat.setData(index, editor.text())
             elif type(editor) == QComboBox:
-                item.setText(editor.currentText())
-                item.setData(Qt.UserRole, editor.currentData(Qt.UserRole))
+                self.tblMat.setDataFromComboBox(index, editor)
 
     def comboEditor(self, parent, index, map):
-        curr_item = self.tblMat.item(index.row(), index.column())
-        curr_item.setText('')
-        curr_item.setData(Qt.UserRole, '')
+        self.tblMat.setData(index, '', Qt.UserRole)
         model = QStandardItemModel(0, 1)
         for key, text in map.items():
             item = QStandardItem(text)
@@ -749,7 +1107,7 @@ class MaterialDoseDelegate(QItemDelegate):
         comboEdit = QComboBox(parent)
         comboEdit.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         comboEdit.setModel(model)
-        comboEdit.setCurrentIndex(comboEdit.findData(curr_item.data(Qt.UserRole)))
+        comboEdit.setCurrentIndex(comboEdit.findData(self.tblMat.data(index)))
         return comboEdit
 
 
@@ -796,8 +1154,8 @@ class ScenarioRange(ui_scenario_range_dialog.Ui_RangeDefinition, QDialog):
     def on_radio_distance_toggled(self, checked):
         self.wdgtDistanceParams.setVisible(checked)
         tmp_str = 'distance' if checked else 'dose/flux'
-        self.label_minimum.setText(f"Minimum {tmp_str}:")
-        self.label_maximum.setText(f"Maximum {tmp_str}:")
+        self.label_minimum.setText(self.tr('Minimum {}:').format(tmp_str))
+        self.label_maximum.setText(self.tr('Maximum {}:').format(tmp_str))
 
     @Slot(QValidator.State)
     def handle_validation_change(self, state):
@@ -863,3 +1221,28 @@ class ScenarioRange(ui_scenario_range_dialog.Ui_RangeDefinition, QDialog):
             self.help_dialog.load_page(page='Use_distance.html')
             self.help_dialog.show()
         self.help_dialog.activateWindow()
+
+
+if __name__ == '__main__':
+    from PySide6.QtWidgets import QApplication
+    from src.rase import Rase
+    from src.rase_functions import delete_scenario
+    from src.rase_settings import RaseSettings
+    import sys
+
+    app = QApplication(sys.argv)  # required to call RASE object
+    r = Rase(args='')
+    settings = RaseSettings()
+    foo = ScenarioModel(data_src=np.array([['FLUX', 'Cs137', '0.10101']]),
+                        data_bgnd=np.array([['DOSE', 'Bgnd', '0.0101']]))
+    foo.comment = 'TestComment'
+    foo.accept()
+
+    session = Session()
+    scen = session.query(Scenario).filter_by(comment='TestComment').first()
+    assert scen is not None
+    delete_scenario([scen.id], settings.getSampleDirectory())
+    scen = session.query(Scenario).filter_by(comment='TestComment').first()
+    assert scen is None
+
+

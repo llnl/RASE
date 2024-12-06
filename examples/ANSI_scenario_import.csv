@@ -1,0 +1,11 @@
+s_fd_mode,s_material,s_intensity,b_fd_mode,b_material,b_intensity,acq_time,replications,comment
+DOSE,Am241,0.11,DOSE,Bgnd,0.06,120,25, 
+DOSE,Ba133,0.11,DOSE,Bgnd,0.06,120,25, 
+DOSE,Co60,0.11,DOSE,Bgnd,0.06,120,25, 
+DOSE,Cs137,0.11,DOSE,Bgnd,0.06,120,25, 
+DOSE,Ga67,0.11,DOSE,Bgnd,0.06,120,25, 
+DOSE,I131,0.11,DOSE,Bgnd,0.06,120,25, 
+DOSE,Tc99m,0.11,DOSE,Bgnd,0.06,120,25, 
+DOSE,Tl201,0.11,DOSE,Bgnd,0.06,120,25, 
+DOSE,Ra226,0.11,DOSE,Bgnd,0.06,120,25, 
+DOSE,Th232,0.11,DOSE,Bgnd,0.06,120,25, 

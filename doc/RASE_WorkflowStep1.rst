@@ -7,7 +7,7 @@ RASE Workflow Step 1: Instrument Definition
 
 The “Add instrument” dialog window (Figure below) is called by clicking the “Add Instrument...” button in the main RASE window.
 
-The user is required to enter an arbitrary name for the instrument in the top-left dialog. All other entries in this area are optional.
+The user is required to enter a unique name for the instrument in the top-left dialog. All other entries in this area are optional.
 
 To associate a set of base spectra with the new instrument, press the “Add Base Spectra” button in the top-right area of the dialog. In the new window that pops up, navigate to the directory that contains the base spectra in the appropriate .n42 format and press the “Select Folder” button. Review the base spectra metadata and import details, then press “OK”.
 
@@ -42,11 +42,17 @@ Once base spectra are loaded, they can be quickly reviewed within RASE by double
 
 All other entries in the “Add Instrument” dialog can be modified later in the workflow and are covered later in this documentation.
 
+
+NOTE: Detectors using base spectra with different calibrations
+==============================================================
+
+RASE allows users to attach base spectra with several different energy calibrations to a single detector. It is important to note that the energy calibration of the detector will be informed by the calibration of the *final* spectrum to be added to the detector, and all the other spectra will be rebinned to agree with that final spectrum (summing and dividing as necessary). This ordering is particularly relevant for combining experimental with simulated spectra, which may not be binned in the same manner as the experimental data. In such an instance, the simulated data must be loaded *first* and the experimental data *second* to make sure the calibration for the detector is aligned with the experimental data.
+
 |
 
 .. _rase-WorkflowStep1:
 
 .. figure:: _static/rase_WorkflowStep1.png
-    :scale: 33 %
+    :scale: 70 %
 
     **“Add Instrument” dialog.**

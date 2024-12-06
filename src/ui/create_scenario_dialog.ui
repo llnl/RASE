@@ -68,7 +68,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="txtReplication_2">
+      <widget class="QLineEdit" name="txtReplication">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
          <horstretch>0</horstretch>
@@ -119,7 +119,7 @@
     </layout>
    </item>
    <item>
-    <widget class="QTableWidget" name="tblMaterial">
+    <widget class="QTableView" name="tblMaterial">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
@@ -135,47 +135,19 @@
      <attribute name="horizontalHeaderMinimumSectionSize">
       <number>150</number>
      </attribute>
-     <attribute name="horizontalHeaderDefaultSectionSize">
-      <number>150</number>
-     </attribute>
      <attribute name="horizontalHeaderStretchLastSection">
       <bool>true</bool>
      </attribute>
-     <attribute name="verticalHeaderVisible">
-      <bool>false</bool>
-     </attribute>
-     <attribute name="verticalHeaderStretchLastSection">
+     <attribute name="verticalHeaderCascadingSectionResizes">
       <bool>true</bool>
      </attribute>
-     <column>
-      <property name="text">
-       <string>Flux/Dose</string>
-      </property>
-      <property name="font">
-       <font>
-        <italic>false</italic>
-       </font>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>Source Materials</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>Intensity</string>
-      </property>
-      <property name="font">
-       <font>
-        <italic>false</italic>
-       </font>
-      </property>
-     </column>
+     <attribute name="verticalHeaderDefaultSectionSize">
+      <number>24</number>
+     </attribute>
     </widget>
    </item>
    <item>
-    <widget class="QTableWidget" name="tblBackground">
+    <widget class="QTableView" name="tblBackground">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
@@ -197,33 +169,15 @@
      <attribute name="horizontalHeaderMinimumSectionSize">
       <number>150</number>
      </attribute>
-     <attribute name="horizontalHeaderDefaultSectionSize">
-      <number>150</number>
-     </attribute>
      <attribute name="horizontalHeaderStretchLastSection">
       <bool>true</bool>
      </attribute>
-     <attribute name="verticalHeaderVisible">
-      <bool>false</bool>
-     </attribute>
-     <attribute name="verticalHeaderStretchLastSection">
+     <attribute name="verticalHeaderCascadingSectionResizes">
       <bool>true</bool>
      </attribute>
-     <column>
-      <property name="text">
-       <string>Flux/Dose</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>Background Materials</string>
-      </property>
-     </column>
-     <column>
-      <property name="text">
-       <string>Intensity</string>
-      </property>
-     </column>
+     <attribute name="verticalHeaderDefaultSectionSize">
+      <number>24</number>
+     </attribute>
     </widget>
    </item>
    <item>
@@ -234,7 +188,7 @@
     </widget>
    </item>
    <item>
-    <widget class="QListWidget" name="lstInfluences">
+    <widget class="QListView" name="lstInfluences">
      <property name="selectionMode">
       <enum>QAbstractItemView::MultiSelection</enum>
      </property>
@@ -311,9 +265,6 @@
      </item>
      <item>
       <widget class="QDialogButtonBox" name="buttonBox">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
        <property name="standardButtons">
         <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
        </property>
@@ -324,5 +275,38 @@
   </layout>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>accepted()</signal>
+   <receiver>ScenarioDialog</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>541</x>
+     <y>666</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>338</x>
+     <y>347</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>buttonBox</sender>
+   <signal>rejected()</signal>
+   <receiver>ScenarioDialog</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>541</x>
+     <y>666</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>338</x>
+     <y>347</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

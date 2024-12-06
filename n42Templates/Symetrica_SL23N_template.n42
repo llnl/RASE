@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RadInstrumentData xmlns="http://physics.nist.gov/N42/2011/N42" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:sym="http://www.symetrica.com/schemas/ANSIN42-2011Extension" xsi:schemaLocation="http://physics.nist.gov/N42/2011/N42 http://www.symetrica.com/schemas/N42-2011.xsd http://www.symetrica.com/schemas/ANSIN42-2011Extension http://www.symetrica.com/schemas/ANSIN42-2011Extension.xsd">
+	<RadInstrumentInformation id="Symetrica-SL23-N-SL23N-220143">
+		<RadInstrumentManufacturerName>Symetrica</RadInstrumentManufacturerName>
+		<RadInstrumentIdentifier>SL23N-220143</RadInstrumentIdentifier>
+		<RadInstrumentModelName>VeriFinder SL23-N</RadInstrumentModelName>
+		<RadInstrumentClassCode>Radionuclide Identifier</RadInstrumentClassCode>
+		<RadInstrumentVersion>
+			<RadInstrumentComponentName>Software</RadInstrumentComponentName>
+			<RadInstrumentComponentVersion>3.4.7.2</RadInstrumentComponentVersion>
+		</RadInstrumentVersion>
+		<RadInstrumentVersion>
+			<RadInstrumentComponentName>MainAnalysis</RadInstrumentComponentName>
+			<RadInstrumentComponentVersion>2019112801</RadInstrumentComponentVersion>
+		</RadInstrumentVersion>
+		<RadInstrumentVersion>
+			<RadInstrumentComponentName>Export</RadInstrumentComponentName>
+			<RadInstrumentComponentVersion>Summary-N4242_2011_Modern-3.4.7.2</RadInstrumentComponentVersion>
+		</RadInstrumentVersion>
+	</RadInstrumentInformation>
+	<RadDetectorInformation id="DetectorInfoGamma">
+		<RadDetectorCategoryCode>Gamma</RadDetectorCategoryCode>
+		<RadDetectorKindCode>LaBr3</RadDetectorKindCode>
+		<RadDetectorLengthValue>3.8</RadDetectorLengthValue>
+		<RadDetectorDiameterValue>3.8</RadDetectorDiameterValue>
+		<RadDetectorCharacteristics>
+			<Characteristic>
+				<CharacteristicName>SerialNumber</CharacteristicName>
+				<CharacteristicValue>A22862</CharacteristicValue>
+				<CharacteristicValueUnits>unitless</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>string</CharacteristicValueDataClassCode>
+			</Characteristic>
+			<Characteristic>
+				<CharacteristicName>PartNumber</CharacteristicName>
+				<CharacteristicValue>410-0408-04</CharacteristicValue>
+				<CharacteristicValueUnits>unitless</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>string</CharacteristicValueDataClassCode>
+			</Characteristic>
+			<Characteristic valueDateTime="2024-03-15T18:47:51.031-05:00" valueOutOfLimits="false">
+				<CharacteristicName>Gamma-Gamma.BiasVoltage</CharacteristicName>
+				<CharacteristicValue>54.0479</CharacteristicValue>
+				<CharacteristicValueUnits>V</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>float</CharacteristicValueDataClassCode>
+			</Characteristic>
+			<Characteristic valueDateTime="2024-03-15T15:26:12.518-05:00" valueOutOfLimits="false">
+				<CharacteristicName>Gamma-Gamma.CalibrationName</CharacteristicName>
+				<CharacteristicValue>Gamma-A22862</CharacteristicValue>
+				<CharacteristicValueUnits>unitless</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>string</CharacteristicValueDataClassCode>
+			</Characteristic>
+			<Characteristic valueDateTime="2024-03-15T18:16:30.750-05:00" valueOutOfLimits="false">
+				<CharacteristicName>Gamma-Gamma.FineGain</CharacteristicName>
+				<CharacteristicValue>0.798065</CharacteristicValue>
+				<CharacteristicValueUnits>unitless</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>float</CharacteristicValueDataClassCode>
+			</Characteristic>
+			<Characteristic valueDateTime="2024-03-15T15:26:11.502-05:00" valueOutOfLimits="false">
+				<CharacteristicName>Gamma-Gamma.FirmwareVersion</CharacteristicName>
+				<CharacteristicValue>tmeeks:trunk/500-0026-NewMCAFirmware54037</CharacteristicValue>
+				<CharacteristicValueUnits>unitless</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>string</CharacteristicValueDataClassCode>
+			</Characteristic>
+			<Characteristic valueDateTime="2024-03-15T18:47:50.442-05:00" valueOutOfLimits="false">
+				<CharacteristicName>Gamma-Gamma.HighVoltage</CharacteristicName>
+				<CharacteristicValue>530.634</CharacteristicValue>
+				<CharacteristicValueUnits>V</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+			</Characteristic>
+		</RadDetectorCharacteristics>
+	</RadDetectorInformation>
+	<RadDetectorInformation id="DetectorInfoNeutron">
+		<RadDetectorCategoryCode>Neutron</RadDetectorCategoryCode>
+		<RadDetectorKindCode>LiZnS</RadDetectorKindCode>
+		<RadDetectorVolumeValue>61</RadDetectorVolumeValue>
+		<RadDetectorCharacteristics>
+			<Characteristic>
+				<CharacteristicName>SerialNumber</CharacteristicName>
+				<CharacteristicValue>220066</CharacteristicValue>
+				<CharacteristicValueUnits>unitless</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>string</CharacteristicValueDataClassCode>
+			</Characteristic>
+			<Characteristic>
+				<CharacteristicName>PartNumber</CharacteristicName>
+				<CharacteristicValue>410-0319-02</CharacteristicValue>
+				<CharacteristicValueUnits>unitless</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>string</CharacteristicValueDataClassCode>
+			</Characteristic>
+			<Characteristic valueDateTime="2024-03-15T18:46:40.670-05:00" valueOutOfLimits="false">
+				<CharacteristicName>Neutron-Neutron.BiasVoltage</CharacteristicName>
+				<CharacteristicValue>55368</CharacteristicValue>
+				<CharacteristicValueUnits>mV</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+			</Characteristic>
+			<Characteristic valueDateTime="2024-03-15T15:26:10.913-05:00" valueOutOfLimits="false">
+				<CharacteristicName>Neutron-Neutron.CPLDVersion</CharacteristicName>
+				<CharacteristicValue>88</CharacteristicValue>
+				<CharacteristicValueUnits>unitless</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>string</CharacteristicValueDataClassCode>
+			</Characteristic>
+			<Characteristic valueDateTime="2024-03-15T15:26:10.912-05:00" valueOutOfLimits="false">
+				<CharacteristicName>Neutron-Neutron.FirmwareVersion</CharacteristicName>
+				<CharacteristicValue>1.1#0126</CharacteristicValue>
+				<CharacteristicValueUnits>unitless</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>string</CharacteristicValueDataClassCode>
+			</Characteristic>
+			<Characteristic valueDateTime="2024-03-15T18:47:51.060-05:00" valueOutOfLimits="false">
+				<CharacteristicName>Neutron-Neutron.TimeSinceLastNeutron</CharacteristicName>
+				<CharacteristicValue>9.61236</CharacteristicValue>
+				<CharacteristicValueUnits>s</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+			</Characteristic>
+		</RadDetectorCharacteristics>
+	</RadDetectorInformation>
+	<EnergyCalibration id="ECalGamma-SG_60017-01341">
+		<CoefficientValues>${detector.ecal0} ${detector.ecal1} ${detector.ecal2} </CoefficientValues>
+		<CalibrationDateTime>2020-10-07T17:55:52.431+00:00</CalibrationDateTime>
+	</EnergyCalibration>
+	<FWHMCalibration id="RCalGamma-A22862">
+		<EnergyValues>1408 778.9 344.3 121.78 42.44 511</EnergyValues>
+		<FWHMValues>29.8474 24.8538 18.8122 14.9377 13.8166 20.3355</FWHMValues>
+		<CalibrationDateTime>2022-06-20T13:31:36.324+00:00</CalibrationDateTime>
+	</FWHMCalibration>
+	<DerivedData id="Analysis0DerivedData">
+		<Remark>Realtime is the maximum realtime measured by an instrument</Remark>
+		<MeasurementClassCode>NotSpecified</MeasurementClassCode>
+		<StartDateTime>2021-12-02T23:52:06.949+00:00</StartDateTime>
+		<RealTimeDuration>PT${scenario.acq_time}S</RealTimeDuration>
+		<Spectrum id="Analysis0BGGamma" radDetectorInformationReference="DetectorInfoGamma" energyCalibrationReference="ECalGamma-SG_60017-01341" FWHMCalibrationReference="RCalGamma-SG_60017-01341">
+			<LiveTimeDuration>PT${secondary_spectrum.realtime}S</LiveTimeDuration>
+			<ChannelData compressionCode="CountedZeroes"> ${secondary_spectrum.get_compressed_counts_as_str()} </ChannelData>
+		</Spectrum>
+		<Spectrum id="Analysis0Gamma" radDetectorInformationReference="DetectorInfoGamma" energyCalibrationReference="ECalGamma-SG_60017-01341" FWHMCalibrationReference="RCalGamma-SG_60017-01341">
+			<LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+			<ChannelData compressionCode="CountedZeroes"> ${compressed_sample_counts} </ChannelData>
+		</Spectrum>
+		<sym:EventId>37</sym:EventId>
+	</DerivedData>
+</RadInstrumentData>
+

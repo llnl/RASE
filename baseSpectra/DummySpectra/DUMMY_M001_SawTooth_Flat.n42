@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <N42InstrumentData xmlns="http://physics.nist.gov/Divisions/Div846/Gp4/ANSIN4242/2005/ANSIN4242" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <Measurement>
     <Spectrum Detector="gamma" Type="PHA" ID="item" BackgroundSpectrumID="bkg-g">

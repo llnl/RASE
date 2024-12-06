@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RadInstrumentData xmlns="http://physics.nist.gov/N42/2011/N42" xmlns:H3D="https://www.h3dgamma.com/">
+	<RadInstrumentInformation id="RadInstrumentInformation-1">
+		<RadInstrumentManufacturerName>H3D, Inc.</RadInstrumentManufacturerName>
+		<RadInstrumentIdentifier>A0300002Anaximander</RadInstrumentIdentifier>
+		<RadInstrumentModelName>A400 v3.0</RadInstrumentModelName>
+		<RadInstrumentClassCode>Radionuclide Identifier</RadInstrumentClassCode>
+		<RadInstrumentVersion>
+			<RadInstrumentComponentName>Software</RadInstrumentComponentName>
+			<RadInstrumentComponentVersion>Web: V2.10.0W-11-gb03275e IMG: V2.10.0I-0-g5151d58, V2.10.0I-0-g0cc3749, V2.10.0I-0-g17a557a, V2.10.0I-0-gbd3e803 DAQ: V3.4.0Q-0-gc7f3067, V3.4.0Q-0-g1501a6e</RadInstrumentComponentVersion>
+		</RadInstrumentVersion>
+	</RadInstrumentInformation>
+	<RadDetectorInformation id="Gamma-0">
+		<RadDetectorCategoryCode>Gamma</RadDetectorCategoryCode>
+		<RadDetectorKindCode>CZT</RadDetectorKindCode>
+	</RadDetectorInformation>
+	<RadDetectorInformation id="Neutron-0">
+		<RadDetectorCategoryCode>Neutron</RadDetectorCategoryCode>
+		<RadDetectorKindCode>He3</RadDetectorKindCode>
+	</RadDetectorInformation>
+	<EnergyCalibration id="EnergyCalibration-0">
+		<CoefficientValues>${detector.ecal0} ${detector.ecal1} ${detector.ecal2}</CoefficientValues>
+	</EnergyCalibration>
+	<RadMeasurement id="RadMeasurement-1">
+		<MeasurementClassCode>Background</MeasurementClassCode>
+		<StartDateTime>2024-03-26T07:04:16-05:00</StartDateTime>
+		<RealTimeDuration>PT${secondary_spectrum.realtime}S</RealTimeDuration>
+		<Spectrum id="RadMeasurement-1-Spectrum-1" radDetectorInformationReference="Gamma-0" energyCalibrationReference="EnergyCalibration-0">
+			<LiveTimeDuration>PT${secondary_spectrum.livetime}S</LiveTimeDuration>
+			<ChannelData compressionCode="CountedZeroes">${secondary_spectrum.get_compressed_counts_as_str()} </ChannelData>
+		</Spectrum>
+	</RadMeasurement>
+	<RadMeasurement id="RadMeasurement-2">
+		<MeasurementClassCode>Foreground</MeasurementClassCode>
+		<StartDateTime>2024-03-26T07:59:14-05:00</StartDateTime>
+		<RealTimeDuration>PT${scenario.acq_time}S</RealTimeDuration>
+		<Spectrum id="RadMeasurement-2-Spectrum-1-PUR" radDetectorInformationReference="Gamma-0" energyCalibrationReference="EnergyCalibration-0">
+			<LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+			<ChannelData compressionCode="CountedZeroes">${compressed_sample_counts} </ChannelData>
+		</Spectrum>
+		<GrossCounts id="RadMeasurement-2-GrossNeutronCounts-1" radDetectorInformationReference="Neutron-0">
+			<LiveTimeDuration>PT0S</LiveTimeDuration>
+			<CountData>0</CountData>
+		</GrossCounts>
+		<ExposureRate id="RadMeasurement-2-ExposureRate-1" radDetectorInformationReference="Gamma-0">
+			<CountData units="mR/h">0.01</CountData>
+		</ExposureRate>
+		<RadInstrumentState radInstrumentInformationReference="RadInstrumentInformation-1">
+			<RadInstrumentModeCode>Long Dwell</RadInstrumentModeCode>
+			<StateVector>
+				<RelativeLocation>
+					<DistanceValue type="Previous">0.457</DistanceValue>
+				</RelativeLocation>
+			</StateVector>
+		</RadInstrumentState>
+	</RadMeasurement>
+</RadInstrumentData>

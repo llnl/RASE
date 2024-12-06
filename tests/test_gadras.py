@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -31,15 +31,13 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ###############################################################################
 
-import os
-from pathlib import Path
-import tempfile
+
 import pytest
 from src.rase_settings import RaseSettings
 from sqlalchemy.orm import close_all_sessions
 from src.rase_functions import *
 from src.rase_gadras import *
-from tools import gadras_clone_detector
+from demonstrationScripts import gadras_clone_detector
 from src.table_def import DetectorSchema
 import yaml
 
@@ -47,10 +45,6 @@ import yaml
 gadras_root = r"C:\GADRAS"
 drf_to_use = r"Handheld\Detective-EX100"
 
-
-
-tempdir = Path(tempfile.gettempdir())
-outpcf = tempdir/'test.pcf'
 
 
 @pytest.fixture(scope='session', autouse=True)
@@ -143,4 +137,4 @@ class Test_gadras:
     def test_convert_yaml_force(self,temp_data_dir):
         savefilepath = Path(temp_data_dir) / 'test_export.yaml'
         with pytest.raises(SourceNotFoundException):
-            gadras_clone_detector.clone_detector_yaml(savefilepath, drf_to_use,force=True)
+            gadras_clone_detector.clone_detector_yaml(savefilepath, drf_to_use, force=True)

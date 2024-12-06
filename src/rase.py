@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -34,8 +34,10 @@
 This module defines the main UI of RASE
 """
 
-import csv
+from matplotlib import rcParams
+from itertools import product
 import subprocess
+import sys
 import traceback
 
 from PySide6.QtCore import QPoint, Qt, QSize, QObject, Slot, Signal
@@ -43,46 +45,41 @@ from PySide6.QtGui import QFont, QTextDocument, QAbstractTextDocumentLayout, QAc
 from PySide6.QtWidgets import QApplication, QMainWindow, QTableWidgetItem, QMenu, \
     QMessageBox, QAbstractItemView, QStyledItemDelegate, QStyle, QFileDialog, \
     QHeaderView, QDialog, QProgressDialog, QCheckBox
-from matplotlib import rcParams
-from sqlalchemy import or_
 from sqlalchemy.orm import make_transient
 from sqlalchemy.sql import select
-from mako.template import Template
-from math import pow
-import pandas as pd
 
+from src import rase_init
+from src.automated_s_curve import generate_curve
+from src.automated_s_curve_dialog import AutomatedSCurve
 from src.correspondence_table_dialog import CorrespondenceTableDialog
+from src.create_base_spectra_dialog import CreateBaseSpectraDialog
 from src.create_base_spectra_wizard import CreateBaseSpectraWizard
+from src.create_shielded_spectra_dialog import CreateShieldedSpectraDialog
 from src.detector_dialog import DetectorDialog
-from src.rase_functions import *
-from src.rase_functions import _getCountsDoseAndSensitivity, secondary_type
-from src.progressbar_dialog import ProgressBar
-from src.rase_settings import RaseSettings, APPLICATION_PATH
-from src.replay_dialog import ReplayDialog
-from src.scenario_dialog import ScenarioDialog
-from src.settings_dialog import SettingsDialog
-from src.table_def import ScenarioGroup, ScenarioMaterial, \
-    scen_infl_assoc_tbl, CorrespondenceTableElement, CorrespondenceTable, DetectorInfluence, ReplayTypes, BackgroundSpectrum
-from src.view_results_dialog import ViewResultsDialog
-from src.manage_influences_dialog import ManageInfluencesDialog
-from src.manage_weights_dialog import ManageWeightsDialog
 from src.help_dialog import HelpDialog
-from src.qt_utils import QSignalWait
+from src.manage_influences_dialog import ManageInfluencesDialog
+from src.manage_replays_dialog import ManageReplaysDialog
+from src.manage_weights_dialog import ManageWeightsDialog
 from src.plotting import SampleSpectraViewerDialog, MultiSpecViewerDialog
+from src.progressbar_dialog import ProgressBar
+from src.qt_utils import QSignalWait
+from src.replay_dialog import ReplayDialog
+from src.replay_generation import ReplayGeneration, TranslationGeneration
+from src.random_seed_dialog import RandomSeedDialog
+from src.rase_functions import *
+from src.rase_settings import RaseSettings
+from src.scenario_dialog import ScenarioDialog
+from src.scenario_group_dialog import GroupSettings
+from src.settings_dialog import SettingsDialog
+from src.contexts import SimContext
+from src.spectra_generation import SampleSpectraGeneration
+from src.table_def import Session, Detector, Scenario, Replay, ScenarioGroup, \
+    ScenarioMaterial, scen_infl_assoc_tbl, CorrespondenceTable
+from src.ui_generated import ui_rase, ui_about_dialog
+from src.view_results_dialog import ViewResultsDialog
+
 
 rcParams['backend'] = 'QtAgg'
-from src.ui_generated import ui_rase, ui_about_dialog, ui_input_random_seed
-from src.table_def import Scenario, Detector, Session, Replay, SampleSpectraSeed, \
-    MaterialWeight
-
-from src.manage_replays_dialog import ManageReplaysDialog
-from src.random_seed_dialog import RandomSeedDialog
-from src.create_base_spectra_dialog import CreateBaseSpectraDialog
-from src.scenario_group_dialog import GroupSettings
-from src.automated_s_curve_dialog import AutomatedSCurve
-from src.automated_s_curve import generate_curve
-
-from itertools import product
 
 SCENARIO_ID, MATER_EXPOS, BCKRND, INFLUENCES, ACQ_TIME, REPLICATION, COMMENT = range(7)
 DETECTOR, REPLAY, REPL_SETTS = range(3)
@@ -106,11 +103,8 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         self.settings.setUseConfidencesInCalcs(self.settings.getUseConfidencesInCalcs())
         self.settings.setUseMWeightsInCalcs(self.settings.getUseMWeightsInCalcs())
         self.help_dialog = None
-        self.addIsotopeToCorrTable = False
-        self.new_replay = None
-        self.result_super_map = None
-        self.scenario_stats_df = pd.DataFrame()
         self.setFocusPolicy(Qt.StrongFocus)
+        self._handled_exception = self.tr('Handled Exception')
 
         # change fonts if on Mac
         if sys.platform == 'darwin':
@@ -122,10 +116,10 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         # setup table properties
         self.tblScenario.setColumnCount(7)
         self.setTableHeaders()
-        self.tblScenario.horizontalHeaderItem(MATER_EXPOS).setToolTip('Dose = (\u00B5Sv/h), <i>Flux = (\u03B3/('
-                                                                       'cm\u00B2s))<\i>')
-        self.tblScenario.horizontalHeaderItem(BCKRND).setToolTip('Dose = (\u00B5Sv/h), <i>Flux = (\u03B3/('
-                                                                       'cm\u00B2s))<\i>')
+        self.tblScenario.horizontalHeaderItem(MATER_EXPOS).setToolTip(r'Dose = (\u00B5Sv/h), <i>Flux = (\u03B3/('
+                                                                       r'cm\u00B2s))<\i>')
+        self.tblScenario.horizontalHeaderItem(BCKRND).setToolTip(r'Dose = (\u00B5Sv/h), <i>Flux = (\u03B3/('
+                                                                       r'cm\u00B2s))<\i>')
         self.tblScenario.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tblScenario.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.tblScenario.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -137,7 +131,7 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
 
         self.tblDetectorReplay.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tblDetectorReplay.setColumnCount(3)
-        self.detectorHorizontalHeaderLabels = ['Instrument', 'Replay', 'Replay Settings']
+        self.detectorHorizontalHeaderLabels = [self.tr('Instrument'), self.tr('Replay'), self.tr('Replay Settings')]
         self.tblDetectorReplay.setHorizontalHeaderLabels(self.detectorHorizontalHeaderLabels)
         self.tblDetectorReplay.setItemDelegate(HtmlDelegate())
         self.tblDetectorReplay.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -145,18 +139,13 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         self.tblDetectorReplay.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         self.tblDetectorReplay.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
 
-        dataDir = self.settings.getDataDirectory()
-
-        if not os.path.exists(dataDir):
-            os.makedirs(dataDir, exist_ok=True)
-        initializeDatabase(self.settings.getDatabaseFilepath())
+        rase_init.init_rase()
         self.populateAll()
 
         # connect selection changes to updating buttons and tables
         self.tblScenario.itemSelectionChanged.connect(self.updateDetectorColors)
         self.tblDetectorReplay.itemSelectionChanged.connect(self.updateScenarioColors)
 
-        self.corrHash = {}
         self.settings.setIsAfterCorrespondenceTableCall(self.settings.getIsAfterCorrespondenceTableCalldDefault())
 
         self.btnExportInstruments.clicked.connect(self.handleInstrumentExport)
@@ -168,6 +157,12 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         self.setImportButtonVisibile(False)
         self.ckboxEnableAdvanced.stateChanged.connect(self.setImportButtonVisibile)
 
+    def closeEvent(self, event) -> None:
+        Session().close()
+        Session().bind.dispose()
+        event.accept()
+
+
     @Slot(int)
     def setImportButtonVisibile(self, state=1):
         self.btnImportSpectra.setVisible(state)
@@ -178,7 +173,7 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         """
         Exports Instrument to CSV
         """
-        path = QFileDialog.getSaveFileName(self, 'Save File', self.settings.getLastDirectory(), 'CSV (*.csv)')
+        path = QFileDialog.getSaveFileName(self, self.tr('Save File'), self.settings.getLastDirectory(), 'CSV (*.csv)')
         if path[0]:
             with open(path[0], mode='w', newline='') as stream:
                 writer = csv.writer(stream)
@@ -197,7 +192,7 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         """
         Exports Scenarios to XML
         """
-        path = QFileDialog.getSaveFileName(self, 'Save File', self.settings.getLastDirectory(), 'XML (*.xml)')
+        path = QFileDialog.getSaveFileName(self, self.tr('Save File'), self.settings.getLastDirectory(), 'XML (*.xml)')
         if path[0]:
             if len(self.tblScenario.selectedIndexes()) > 0:
                 scenIds = self.getSelectedScenarioIds()
@@ -210,7 +205,7 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         Import Scenarios from different formats
         """
         files_filter = {'xml': 'XML (*.xml)', 'csv': 'CSV(*.csv)'}
-        paths, _ = QFileDialog.getOpenFileNames(self, 'Open File', self.settings.getLastDirectory(),
+        paths, _ = QFileDialog.getOpenFileNames(self, self.tr('Open File'), self.settings.getLastDirectory(),
                                                files_filter[file_format])
         for path in paths:
             session = Session()
@@ -218,185 +213,22 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
                 # scenarios are imported within a group named after the file
                 scenarios = import_scenarios(path, file_format,
                                              group_name=Path(path).with_suffix('').name, group_desc='Imported')
+                session.add_all(scenarios)
             except Exception as e:
                 traceback.print_exc()
-                logging.exception("Handled Exception", exc_info=True)
-                QMessageBox.critical(self, 'Import Failed', f'Failed to import scenarios<br><br>{str(e)}')
+                logging.exception(self._handled_exception, exc_info=True)
+                QMessageBox.critical(self, self.tr('Import Failed'), self.tr('Failed to import '
+                                                             'scenarios<br><br>{}').format(str(e)))
                 session.rollback()
             else:
                 session.commit()
                 self.populateAll()
 
-    def getCorrHash(self):
-        """
-        Reads the Correspondence Table and creates
-        association of isotopes to correct and allowed ids
-        :return: association of isotopes to correct and allowed ids
-        """
-        corrTable = Session().query(CorrespondenceTable).filter_by(is_default=True).one_or_none()
-        if not corrTable:
-            QMessageBox.critical(self, 'Set Correspondence Table', 'Must specify a Correspondence Table')
-            return
-        # if the corrHash dict has already been populated and the Correspondence Table Dialog has not
-        # been called since it was populated, there is no need to re-populate it
-        #        if self.corrHash and not self.isAfterCorrespondenceTableCall:
-        if self.corrHash and not self.settings.getIsAfterCorrespondenceTableCall():
-            return self.corrHash
-        self.corrHash = {}
-        # self.isAfterCorrespondenceTableCall = False
-        self.settings.setIsAfterCorrespondenceTableCall(False)
-        corTableRows = (Session().query(CorrespondenceTableElement).filter_by(corr_table_name=corrTable.name))
-        for line in corTableRows:
-            isotope = line.isotope.strip()
-            # correct_ids is a list of ";" delimited strings
-            correct_ids = [l.strip() for l in line.corrList1.split(';') if l.strip()]
-            # allowed_ids is a single ";" delimited string
-            allowed_ids = [l.strip() for l in line.corrList2.split(';') if l.strip()]
-            self.corrHash[isotope] = [correct_ids, allowed_ids]
-        return self.corrHash
-
-    def getCorrTableData(self, scenarioIsotopes, backgroundIsotopes):
-        allowed_list = []
-        correct_list = []
-        # store source and background isotopes together with source/background info
-        isoPairList = []
-        for iso in scenarioIsotopes:
-            isoPairList.append((iso, "source"))
-        for iso in backgroundIsotopes:
-            isoPairList.append((iso, "background"))
-        for isoP in isoPairList:
-            iso = isoP[0]
-            if isoP[1] == "source":
-                isSource = True
-            else:
-                isSource = False
-            # get the correspondence table entry for this isotope
-            # or use default names if nothing is specified
-            # print("iso="+iso)
-            # for isohash in self.getCorrHash():
-            #     print("isohash="+isohash)
-            isohash = self.getCorrHash()
-            if iso not in isohash:
-                if isSource:
-                    tmp = re.split('(\d+)', iso)  # split by numbers
-                    correct_ids = [iso, tmp[0] + '-' + ''.join(tmp[1:])]  # e.g. Am241 and Am-241
-                    # print(correct_ids)
-                    allowed_ids = []
-                else:
-                    correct_ids = []
-                    allowed_ids = []
-
-            else:
-                correct_ids, allowed_ids = isohash[iso]
-                # print("from corr table")
-                # print("correct_ids: " + str(correct_ids))
-                # print("allowed_ids: " + str(allowed_ids))
-
-            # Build the list of all allowed isotopes
-            allowed_list += allowed_ids
-            correct_list.append(correct_ids)
-
-        return [i[0] for i in isoPairList], correct_list, allowed_list
-
-
-    def getMaterialWeightsData(self, assoc_table):
-        session = Session()
-        mat_weights = {}
-        for mat in list(session.query(MaterialWeight).all()):
-            mat_weights[mat.name] = (mat.TPWF, mat.FPWF, mat.FNWF)
-
-        for key in self.getCorrHash().keys() | assoc_table.keys():
-            if (key not in mat_weights) or not (self.settings.getUseMWeightsInCalcs()):
-                mat_weights[key] = (1, 1, 1)
-
-        return mat_weights
-
-
-    def getTpFpFn(self, results, allowed_list, assoc_table, mats_with_weights):
-        """
-        calculates True Positives, False Positives, False Negatives
-        :return: True Positives, False Positives, False Negatives
-        """
-        iso_id_required = 0
-        result_keys = set(results.keys())
-        FP_candidates = result_keys
-
-        found_isotopes = {}
-        not_found = {}
-
-        Tp = 0
-        wTp = 0
-        for material, correct_ids in assoc_table.items():
-            # if the correct_id list for this isotope is empty,
-            # then we interpret it as if this isotope does not need to be identified
-            if correct_ids:
-                iso_id_required += 1
-
-            # check if any of the correct IDs are within the ID results
-            found = [r for r in result_keys if r in correct_ids]
-            confidences = [results[key] for key in found]
-
-            weights = mats_with_weights[material]
-
-            if found:
-                found_isotopes[material] = tuple([w * max(confidences) for w in weights])
-                wTp += found_isotopes[material][0]
-                Tp += 1
-            # if the correspondence table row is blank or has allowed isotopes
-            elif assoc_table[material] and not [r for r in result_keys if r in allowed_list]:
-                not_found[material] = weights
-
-            # whatever was not found is a potential false positive
-            FP_candidates = list(set(FP_candidates) - set(found))
-
-        for key in not_found.keys():
-            if key in found_isotopes.keys():
-                not_found[key].pop()
-
-        # Now remove the allowed isotopes from the false positive candidates
-        FP_list = [iso for iso in FP_candidates if iso not in allowed_list]
-
-        # now compute Fn, Fp
-        Fn = 0
-        wFn = 0
-        if not_found:
-            wFn = sum([weight[2] for weight in not_found.values()])
-            Fn = len(not_found)
-
-        Fp = 0
-        wFp = 0
-        weights = None
-        for id_iso in FP_list:
-            for mat, [correct, _] in self.corrHash.items():
-                if id_iso in correct:
-                    if weights is not None:
-                        weights = tuple([max(a, b) for a, b in zip(weights, mats_with_weights[mat])])
-                    else:
-                        weights = mats_with_weights[mat]
-
-            if weights is not None:
-                wFp += weights[1] * results[id_iso]
-                Fp += 1
-            else:
-                wFp += 1
-                Fp += 1
-
-        # print some debugging
-        # print("FP final= ", FP_list)
-        # print("allowed_ids= ", allowed_list)
-        # print("len(scenarioIsotopes)= ", len(scenarioIsotopes))
-        # print("Tp= ", Tp)
-        # print("IDRequired= ", iso_id_required)
-        # print("Fn= ", Fn)
-        # print("# True Positives = " , Tp)
-        # print("# False Positives = ", Fp)
-        # print("# False Negatives = ", Fn)
-
-        return Tp, Fn, Fp, wTp, wFn, wFp
-
     def setTableHeaders(self):
-        self.scenarioHorizontalHeaderLabels = ['ID', 'Sources', 'Backgrounds',
-                                               'Influences', 'AcqTime (s)', 'Replication', 'Comments']
+        self.scenarioHorizontalHeaderLabels = [self.tr('ID'), self.tr('Sources'),
+                                               self.tr('Backgrounds'), self.tr('Influences'),
+                                               self.tr('AcqTime (s)'), self.tr('Replication'),
+                                               self.tr('Comments')]
         self.tblScenario.setHorizontalHeaderLabels(self.scenarioHorizontalHeaderLabels)
 
     def populateAll(self):
@@ -410,8 +242,8 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
     def populateScenarioGroupCombo(self):
         currentSelection = self.cmbScenarioGroups.currentText()
         self.cmbScenarioGroups.clear()
-        self.cmbScenarioGroups.addItem('All Scenario Groups')
-        self.checkGroups()
+        self.cmbScenarioGroups.addItem(self.tr('All Scenario Groups'))
+        check_groups()
         for scenGrp in Session().query(ScenarioGroup):
             self.cmbScenarioGroups.addItem(scenGrp.name)
         if currentSelection:
@@ -437,24 +269,24 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
             search_terms = csv.reader([scenSearch], skipinitialspace=True, delimiter=' ')
             for searchStr in next(search_terms):
                 # materials search
-                stmt = select([ScenarioMaterial]).where(ScenarioMaterial.material_name.ilike('%' + searchStr + '%'))
+                stmt = select(ScenarioMaterial).where(ScenarioMaterial.material_name.ilike('%' + searchStr + '%'))
                 scenIds |= {row.scenario_id for row in connection.execute(stmt)}
 
                 # Background materials search
-                stmt = select([ScenarioBackgroundMaterial]).where(
+                stmt = select(ScenarioBackgroundMaterial).where(
                     ScenarioBackgroundMaterial.material_name.ilike('%' + searchStr + '%'))
                 scenIds |= {row.scenario_id for row in connection.execute(stmt)}
 
                 # influences search
-                stmt = select([scen_infl_assoc_tbl]).where(
+                stmt = select(scen_infl_assoc_tbl).where(
                     scen_infl_assoc_tbl.c.influence_name.ilike('%' + searchStr + '%'))
                 scenIds |= {row.scenario_id for row in connection.execute(stmt)}
 
                 # scenario comment search
-                stmt = select([Scenario]).where(Scenario.comment.ilike('%' + searchStr + '%'))
+                stmt = select(Scenario).where(Scenario.comment.ilike('%' + searchStr + '%'))
                 scenIds |= {row.id for row in connection.execute(stmt)}
 
-            scenarios = {session.query(Scenario).get(scenId) for scenId in scenIds}
+            scenarios = {session.get(Scenario, scenId) for scenId in scenIds}
         else:
             scenarios = list(session.query(Scenario))
 
@@ -494,6 +326,16 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         # Re-enable sorting
         self.tblScenario.setSortingEnabled(True)
 
+    def set_tblDetectorReplay_row(self, row: int, detector_name: str, replay_name: str, replay_settings: str):
+        self.tblDetectorReplay.setRowHeight(row, 22)
+        item = QTableWidgetItem(detector_name)
+        item.setData(Qt.UserRole, detector_name)
+        self.tblDetectorReplay.setItem(row, DETECTOR, item)
+        item = QTableWidgetItem(replay_name)
+        item.setData(Qt.UserRole, replay_name)
+        self.tblDetectorReplay.setItem(row, REPLAY, item)
+        self.tblDetectorReplay.setItem(row, REPL_SETTS, QTableWidgetItem(replay_settings))
+
     def populateDetectorReplays(self):
         """shows scenarios in rase main screen scenario table"""
         # Disable sorting while setting/inserting items to avoid crashes
@@ -506,32 +348,24 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
             connection = Session().get_bind().connect()
             search_terms = csv.reader([detSearch], skipinitialspace=True, delimiter=' ')
             for searchStr in next(search_terms):
-                # materials search
-                stmt = select([Detector]).where(or_(Detector.name.ilike('%' + searchStr + '%'),
-                                                    Detector.replay_name.ilike('%' + searchStr + '%')))
+                # detector name search
+                # TODO: add ability to search inside replay tools name as well
+                stmt = select(Detector).where(Detector.name.ilike('%' + searchStr + '%'))
                 detNames |= {row.name for row in connection.execute(stmt)}
 
-            detectors = {session.query(Detector).get(detName) for detName in detNames}
+            detectors = {session.get(Detector, detName) for detName in detNames}
         else:
             detectors = list(session.query(Detector))
-        self.tblDetectorReplay.setRowCount(len(detectors))
 
-        for row, detector in enumerate(detectors):
-            self.tblDetectorReplay.setRowHeight(row, 22)
-
-            item = QTableWidgetItem(detector.name)
-            item.setData(Qt.UserRole, detector.name)
-            self.tblDetectorReplay.setItem(row, DETECTOR, item)
-            if detector.replay:
-                item = QTableWidgetItem(detector.replay.name)
-                item.setData(Qt.UserRole, detector.replay.name)
-                self.tblDetectorReplay.setItem(row, REPLAY, item)
-                self.tblDetectorReplay.setItem(row, REPL_SETTS, QTableWidgetItem(detector.replay.settings_str_u()))
+        self.tblDetectorReplay.setRowCount(0)
+        for detector in detectors:
+            if detector.replays:
+                for replay in detector.replays:
+                    self.tblDetectorReplay.insertRow(self.tblDetectorReplay.rowCount())
+                    self.set_tblDetectorReplay_row(self.tblDetectorReplay.rowCount()-1, detector.name, replay.name, replay.settings_str_u())
             else:
-                empty_item = QTableWidgetItem("")
-                empty_item.setData(Qt.UserRole, "")
-                self.tblDetectorReplay.setItem(row, REPLAY, empty_item)
-                self.tblDetectorReplay.setItem(row, REPL_SETTS, QTableWidgetItem(empty_item))
+                self.tblDetectorReplay.insertRow(self.tblDetectorReplay.rowCount())
+                self.set_tblDetectorReplay_row(self.tblDetectorReplay.rowCount()-1, detector.name, "", "")
 
         self.updateDetectorColors()
         # self.tblDetectorReplay.resizeColumnsToContents()
@@ -540,15 +374,6 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         # Re-enable sorting
         self.tblDetectorReplay.setSortingEnabled(True)
 
-    def checkGroups(self):
-        """
-        Make sure there is a default group (a group that cannot be deleted) for
-        scenarios to exist in initially if they are not added to another at creation
-        """
-        session = Session()
-        if not session.query(ScenarioGroup).filter_by(name='default_group').first():
-            session.add(ScenarioGroup(name='default_group'))
-            session.commit()
 
     def updateDetectorColors(self):
         """
@@ -562,41 +387,42 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
             item = self.tblDetectorReplay.item(row, DETECTOR)
             detTxt = item.data(Qt.UserRole)
             detector = session.query(Detector).filter_by(name=detTxt).first()
+            replTxt = self.tblDetectorReplay.item(row, REPLAY).data(Qt.UserRole)
+            replay = session.query(Replay).filter_by(name=replTxt).first()
             toolTip = ''
 
             detectorColor = 'black'
             procphase = ''
             for scenID in selScenarioIds:
                 scenario = session.query(Scenario).filter_by(id=scenID).first()
-                if (files_exist(get_results_dir(self.settings.getSampleDirectory(), detector, scenario.id))):
-                    procphase = 'Replay'
+                if files_exist(get_results_dir(self.settings.getSampleDirectory(), detector, replay, scenario.id)):
+                    procphase = self.tr('Replay')
                     detectorColor = 'green'
                 elif scenario and files_exist(get_sample_dir(
                         self.settings.getSampleDirectory(), detector, scenario.id)) and detectorColor != 'green':
                     detectorColor = 'orange'
-                    procphase = 'Spectrum generation'
+                    procphase = self.tr('Spectrum generation')
 
             if len(selScenarioIds) != 0 and detectorColor != 'black':
                 detTxt = '<font color=' + detectorColor + '>' + detector.name + '</font>'
                 if len(selScenarioIds) == 1:
-                    toolTip = '\n' + procphase + ' results available for ' + detector.name + \
-                              ' and scenario: ' + scenario.id
+                    toolTip = self.tr('\n{} results available for {} and scenario {}').format(
+                                                        procphase, detector.name, scenario.id)
                 else:
-                    toolTip = '\n' + procphase + ' results available for ' + detector.name + \
-                              ' and selected scenarios'
+                    toolTip = self.tr('\n{} results available for {} and selected scenarios').format(
+                                                        procphase, detector.name)
 
             item.setText(detTxt)
-            item.setToolTip(f'Detector ID: {detector.id}{toolTip}')
+            item.setToolTip(self.tr('Detector ID: {}{}').format(detector.id, toolTip))
 
             # replay
-            replay = detector.replay
             if replay:
                 replTxt = replay.name
                 toolTip = None
                 item = self.tblDetectorReplay.item(row, REPLAY)
                 if replay and replay.is_runnable():
                     replTxt = '<font color="green">' + replay.name + '</font>'
-                    toolTip = 'Cmd line replay tool available for ' + detector.name
+                    toolTip = self.tr('Cmd line replay tool available for {}').format(detector.name)
                 item.setText(replTxt)
                 item.setToolTip(toolTip)
 
@@ -609,20 +435,24 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         self.tblScenario.setSortingEnabled(False)
         session = Session()
         selDetectorNames = self.getSelectedDetectorNames()
+        selReplayNames = self.getSelectedReplayNames()
 
         detectors = []
+        replays = []
         det_infl = {}
 
-        for det_index, detector_name in enumerate(selDetectorNames):
+        for detector_name, replay_name in zip(selDetectorNames, selReplayNames):
             detector = session.query(Detector).filter_by(name=detector_name).first()
-            if detector:
+            replay = session.query(Replay).filter_by(name=replay_name).first()
+            if detector and replay:
                 detectors.append(detector)
+                replays.append(replay)
                 det_infl[detector_name] = [detInfluence.name for detInfluence in detector.influences]
 
         for row in range(self.tblScenario.rowCount()):
 
             s_item = self.tblScenario.item(row, SCENARIO_ID)
-            scenario = session.query(Scenario).get(s_item.data(Qt.UserRole))
+            scenario = session.get(Scenario, s_item.data(Qt.UserRole))
             mat_toolTip = []
             inf_toolTip = []
             s_toolTip = []
@@ -677,8 +507,8 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
                     item.setText(', '.join(item_text))
 
                 for detector_name in det_missing_mat:
-                    mat_toolTip.append(detector_name + ' is missing base spectra for this scenario')
-                    s_toolTip.append(detector_name + ' is missing base spectra for this scenario')
+                    mat_toolTip.append(self.tr('{} is missing base spectra for this scenario').format(detector_name))
+                    s_toolTip.append(self.tr('{} is missing base spectra for this scenario').format(detector_name))
                 for col in [MATER_EXPOS, BCKRND]:
                     item = self.tblScenario.item(row, col)
                     item.setToolTip(',\n'.join(mat_toolTip))
@@ -702,8 +532,8 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
                         item_text.append(infl)
 
                 for detector_name in det_missing_infl:
-                    inf_toolTip.append(detector_name + ' is missing influences for this scenario')
-                    s_toolTip.append(detector_name + ' is missing influences for this scenario')
+                    inf_toolTip.append(self.tr('{} is missing influences for this scenario').format(detector_name))
+                    s_toolTip.append(self.tr('{} is missing influences for this scenario').format(detector_name))
                 item.setText(', '.join(item_text))
                 item.setToolTip(',\n'.join(inf_toolTip))
 
@@ -711,17 +541,17 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
                 # set scenarios
                 det_results = set()
                 det_spectra = set()
-                for detector in detectors:
-                    if files_exist(get_results_dir(self.settings.getSampleDirectory(), detector, scenario.id)):
+                for detector, replay in zip(detectors, replays):
+                    if files_exist(get_results_dir(self.settings.getSampleDirectory(), detector, replay, scenario.id)):
                         det_results.update([detector.name])
 
                     if files_exist(get_sample_dir(self.settings.getSampleDirectory(), detector, scenario.id)):
                         det_spectra.update([detector.name])
 
                 for detector_name in det_results:
-                    s_toolTip.append('Identification results available for {} and this scenario'.format(detector_name))
+                    s_toolTip.append(self.tr('Identification results available for {} and this scenario').format(detector_name))
                 for detector_name in det_spectra:
-                    s_toolTip.append('Sample spectra available for {} and this scenario'.format(detector_name))
+                    s_toolTip.append(self.tr('Sample spectra available for {} and this scenario').format(detector_name))
 
                 if len(det_results) > 0:
                     scenTxt = '<font color="green">' + scenario.id + '</font>'
@@ -744,13 +574,14 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         """
         scenIds = self.getSelectedScenarioIds()
         selDetectorNames = self.getSelectedDetectorNames()
+        selReplayNames = self.getSelectedReplayNames()
 
         # clear buttons
         buttons = [self.btnGenScenario, self.btnGenerate, self.btnRunReplay, self.btnViewResults,
                    self.btnRunResultsTranslator, self.btnImportIDResults, self.btnImportSpectra]
         for button in buttons: button.setEnabled(False)
         if not (len(scenIds) and len(selDetectorNames)):
-            [button.setToolTip('Must choose scenario and instrument') for button in buttons]
+            [button.setToolTip(self.tr('Must choose scenario and instrument')) for button in buttons]
             return
         for button in buttons: button.setToolTip('')
 
@@ -765,50 +596,51 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         resultsExists = []
         detMissingSpectra = []
         detMissingInfluence = []
-        for det_index, detector_name in enumerate(selDetectorNames):
+        for detector_name, replay_name in zip(selDetectorNames, selReplayNames):
 
             detector = session.query(Detector).filter_by(name=detector_name).first()
+            replay = session.query(Replay).filter_by(name=replay_name).first()
 
-            replay_defined.append((detector.replay and detector.replay.is_defined()))
-            replay_commandline.append((detector.replay and detector.replay.is_runnable()))
-            if detector.replay and detector.replay.translator_exe_path:  # not all replay tools require a translator
-                results_translators_defined.append((detector.replay.translator_exe_path
-                                                   and detector.replay.translator_is_cmd_line))
+            if detector:
+                replay_defined.append((replay and replay.is_defined()))
+                replay_commandline.append((replay and replay.is_runnable()))
+                if replay and replay.translator_exe_path:  # not all replay tools require a translator
+                    results_translators_defined.append((replay.translator_exe_path
+                                                       and replay.translator_is_cmd_line))
 
-            det_infl = set(detInfl.name for detInfl in detector.influences)
+                det_infl = set(detInfl.name for detInfl in detector.influences)
 
-            for scenId in scenIds:
-                scenario = session.query(Scenario).filter_by(id=scenId).first()
-                if scenario:
+                for scenId in scenIds:
+                    scenario = session.query(Scenario).filter_by(id=scenId).first()
+                    if scenario:
+                        for scen_mat in set(scenario.scen_materials + scenario.scen_bckg_materials):
+                            if not detector.scenariomaterial_is_allowed(scen_mat):
+                                detMissingSpectra.append(scenId)
 
-                    for scen_mat in set(scenario.scen_materials + scenario.scen_bckg_materials):
-                        if not detector.scenariomaterial_is_allowed(scen_mat):
-                            detMissingSpectra.append(scenId)
+                        scen_infl = set(influence.name for influence in scenario.influences)
+                        if not scen_infl <= det_infl: detMissingInfluence.append(scenId)
 
-                    scen_infl = set(influence.name for influence in scenario.influences)
-                    if not scen_infl <= det_infl: detMissingInfluence.append(scenId)
-
-                    samplesExists.append(
-                        files_exist(get_sample_dir(self.settings.getSampleDirectory(), detector, scenId)))
-                    replayInputSamplesExists.append(
-                        files_exist(get_replay_input_dir(self.settings.getSampleDirectory(), detector, scenId)))
-                    # Replay tool output files and results files are expected to end in ".n42" or ".res".
-                    # Check explicitly in case other output is present (e.g. from replay tool or translator)
-                    output_dir = get_replay_output_dir(self.settings.getSampleDirectory(), detector, scenId)
-                    if detector.replay:
-                        replayOutputExists.append(files_endswith_exists(output_dir, (".n42", ".res", ".rslt", ".json", ".csv",".xml", detector.replay.input_filename_suffix)))
-                    else:
-                        replayOutputExists.append(files_endswith_exists(output_dir, (".n42", ".res", ".rslt", ".json", ".csv", ".xml")))
-                    results_dir = get_results_dir(self.settings.getSampleDirectory(), detector, scenId)
-                    resultsExists.append(files_endswith_exists(results_dir, (".n42", ".res", ".csv", ".xml")))
+                        samplesExists.append(
+                            files_exist(get_sample_dir(self.settings.getSampleDirectory(), detector, scenId)))
+                        replayInputSamplesExists.append(
+                            files_exist(get_replay_input_dir(self.settings.getSampleDirectory(), detector, replay, scenId)))
+                        # Replay tool output files and results files are expected to end in ".n42" or ".res".
+                        # Check explicitly in case other output is present (e.g. from replay tool or translator)
+                        output_dir = get_replay_output_dir(self.settings.getSampleDirectory(), detector, replay, scenId)
+                        if replay:
+                            replayOutputExists.append(files_endswith_exists(output_dir, allowed_results_file_exts + (replay.input_filename_suffix,)))
+                        else:
+                            replayOutputExists.append(files_endswith_exists(output_dir, allowed_results_file_exts))
+                        results_dir = get_results_dir(self.settings.getSampleDirectory(), detector, replay, scenId)
+                        resultsExists.append(files_endswith_exists(results_dir, allowed_results_file_exts))
 
         if detMissingSpectra or detMissingInfluence:
             # generate sample is possible only if no missing base spectra or influences
             missingScenarios = missingInfluences = ''
             if detMissingSpectra:
-                missingScenarios = "Missing base spectra for scenarios:<br>" + '<br>'.join(detMissingSpectra)
+                missingScenarios = self.tr('Missing base spectra for scenarios:') + '<br>' + '<br>'.join(detMissingSpectra)
             if detMissingInfluence:
-                missingInfluences = "<br>Missing influences for scenarios:<br>" + '<br>'.join(detMissingInfluence)
+                missingInfluences = self.tr('<br>Missing influences for scenarios:') + '<br>' + '<br>'.join(detMissingInfluence)
 
         # Run scenario button
         if detMissingSpectra or detMissingInfluence:
@@ -816,7 +648,7 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
             self.btnGenScenario.setToolTip(missingScenarios + missingInfluences)
         elif not all(replay_commandline):
             self.btnGenScenario.setEnabled(False)
-            self.btnGenScenario.setToolTip('Command-line replay tool undefined for one or more instruments')
+            self.btnGenScenario.setToolTip(self.tr('Command-line replay tool undefined for one or more instruments'))
         else:
             self.btnGenScenario.setEnabled(True)
             self.btnGenScenario.setToolTip('')
@@ -832,11 +664,11 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         # run replay button:
         if not any(replayInputSamplesExists):
             self.btnRunReplay.setEnabled(False)
-            self.btnRunReplay.setToolTip('Sample spectra have not yet been generated, translated or imported')
+            self.btnRunReplay.setToolTip(self.tr('Sample spectra have not yet been generated, translated or imported'))
         # FIXME: the following does not consider the case of a replay tool not from the command line
         elif not any(replay_defined):
             self.btnRunReplay.setEnabled(False)
-            self.btnRunReplay.setToolTip('No replay tool defined')
+            self.btnRunReplay.setToolTip(self.tr('No replay tool defined'))
         else:
             self.btnRunReplay.setEnabled(True)
             self.btnRunReplay.setToolTip('')
@@ -850,16 +682,16 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         else:
             self.btnImportSpectra.setEnabled(False)
             self.btnImportIDResults.setEnabled(False)
-            self.btnImportSpectra.setToolTip('Can only import one scenario at a time')
-            self.btnImportIDResults.setToolTip('Can only import one scenario at a time')
+            self.btnImportSpectra.setToolTip(self.tr('Can only import one scenario at a time'))
+            self.btnImportIDResults.setToolTip(self.tr('Can only import one scenario at a time'))
 
         # run results translator button:
         if not (results_translators_defined and any(results_translators_defined)):
             self.btnRunResultsTranslator.setEnabled(False)
-            self.btnRunResultsTranslator.setToolTip('No instruments have a command-line results translator defined ')
+            self.btnRunResultsTranslator.setToolTip(self.tr('No instruments have a command-line results translator defined '))
         elif not any(replayOutputExists):
             self.btnRunResultsTranslator.setEnabled(False)
-            self.btnRunResultsTranslator.setToolTip('All scenarios are missing replay tool output')
+            self.btnRunResultsTranslator.setToolTip(self.tr('All scenarios are missing replay tool output'))
         else:
             self.btnRunResultsTranslator.setEnabled(True)
             self.btnRunResultsTranslator.setToolTip('')
@@ -867,10 +699,10 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         # view results button
         if any(resultsExists):
             self.btnViewResults.setEnabled(True)
-            self.btnViewResults.setToolTip('Results are available')
+            self.btnViewResults.setToolTip(self.tr('Results are available'))
         else:
             self.btnViewResults.setEnabled(False)
-            self.btnViewResults.setToolTip('No results available')
+            self.btnViewResults.setToolTip(self.tr('No results available'))
 
     def getSelectedScenarioIds(self):
         """
@@ -938,11 +770,11 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         secondary_spectra = detector.secondary_spectra
         make_transient(detector)
         detector.id = None  # new primary_key will be created on commit
-        new_name = detector.name + ' (copy)'
+        new_name = detector.name + self.tr(' (copy)')
         repeat_clone = 0
         while new_name in [d.name for d in session.query(Detector).all()]:
             repeat_clone += 1
-            new_name = detector.name + f' (copy) {repeat_clone}'
+            new_name = detector.name + self.tr(' (copy) {}').format(repeat_clone)
         detector.name = new_name
         session.add(detector)
         session.commit()
@@ -955,7 +787,7 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
                     'secondary_spectra': secondary_spectra}
         for attr, spectra_list in obj_dict.items():
             for s in spectra_list:
-                if s.spectrum_type != 'secondary_spectrum':
+                if s.spectrum_type not in ['secondary_spectrum', 'background_spectrum']:
                     assert s.filename  # some lazy loading requires this
                 make_transient(s)
                 s.id = None
@@ -966,7 +798,7 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         self.populateDetectorReplays()
 
     def duplicate_scen(self, id):
-        dialog = ScenarioDialog(self, id, duplicate=self.getSelectedScenarioIds())
+        dialog = ScenarioDialog(self, id, duplicate_ids=self.getSelectedScenarioIds())
         if dialog.exec_():
             self.populateScenarios()
         self.populateScenarioGroupCombo()
@@ -989,7 +821,7 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
     @Slot(int, int)
     def on_tblDetectorReplay_cellDoubleClicked(self, row, col):
         """
-        Listens for Instrument or Replay cell click and lunces correponding edit dialogs
+        Listens for Instrument or Replay cell click and launches corresponding edit dialogs
         """
         if col == DETECTOR:
             detectorName = strip_xml_tag(self.tblDetectorReplay.item(row, col).text())
@@ -999,13 +831,16 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
             if self.tblDetectorReplay.item(row, col):
                 replay = session.query(Replay).filter_by(
                     name=self.tblDetectorReplay.item(row, col).data(Qt.UserRole)).first()
-                if ReplayDialog(self, replay).exec_() and self.new_replay:
-                    # if replay is new, add the replay info to detector
-                    detectorName = strip_xml_tag(self.tblDetectorReplay.item(row, DETECTOR).text())
-                    detector = session.query(Detector).filter_by(name=detectorName).first()
-                    detector.replay = self.new_replay
-                    session.commit()
-                    self.new_replay = None
+                all_replays = [r for r in session.query(Replay).all()]
+                if ReplayDialog(self, replay).exec():
+                    all_replays_post = [r for r in session.query(Replay).all()]
+                    if len(all_replays) != len(all_replays_post):   # new replay added
+                        new_replay = [r for r in all_replays_post if r not in all_replays]
+                        print(new_replay)
+                        detectorName = strip_xml_tag(self.tblDetectorReplay.item(row, DETECTOR).text())
+                        detector = session.query(Detector).filter_by(name=detectorName).first()
+                        detector.add_replay(new_replay[0])
+                        session.commit()
                 self.populateDetectorReplays()
 
     def keyPressEvent(self, e):
@@ -1030,9 +865,9 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         # show the context menu only if on an a valid part of the table
         if current_cell:
             row = current_cell.row()
-            deleteAction = QAction('Delete Instrument', self)
-            editAction = QAction('Edit Instrument', self)
-            cloneAction = QAction('Clone Instrument', self)
+            deleteAction = QAction(self.tr('Delete Instrument'), self)
+            editAction = QAction(self.tr('Edit Instrument'), self)
+            cloneAction = QAction(self.tr('Clone Instrument'), self)
             menu = QMenu(self.tblDetectorReplay)
             menu.addAction(deleteAction)
             menu.addAction(editAction)
@@ -1042,12 +877,12 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
             name = strip_xml_tag(self.tblDetectorReplay.item(row, 0).text())
             if action == deleteAction:
                 if len(self.getSelectedScenarioIds()):
-                    QMessageBox.critical(self, 'Scenario Selected',
-                                         'Please Unselect All Scenarios Prior to Deleting Instrument')
+                    QMessageBox.critical(self, self.tr('Scenario Selected'),
+                                 self.tr('Please Unselect All Scenarios Prior to Deleting Instrument'))
                     return
-                confirm = QMessageBox.question(self, 'Confirm Instrument Deletion',
-                                               'Are you sure you want to delete this instrument?\n\n'
-                                               'Any generated spectra or results with this instrument may be lost.',
+                confirm = QMessageBox.question(self, self.tr('Confirm Instrument Deletion'),
+                                               self.tr('Are you sure you want to delete this instrument?\n\n'
+                                               'Any generated spectra or results with this instrument may be lost.'),
                                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
                 if confirm == QMessageBox.StandardButton.Yes:
                     delete_instrument(session, name)
@@ -1063,57 +898,65 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         Launches a single button to do all processing (generate, replay, and translate)
         """
         replay_status = False
-        translate_status = False
-        scenIds, detNames = self.runSelect()
-        spec_status = self.genSpectra(scenIds, detNames)
+        sim_context_list = self.runSelect()
+        spec_status = self.genSpectra(sim_context_list)
         if spec_status:
-            replay_status = self.runReplay(scenIds, detNames)
-        self.on_action_complete(spec_status and replay_status, "Scenarios processing")
+            replay_gui = ReplayGenerationGUI(self, sim_context_list, self.settings)
+            replay_status = replay_gui.runReplay()
+        self.on_action_complete(spec_status and replay_status, self.tr("Scenarios processing"))
 
     @Slot(bool)
     def on_btnGenerate_clicked(self, checked):
-        scenIds, detNames = self.runSelect()
-        status = self.genSpectra(scenIds, detNames)
-        self.on_action_complete(status, "Sample spectra generation")
+        status = self.genSpectra(self.runSelect())
+        self.on_action_complete(status, self.tr("Sample spectra generation"))
+        return status
 
-    def runSelect(self):
+    def runSelect(self) -> list[SimContext]:
         scenIds = self.getSelectedScenarioIds()
         detNames = self.getSelectedDetectorNames()
-        return scenIds, detNames
+        repNames = self.getSelectedReplayNames()
 
-    def genSpectra(self, scenIds, detNames, dispProg=True, checked=False):
+        sim_context_list = []
+        for (d, r), s in product(zip(detNames, repNames), scenIds):
+            detector = Session().query(Detector).filter_by(name=d).first()
+            replay = Session().query(Replay).filter_by(name=r).first()
+            scenario = Session().query(Scenario).filter_by(id=s).first()
+            sim_context_list.append(SimContext(detector=detector, replay=replay, scenario=scenario))
+        return sim_context_list
+
+    def genSpectra(self, sim_context_list: list[SimContext], dispProg=True, checked=False):
         """
         Launches generation of sample spectra
         """
         # get selected conditions
         session = Session()
 
-        # List of all [instrument,scenarios] combinations
-        detector_scenarios = list(product(detNames, scenIds))
-
-        replications = 0
         overwrite = False
         ill_defined_scen = 0
 
         # Check if any sample spectra may be overwritten
-        for detName, scenId in detector_scenarios:
-            detector = session.query(Detector).filter_by(name=detName).first()
-            directoryName = get_sample_dir(self.settings.getSampleDirectory(), detector, scenId)
-            scenario = session.query(Scenario).filter_by(id=scenId).first()
+        # Loop over a copy of sim_context_list since the list is modified in the loop
+        for sim_context in list(sim_context_list):
+            detector = sim_context.detector
+            scenario = sim_context.scenario
+            replay = sim_context.replay
+            directoryName = get_sample_dir(self.settings.getSampleDirectory(), detector, scenario.id)
             if files_exist(directoryName):
                 if not checked:
-                    answer = QMessageBox(QMessageBox.Question, 'Sample spectra already exists',
-                                                  'Sample spectra for instrument: ' + detector.name +
-                                                    ' and scenario: ' + scenario.id +
-                                                  ' already exists.  Select yes to overwrite or no to skip this case')
+                    answer = QMessageBox(QMessageBox.Question, self.tr('Sample spectra already exists'),
+                                  self.tr('Sample spectra for instrument: {} and scenario: {} '
+                                          'already exists. <br><br> Select yes to overwrite or no to skip '
+                                          'this case. <br>This choice is automatically applied to all replay tools '
+                                          'associated with this instrument.').format(detector.name, scenario.id))
                     answer.addButton(QMessageBox.Yes)
                     answer.addButton(QMessageBox.No)
-                    checkit = QCheckBox("Use this selection for all scenarios")
+                    checkit = QCheckBox(self.tr('Use this selection for all scenarios'))
                     checkit.setEnabled(True)
                     answer.setCheckBox(checkit)
                     ans_hold = answer.exec()
                     if ans_hold == QMessageBox.No:
-                        detector_scenarios.remove((detName, scenId))
+                        sim_context_list[:] = [sc for sc in sim_context_list
+                                               if sc.scenario!=scenario and sc.detector!=detector]
                         if checkit.isChecked():
                             checked = True
                             overwrite = False
@@ -1126,313 +969,73 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
                     if overwrite:
                         shutil.rmtree(directoryName)
                     else:
-                        detector_scenarios.remove((detName, scenId))
+                        sim_context_list[:] = [sc for sc in sim_context_list
+                                               if sc.scenario!=scenario and sc.detector!=detector]
 
-            replications += scenario.replication
-
-            if (detector.includeSecondarySpectrum and detector.secondary_type == secondary_type['scenario'] and not scenario.scen_bckg_materials):
+            if (detector.includeSecondarySpectrum and detector.secondary_type ==
+                    secondary_type['scenario'] and not scenario.scen_bckg_materials):
                 ill_defined_scen += 1
 
         session.close()
 
         if ill_defined_scen:
-            QMessageBox.information(self, 'Not all scenarios were processed', 'At least one selected scenario '
-                                                          'lacks the background definition required to generate '
-                                                          'a secondary spectrum, and will not be processed.')
-            if ill_defined_scen == len(detector_scenarios):
+            QMessageBox.information(self, self.tr('Not all scenarios were processed'),
+                                    self.tr('At least one selected scenario lacks the background '
+                                            'definition required to generate a secondary spectrum, '
+                                            'and will not be processed.'))
+            if ill_defined_scen == len(sim_context_list):
                 return True
 
         # Test one single first to make sure things are working
         try:
-            SampleSpectraGeneration(detector_scenarios, True).work()
+            SampleSpectraGenerationGUI(sim_context_list, test=True).work()
         except Exception as e:
             traceback.print_exc()
-            logging.exception("Handled Exception", exc_info=True)
-            QMessageBox.critical(self, 'Error!', 'Sample generation failed for ' + detName
-                                 + '<br> If n42 template is set, please verify it is formatted correctly.<br><br>'
-                                 + str(e))
-            shutil.rmtree(directoryName)
+            logging.exception(self._handled_exception, exc_info=True)
+            err_msg = exceptions.text_error_template().render()
+            if "secondary_spectrum" in err_msg:
+                QMessageBox.critical(self, self.tr('Error!'), self.tr('Sample generation failed for '
+                                            '{}<br><br> Please check that the secondary spectrum is '
+                                            'defined for this instrument.<br><br>').format(detector.name))
+            else:
+                QMessageBox.critical(self, self.tr('Error!'), self.tr('Sample generation failed for '
+                                            '{}<br> If n42 template is set, please verify it is '
+                                            'formatted correctly.<br><br>').format(detector.name) + str(e))
+            # shutil.rmtree(directoryName)
             return False
 
         # now generate all samples
         bar = ProgressBar(self, dispProg)
-        bar.title.setText("Sample spectra generation in progress")
-        bar.progress.setMaximum(replications)
-        bar.run(SampleSpectraGeneration(detector_scenarios))
+        bar.title.setText(self.tr('Sample spectra generation in progress'))
+        bar.progress.setMaximum(sum(sc.scenario.replication for sc in sim_context_list))
+        bar.run(SampleSpectraGenerationGUI(sim_context_list))
 
         godot = QSignalWait(bar.sig_finished)
         return godot.wait()
 
     @Slot(bool)
     def on_btnRunReplay_clicked(self, checked):
-        scenIds, detNames = self.runSelect()
-        status = self.runReplay(scenIds, detNames)
-        self.on_action_complete(status, "Run replay tool")
-
-    def runReplay(self, scenIds, detNames, dispProg=True):
-        """
-        launches replay
-        """
-        session = Session()
-        sampleRootDir = self.settings.getSampleDirectory()
-
-        # List of all [instrument,scenarios] combinations
-        # detector_scenarios = list(product(detNames, scenIds))
-        if dispProg:
-            progress = QProgressDialog('Replay in progress...', None, 0,
-                                       len(scenIds) + 1, self)
-            progress.setMinimumDuration(0)
-            progress.setMaximum(len(scenIds) + 1)
-            progress.setWindowModality(Qt.WindowModal)
-        for detName in detNames:
-            detector = session.query(Detector).filter_by(name=detName).first()
-            if detector.replay and detector.replay.is_defined():
-                if dispProg:
-                    progress.setValue(0)
-                    progress.setLabelText('Replay in progress for ' + detName + '...')
-                if detector.replay.type == ReplayTypes.standalone:
-                    if detector.replay.is_cmd_line:
-                        if detector.replay.exe_path.endswith('.py'):
-                            replayExe = [sys.executable, detector.replay.exe_path]
-                        else:
-                            replayExe = [detector.replay.exe_path]
-                        for i, scenId in enumerate(scenIds, 1):
-                            if dispProg:
-                                progress.setValue(i)
-                            sampleDir = get_replay_input_dir(sampleRootDir, detector, scenId).replace('\\', '/')
-                            if not os.path.exists(sampleDir):
-                                # TODO: eventually we will generate samples directly from here.
-                                pass
-                            if not files_endswith_exists(sampleDir, ('.n42', detector.replay.input_filename_suffix)):
-                                continue
-                            try:
-                                resultsDir = get_replay_output_dir(sampleRootDir, detector, scenId).replace('\\', '/')
-                                settingsList = detector.replay.settings.split(" ")
-                                for index in [idx for idx, s in enumerate(settingsList) if 'INPUTDIR' in s]:
-                                    settingsList[index] = settingsList[index].replace('INPUTDIR', sampleDir)
-                                for index in [idx for idx, s in enumerate(settingsList) if 'OUTPUTDIR' in s]:
-                                    settingsList[index] = settingsList[index].replace('OUTPUTDIR', resultsDir)
-
-                                if os.path.exists(resultsDir):
-                                    shutil.rmtree(resultsDir)
-                                os.makedirs(resultsDir, exist_ok=True)
-
-                                # The stdout and stderr of the replay tool (if any) are sent to a log file
-                                stdout_file = open(
-                                    os.path.join(get_sample_dir(sampleRootDir, detector, scenId), "replay_tool_output.log"),
-                                    mode='w')
-
-                                # On Windows, running this from the binary produced by Pyinstaller
-                                # with the ``--noconsole`` option requires redirecting everything
-                                # (stdin, stdout, stderr) to avoid an OSError exception
-                                # "[Error 6] the handle is invalid."
-                                # See: https://github.com/pyinstaller/pyinstaller/wiki/Recipe-subprocess
-                                # don't pass startup_info because it freezes execution of some replay tools
-                                if 'Target.F501' in replayExe[0]:
-                                    # Target.F501 replay tool looks for the dimensions of an
-                                    # executable window during operation, so we must create one
-                                    p = subprocess.Popen(replayExe + settingsList, stdin=subprocess.DEVNULL,
-                                                         stderr=stdout_file, stdout=stdout_file,
-                                                         shell=sys.platform == 'win32',
-                                                         creationflags=subprocess.DETACHED_PROCESS,
-                                                        cwd=APPLICATION_PATH)
-                                else:
-                                    p = subprocess.Popen(replayExe + settingsList, stdin=subprocess.DEVNULL,
-                                                         stderr=stdout_file, stdout=stdout_file,
-                                                         shell=sys.platform == 'win32',
-                                                         cwd=APPLICATION_PATH)
-                                stdout_file.flush()
-                                stdout_file.close()
-
-                                # TODO: consolidate results of errors in one message box
-                                stderr, stdout = p.communicate()
-                                # if error:
-                                #     QMessageBox.critical(self, 'Error','error message: ' + error)
-                                #     return
-                            except Exception as e:
-                                if dispProg:
-                                    progress.setValue(len(scenIds) + 1)
-                                traceback.print_exc()
-                                logging.exception("Handled Exception", exc_info=True)
-                                QMessageBox.critical(self, 'Replay failed', 'Could not execute replay for instrument '
-                                                     + detName + ' and scenario ' + scenId + '<br><br>' + str(e))
-                                shutil.rmtree(resultsDir)
-                                return
-                        if dispProg:
-                            progress.setValue(len(scenIds) + 1)
-                    else:
-                        for i, scenId in enumerate(scenIds, 1):
-                            sampleDir = get_replay_input_dir(sampleRootDir, detector, scenId)
-                            if not os.path.exists(sampleDir):
-                                # TODO: eventually we will generate samples directly from here.
-                                pass
-                            if not files_endswith_exists(sampleDir, ('.n42',)):
-                                continue
-                            resultsDir = get_replay_output_dir(sampleRootDir, detector, scenId)
-                            if os.path.exists(resultsDir):
-                                shutil.rmtree(resultsDir)
-                            os.makedirs(resultsDir, exist_ok=True)
-                            # FIXME: this works only on Windows
-                            os.startfile(detector.replay.exe_path)
-
-                            QMessageBox.information(self, 'Manual Replay Tool',
-                                                    'Replay tool has been opened in a separate window and must be run manually.<br>' +
-                                                    'Press OK when done.<br><br>' +
-                                                    'Use the following settings:<br>' +
-                                                    f'Input folder:<br> {sampleDir}<br><br>' +
-                                                    f'Output folder:<br> {resultsDir}<br>')
-                            # TODO: Check if the progress bar is handled in this case?
-                        if dispProg:
-                            progress.setValue(len(scenIds) + 1)
-                    self.updateScenarioColors()
-                elif detector.replay.type == ReplayTypes.gadras_web:
-                    for i, scenId in enumerate(scenIds, 1):
-                        if dispProg:
-                            progress.setValue(i)
-                        sampleDir = get_replay_input_dir(sampleRootDir, detector, scenId)
-                        if not os.path.exists(sampleDir):
-                            # TODO: eventually we will generate samples directly from here.
-                            pass
-                        if not files_endswith_exists(sampleDir, ('.n42', detector.replay.input_filename_suffix)):
-                            continue
-                        try:
-                            resultsDir = get_replay_output_dir(sampleRootDir, detector, scenId)
-                            if os.path.exists(resultsDir):
-                                shutil.rmtree(resultsDir)
-                            os.makedirs(resultsDir, exist_ok=True)
-
-                            get_ids_from_webid(sampleDir, resultsDir, detector.replay.drf_name,
-                                               detector.replay.web_address,
-                                               synthesize_bkg=(not detector.includeSecondarySpectrum))
-
-                        except Exception as e:
-                            if dispProg:
-                                progress.setValue(len(scenIds) + 1)
-                            traceback.print_exc()
-                            logging.exception("Handled Exception", exc_info=True)
-                            QMessageBox.critical(self, 'Replay failed', 'Could not execute replay for instrument '
-                                                 + detName + ' and scenario ' + scenId + '<br><br>' + str(e))
-                            shutil.rmtree(resultsDir)
-                            return
-                    if dispProg:
-                        progress.setValue(len(scenIds) + 1)
-            else:
-                if dispProg:
-                    progress.setValue(len(scenIds) + 1)
-
-        replay_name = self.getSelectedReplayNames()
-        translate_status = self.runTranslator(scenIds, detNames, replay_name)
-        return translate_status
-        # QMessageBox.information(self, 'Success!', 'Replay tool execution completed.')
+        replay_gui = ReplayGenerationGUI(self, self.runSelect(), self.settings)
+        status = replay_gui.runReplay()
+        self.on_action_complete(status, self.tr('Run replay tool'))
+        return status
 
     @Slot(bool)
     def on_btnRunResultsTranslator_clicked(self, checked):
-        scenIds, detNames = self.runSelect()
-        replay_name = self.getSelectedReplayNames()
-        status = self.runTranslator(scenIds, detNames, replay_name)
-        self.on_action_complete(status, "Result translation")
-
-    def runTranslator(self, scenIds, detNames, replay_name, dispProg=True):
-        """
-        Launches Translate Results
-        """
-        # user directory
-        session = Session()
-        sampleRootDir = self.settings.getSampleDirectory()
-        if dispProg:
-            progress = QProgressDialog('Translation in progress...', None, 0, len(scenIds) + 1, self)
-            progress.setMinimumDuration(0)
-            progress.setMaximum(len(scenIds) + 1)
-            progress.setWindowModality(Qt.WindowModal)
-        for detector_index, detName in enumerate(detNames):
-            detector = session.query(Detector).filter_by(name=detName).first()
-            if not (detector.replay and detector.replay.translator_exe_path and detector.replay.translator_is_cmd_line):
-                if dispProg:
-                    progress.setValue(len(scenIds) + 1)
-                pass
-            else:
-                if dispProg:
-                    progress.setValue(0)
-                    progress.setLabelText('Translation in progress for ' + detName + '...')
-                repName = replay_name[detector_index]
-                for i, scenId in enumerate(scenIds, 1):
-                    if dispProg:
-                        progress.setValue(i)
-                    # resultsTranslator = session.query(ResultsTranslator).filter_by(name=repName).first()
-
-                    # input dir to this module
-                    input_dir = get_replay_output_dir(sampleRootDir, detector, scenId)
-                    output_dir = get_results_dir(sampleRootDir, detector, scenId)
-
-                    if not files_exist(input_dir):
-                        continue
-                        # QMessageBox.critical(self, 'Insufficient Data', 'Must Run Replay First')
-                        # return False
-
-                    command = [detector.replay.translator_exe_path]
-                    if detector.replay.translator_exe_path.endswith('.py'):
-                        command = ["python", detector.replay.translator_exe_path]
-
-                    # FIXME: the following assumes that INPUTDIR and OUTPUTDIR are present only one time each in the settings
-                    settingsList = detector.replay.translator_settings.split(" ")
-                    if "INPUTDIR" in settingsList:
-                        settingsList[settingsList.index("INPUTDIR")] = input_dir
-                    if "OUTPUTDIR" in settingsList:
-                        settingsList[settingsList.index("OUTPUTDIR")] = output_dir
-
-                    command = command + settingsList
-
-                    try:
-                        # On Windows, running this from the binary produced by Pyinstaller
-                        # with the ``--noconsole`` option requires redirecting everything
-                        # (stdin, stdout, stderr) to avoid an OSError exception
-                        # "[Error 6] the handle is invalid."
-                        # See: https://github.com/pyinstaller/pyinstaller/wiki/Recipe-subprocess
-                        p = subprocess.run(command, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                                           stderr=subprocess.STDOUT, encoding='utf-8', check=True,
-                                           startupinfo=popen_startupinfo, cwd=APPLICATION_PATH)
-                    except subprocess.CalledProcessError as e:
-                        if dispProg:
-                            progress.setValue(len(scenIds) + 1)
-                        log_fname = os.path.join(get_sample_dir(sampleRootDir, detector, scenId),
-                                                 'results_translator_output.log')
-                        log = open(log_fname, 'w')
-                        log.write('### Command: ' + os.linesep)
-                        log.write(' '.join(e.cmd) + os.linesep)
-                        log.write('### Output: ' + os.linesep)
-                        log.write(e.output)
-                        log.close()
-                        QMessageBox.critical(self, 'Error!',
-                                             'Results translation exited with error code ' +
-                                             str(e.returncode) + ' when running translator.<br><br>' +
-                                             'Output log at: <br>' + log_fname)
-                        shutil.rmtree(output_dir, ignore_errors=True)
-                        return False
-                    except Exception as e:
-                        traceback.print_exc()
-                        logging.exception("Handled Exception", exc_info=True)
-                        if dispProg:
-                            progress.setValue(len(scenIds) + 1)
-                        QMessageBox.critical(self, 'Error!',
-                                             'Results translation failed for instrument '
-                                             + detName + ' and scenario ' + scenId + '<br><br>' + str(
-                                                 e))
-                        shutil.rmtree(output_dir, ignore_errors=True)
-                        return False
-                if dispProg:
-                    progress.setValue(len(scenIds) + 1)
-        return True
+        translator_gui = TranslationGenerationGUI(self, self.runSelect(), self.settings)
+        status = translator_gui.runTranslator()
+        self.on_action_complete(status, self.tr('Result translation'))
 
     def on_action_complete(self, exit_status, action_str):
         """
         Displays message dialog when an action is completed
         """
         if exit_status:
-            title = "Success!"
-            message = f"{action_str.capitalize()} completed."
+            title = self.tr('Success!')
+            message = self.tr('{} completed.').format(action_str.capitalize())
         else:
-            title = f"{action_str.capitalize()} aborted"
-            message = f"{action_str.capitalize()} aborted. Not all scenarios were processed."
+            title = self.tr('{} aborted').format(action_str.capitalize())
+            message = self.tr('{} aborted. Not all scenarios were processed.').format(action_str.capitalize())
         QMessageBox.information(self, title, message)
         # update the table colors
         self.updateScenarioColors()
@@ -1468,15 +1071,16 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         session = Session()
         scenId = self.getSelectedScenarioIds()[0]
         detName = self.getSelectedDetectorNames()[0]
+        repName = self.getSelectedReplayNames()[0]
         detector = session.query(Detector).filter_by(name=detName).first()
+        replay = session.query(Replay).filter_by(name=repName).first()
         options = QFileDialog.ShowDirsOnly
         if sys.platform.startswith('win'): options = QFileDialog.DontUseNativeDialog
-        dirpath = QFileDialog.getExistingDirectory(self, 'Select folder of results for scenario: ' + scenId +
-                                                   ' and instrument: ' + detName,
-                                                   get_sample_dir(self.settings.getSampleDirectory(), detector, scenId),
-                                                   options)
+        dirpath = QFileDialog.getExistingDirectory(self, self.tr('Select folder of results for '
+                        'scenario: {} and instrument: {}').format(scenId, detName), get_sample_dir(
+                        self.settings.getSampleDirectory(), detector, scenId), options)
         if dirpath:
-            resultsDir = get_replay_output_dir(self.settings.getSampleDirectory(), detector, scenId)
+            resultsDir = get_replay_output_dir(self.settings.getSampleDirectory(), detector, replay, scenId)
             if os.path.normpath(dirpath) != os.path.normpath(resultsDir):
                 if os.path.exists(resultsDir):
                     shutil.rmtree(resultsDir)
@@ -1494,15 +1098,16 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         session = Session()
         scenId = self.getSelectedScenarioIds()[0]
         detName = self.getSelectedDetectorNames()[0]
+        repName = self.getSelectedReplayNames()[0]
         detector = session.query(Detector).filter_by(name=detName).first()
+        replay = session.query(Replay).filter_by(name=repName).first()
         options = QFileDialog.ShowDirsOnly
         if sys.platform.startswith('win'): options = QFileDialog.DontUseNativeDialog
-        dirpath = QFileDialog.getExistingDirectory(self, 'Select folder of sampled spectra for scenario: ' + scenId +
-                                                   ' and instrument: ' + detName,
-                                                   self.settings.getSampleDirectory(),
-                                                   options)
+        dirpath = QFileDialog.getExistingDirectory(self, self.tr('Select folder of sampled spectra '
+                             'for scenario: {}, instrument: {} and replay: {}').format(scenId, detName, repName),
+                             self.settings.getSampleDirectory(), options)
         if dirpath:
-            outDir = get_replay_input_dir(self.settings.getSampleDirectory(), detector, scenId)
+            outDir = get_replay_input_dir(self.settings.getSampleDirectory(), detector, replay, scenId)
             if os.path.normpath(dirpath) != os.path.normpath(outDir):
                 if os.path.exists(outDir):
                     shutil.rmtree(outDir)
@@ -1536,21 +1141,26 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         Launches Preferences Dialog
         """
         dialog = SettingsDialog(self)
-        if dialog.exec_():
+        if dialog.exec():
             if dialog.dataDirectoryChanged:
+                Session.remove()
+                Session.configure(bind=None)
                 initializeDatabase(self.settings.getDatabaseFilepath())
+                self.tblScenario.blockSignals(True)
+                self.tblDetectorReplay.blockSignals(True)
                 self.populateAll()
+                self.tblScenario.blockSignals(False)
+                self.tblDetectorReplay.blockSignals(False)
 
     @Slot(bool)
     def on_btnAddScenario_clicked(self, checked):
         """
         Handles adding new Scenario
         """
-        self.s_dialog = ScenarioDialog(self)
-        if self.s_dialog.exec_():
+        s_dialog = ScenarioDialog(self)
+        if s_dialog.exec_():
             self.populateScenarios()
         self.populateScenarioGroupCombo()
-        self.s_dialog = None
 
     @Slot(bool)
     def on_btnAddDetector_clicked(self, checked):
@@ -1571,11 +1181,13 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
 
         # show the context menu only if on an a valid part of the table
         if current_cell:
-            scenIds = self.getSelectedScenarioIds()
-            detNames = self.getSelectedDetectorNames()
+            scen_ids = self.getSelectedScenarioIds()
+            det_names = self.getSelectedDetectorNames()
+            rep_names = self.getSelectedReplayNames()
 
-            multiple_cases = len(scenIds) > 1 or len(detNames) > 1
+            multiple_cases = len(scen_ids) > 1 or len(det_names) > 1
 
+            # TODO: How to handle plurals?
             deleteAction = QAction(f'Delete Scenario{"s" if multiple_cases else ""}', self)
             editAction = QAction('Edit Scenario', self)
             duplicateAction = QAction(f'New Scenario{"s" if multiple_cases else ""} from this...', self)
@@ -1589,23 +1201,21 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
                 menu.addAction(duplicateAction)
             menu.addAction(assignAction)
 
-            session = Session()
-
             if multiple_cases:
                 first = True
                 different_sources = False
-                for scenId in scenIds:
+                for scenId in scen_ids:
                     if first:
                         first = False
-                        dmat = {d.material_name: d.fd_mode for d in session.query(Scenario).
+                        dmat = {d.material_name: d.fd_mode for d in Session().query(Scenario).
                                 filter_by(id=scenId).first().scen_materials}
-                        dback = {d.material_name: d.fd_mode for d in session.query(Scenario).
+                        dback = {d.material_name: d.fd_mode for d in Session().query(Scenario).
                                 filter_by(id=scenId).first().scen_bckg_materials}
                     else:
                         if (dmat != {d.material_name: d.fd_mode for d in
-                                     session.query(Scenario).filter_by(id=scenId).first().scen_materials} or
+                                     Session().query(Scenario).filter_by(id=scenId).first().scen_materials} or
                                 dback != {d.material_name: d.fd_mode for d in
-                                          session.query(Scenario).filter_by(id=scenId).first().scen_bckg_materials}):
+                                          Session().query(Scenario).filter_by(id=scenId).first().scen_bckg_materials}):
                             different_sources = True
                             break
                 if not different_sources:
@@ -1615,26 +1225,27 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
             # if the sample folders exists and a detector is selected
             sampleDirs = []
             sampleDirs_only_replays = []
-            for scen in scenIds:
-                for detName in detNames:
-                    detector = session.query(Detector).filter_by(name=detName).first()
+            for scen in scen_ids:
+                for det_name, rep_name in zip(det_names, rep_names):
+                    detector = Session().query(Detector).filter_by(name=det_name).first()
+                    replay = Session().query(Replay).filter_by(name=rep_name).first()
                     dir = get_sample_dir(self.settings.getSampleDirectory(), detector, scen)
                     if files_endswith_exists(dir, ('.n42',)):
                         sampleDirs.append(dir)
-                    elif os.path.exists(get_replay_output_dir(self.settings.getSampleDirectory(), detector, scen)):
+                    elif os.path.exists(get_replay_output_dir(self.settings.getSampleDirectory(), detector, replay, scen)):
                         sampleDirs_only_replays.append(dir)
             if (len(sampleDirs) + len(sampleDirs_only_replays)) > 1:
                 action_label = 'Go To Sample Folders'
                 viewSampleSpectraAction = False
                 if (len(sampleDirs) + len(sampleDirs_only_replays)) < 6:
-                    viewSummedSpectraAction = QAction('Compare Summed Sample Spectra', self)
+                    viewSummedSpectraAction = QAction(self.tr('Compare Summed Sample Spectra'), self)
                 else:
-                    viewSummedSpectraAction = QAction('Compare Summed Sample Spectra (max 5)', self)
+                    viewSummedSpectraAction = QAction(self.tr('Compare Summed Sample Spectra (max 5)'), self)
                     viewSummedSpectraAction.setEnabled(False)
             else:
                 action_label = 'Go To Sample Folder'
-                viewSampleSpectraAction = QAction('View Sample Spectra', self)
-                viewSummedSpectraAction = QAction('View Summed Sample Spectra', self)
+                viewSampleSpectraAction = QAction(self.tr('View Sample Spectra'), self)
+                viewSummedSpectraAction = QAction(self.tr('View Summed Sample Spectra'), self)
 
             goToFolderAction = QAction(action_label, self)
             if sampleDirs and viewSampleSpectraAction:
@@ -1645,26 +1256,26 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
                 menu.addAction(goToFolderAction)
 
             # execute actions
-            action = menu.exec_(self.tblScenario.mapToGlobal(point))
+            action = menu.exec(self.tblScenario.mapToGlobal(point))
             if action == deleteAction:
-                delete_scenario(scenIds, self.settings.getSampleDirectory())
+                delete_scenario(scen_ids, self.settings.getSampleDirectory())
                 self.populateAll()
             elif action == goToFolderAction:
                 for dir in sampleDirs + sampleDirs_only_replays:
                     fileBrowser = 'explorer' if sys.platform.startswith('win') else 'open'
                     subprocess.Popen([fileBrowser, dir])
             elif action == editAction:
-                self.edit_scenario(scenIds[0])  # same as 'scen'; what is better coding practice?
+                self.edit_scenario(scen_ids[0])  # same as 'scen'; what is better coding practice?
             elif action == duplicateAction:
-                self.duplicate_scen(scenIds[0])
+                self.duplicate_scen(scen_ids[0])
             elif action == assignAction:
-                self.assign_to_group(scenIds)
+                self.assign_to_group(scen_ids)
             elif action == viewSampleSpectraAction:
-                scenario = session.query(Scenario).filter_by(id=scenIds[0]).first()
-                detector = session.query(Detector).filter_by(name=detNames[0]).first()
+                scenario = Session().query(Scenario).filter_by(id=scen_ids[0]).first()
+                detector = Session().query(Detector).filter_by(name=det_names[0]).first()
                 SampleSpectraViewerDialog(self, scenario, detector, 0).exec_()
             elif action == viewSummedSpectraAction:
-                MultiSpecViewerDialog(self, sampleDirs).exec_()
+                MultiSpecViewerDialog(self, sampleDirs).exec()
 
 
     @Slot(bool)
@@ -1684,274 +1295,10 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         session = Session()
         default_corr_table = session.query(CorrespondenceTable).filter_by(is_default=True).one_or_none()
         if not default_corr_table:
-            QMessageBox.critical(self, 'Error!', 'Please set a default correspondence table')
+            QMessageBox.critical(self, self.tr('Error!'), self.tr('Please set a default correspondence table'))
             return
-        selected_scenarios = self.getSelectedScenarioIds()
-        selected_detectors = self.getSelectedDetectorNames()
-        self.calculateScenarioStats(caller=self, selected_scenarios=selected_scenarios,
-                                    selected_detectors=selected_detectors)
+        ViewResultsDialog(self, self.runSelect()).open()
 
-        ViewResultsDialog(self, selected_scenarios, selected_detectors).open()
-
-    def calculateScenarioStats(self, caller, selected_scenarios, selected_detectors):
-        """
-        Calculates scenario stats
-        """
-        session = Session()
-        corrTable = session.query(CorrespondenceTable).filter_by(is_default=True).one_or_none()
-        corrTableRows = session.query(CorrespondenceTableElement).filter_by(corr_table_name=corrTable.name)
-        # add background material rows to the correspondence table
-        bckg_material_set = set()
-        for scenId in selected_scenarios:
-            scenario = session.query(Scenario).filter_by(id=scenId).first()
-            bckg_material_set.update(scenario.get_bckg_material_names_no_shielding())
-        corr_table_iso_set = set()
-        for line in corrTableRows:
-            corr_table_iso_set.add(line.isotope)
-        isCorrTableUpdated = False
-        if not caller == 1:
-            for bckgMaterial in bckg_material_set:
-                if bckgMaterial in corr_table_iso_set:
-                    continue
-                print("BCKG NOT IN CORR TABLE")
-                cb = QCheckBox("Edit the Correspondence Table Now")
-                cb.setEnabled(True)
-                msgbox = QMessageBox(QMessageBox.Question, bckgMaterial + ' is currently not in Correspondence Table',
-                                     'Would you like to add ' + bckgMaterial + ' to the Correspondence Table?')
-                msgbox.addButton(QMessageBox.Yes)
-                msgbox.addButton(QMessageBox.No)
-                msgbox.setCheckBox(cb)
-                self.addIsotopeToCorrTable = msgbox.exec()
-                if self.addIsotopeToCorrTable == QMessageBox.Yes:
-                    corrTsbleEntry = CorrespondenceTableElement(isotope=bckgMaterial, table=corrTable, corrList1="",
-                                                                corrList2="")
-                    corrTable.corr_table_elements.append(corrTsbleEntry)
-                    # if "edit correspondence" table selected
-                    if bool(cb.isChecked()): CorrespondenceTableDialog().exec_()
-        session.commit()
-
-        sampleRootDir = self.settings.getSampleDirectory()
-        session = Session()
-        self.result_super_map = {}
-        scen_det_list = list(product(selected_scenarios, selected_detectors))
-        t_scen_det_list = []
-        for i, scen_det in enumerate(scen_det_list):
-            scenId = scen_det[0]
-            detName = scen_det[1]
-            detector = session.query(Detector).filter_by(name=detName).first()
-            res_dir = get_results_dir(sampleRootDir, detector, scenId)
-            if files_exist(res_dir):
-                t_scen_det_list.append(scen_det)
-        scen_det_list = t_scen_det_list
-
-        columns = ['Det', 'Replay', 'Mat_Dose', 'Bkg_Mat_Dose', 'Mat_Flux', 'Bkg_Mat_Flux', 'Infl', 'AcqTime', 'Repl',
-                   'Comment', 'PID', 'PID_L', 'PID_H', 'PFID', 'C&C', 'C&C_L', 'C&C_H', 'TP', 'FP', 'FN', 'Precision', 'Recall',
-                   'F_Score', 'wTP', 'wFP', 'wFN', 'wPrecision', 'wRecall', 'wF_Score']
-
-        index = [scen_det[0] + "*" + scen_det[1] for scen_det in scen_det_list]
-        self.scenario_stats_df = pd.DataFrame(index=index, columns=columns)
-
-        if not caller == 1:
-            progress = QProgressDialog('Computing results...', None, 0,
-                                       len(scen_det_list) + 1, self)
-            progress.setMinimumDuration(0)
-            progress.setValue(0)
-            progress.setWindowModality(Qt.WindowModal)
-
-        for i, scen_det in enumerate(scen_det_list):
-            if not caller == 1:
-                progress.setValue(i)
-            # get selected conditions
-            scenId = scen_det[0]
-            detName = scen_det[1]
-            result_super_map_key = scenId + "*" + detName
-            scenario = session.query(Scenario).filter_by(id=scenId).first()
-            # scen_mats = set(scenMat.material.name for scenMat in scenario.scen_materials)
-            scen_mats = scenario.get_material_names_no_shielding()
-            scen_bckg_mats = scenario.get_bckg_material_names_no_shielding()
-            detector = session.query(Detector).filter_by(name=detName).first()
-            res_dir = get_results_dir(sampleRootDir, detector, scenId)
-            if os.path.exists(res_dir):
-                fc_fileList = [os.path.join(res_dir, f) for f in os.listdir(res_dir) if
-                           (f.endswith(".n42") or f.endswith(".res") or f.endswith(".csv") or f.endswith(".xml"))]
-            else:
-                fc_fileList = []
-
-            pid_total = 0
-            pfid_total = 0
-            tp_total = 0
-            wtp_total = 0
-            fp_total = 0
-            wfp_total = 0
-            fn_total = 0
-            wfn_total = 0
-            CandCtotal = 0
-            precision_total = 0
-            wprecision_total = 0
-            recall_total = 0
-            wrecall_total = 0
-            Fscore_total = 0
-            wFscore_total = 0
-            num_files = 0
-
-            result_map = {}
-            isotopes, correct_ids_list, allowed_ids_list = self.getCorrTableData(scen_mats, scen_bckg_mats)
-            assoc_table = dict(zip(isotopes, correct_ids_list))
-            mats_with_weights = self.getMaterialWeightsData(assoc_table)
-
-            num_required_ids = len([i for i in correct_ids_list if i])
-            for file in fc_fileList:
-                result_list = []
-                num_files = num_files + 1
-                results = {}
-                try:
-                    trans_results, trans_confidences = readTranslatedResultFile(file, self.settings.getUseConfidencesInCalcs())
-                    for r, c in zip(trans_results, trans_confidences):
-                        if r in results.keys():
-                            results[r] = max([results[r], c])
-                        else:
-                            results[r] = c
-                except ResultsFileFormatException as ex:
-                    traceback.print_exc()
-                    logging.exception("Handled Exception", exc_info=True)
-                    print(f"{str(ex)} in file {ntpath.basename(file)}")
-                Tp, Fn, Fp, wTp, wFn, wFp = self.getTpFpFn(results, allowed_ids_list, assoc_table, mats_with_weights)
-                result_list.append(str(Tp))
-                result_list.append(str(Fn))
-                result_list.append(str(Fp))
-
-                pid = 0
-                pfid = 0
-                precision = 0
-                wprecision = 0
-                recall = 0
-                wrecall = 0
-                Fscore = 0
-                wFscore = 0
-                CandC = 0
-
-                if Tp == num_required_ids:
-                    pid = 1
-                if Fp > 0:
-                    pfid = 1
-                if (Tp + Fn > 0):
-                    recall = Tp / (Tp + Fn)
-                if (Tp + Fp > 0):
-                    precision = Tp / (Tp + Fp)
-                if (wTp + wFn > 0):
-                    wrecall = wTp / (wTp + wFn)
-                if (wTp + wFp > 0):
-                    wprecision = wTp / (wTp + wFp)
-                if (precision + recall > 0):
-                    Fscore = 2 * precision * recall / (precision + recall)
-                    if Fscore == 1:
-                        CandC = Fscore
-                if (wprecision + wrecall > 0):
-                    wFscore = 2 * wprecision * wrecall / (wprecision + wrecall)
-
-                pid_total = pid_total + pid
-                pfid_total += pfid
-                tp_total = tp_total + Tp
-                wtp_total = wtp_total + wTp
-                fp_total = fp_total + Fp
-                wfp_total = wfp_total + wFp
-                fn_total = fn_total + Fn
-                wfn_total = wfn_total + wFn
-                CandCtotal = CandC + CandCtotal
-                precision_total = precision_total + precision
-                result_list.append(str(round(precision, 2)))
-                wprecision_total = wprecision_total + wprecision
-                # result_list.append(str(round(wprecision, 2)))
-                recall_total = recall_total + recall
-                result_list.append(str(round(recall, 2)))
-                wrecall_total = wrecall_total + wrecall
-                # result_list.append(str(round(wrecall, 2)))
-                Fscore_total = Fscore_total + Fscore
-                result_list.append(str(round(Fscore, 2)))
-                wFscore_total = wFscore_total + wFscore
-                # result_list.append(str(round(wFscore, 2)))
-                result_list.append('; '.join(results))
-                result_map[file] = result_list
-
-            self.result_super_map[result_super_map_key] = result_map
-            # FIXME: is it possible that num_files becomes zero, thus resulting in an error?
-            pid_freq = pid_total / num_files
-            pfid_freq = pfid_total / num_files
-            (P_CI_p, P_CI_n) = calc_result_uncertainty(pid_freq, num_files)
-            tp_freq = tp_total / num_files
-            wtp_freq = wtp_total / num_files
-            fp_freq = fp_total / num_files
-            wfp_freq = wfp_total / num_files
-            fn_freq = fn_total / num_files
-            wfn_freq = wfn_total / num_files
-            CandC_freq = CandCtotal / num_files
-            (C_CI_p,C_CI_n) = calc_result_uncertainty(CandC_freq, num_files)
-            precision_freq = precision_total / num_files
-            wprecision_freq = wprecision_total / num_files
-            recall_freq = recall_total / num_files
-            wrecall_freq = wrecall_total / num_files
-            Fscore_freq = Fscore_total / num_files
-            wFscore_freq = wFscore_total / num_files
-
-
-            mat_dose_dict = {scen_mat.material.name: scen_mat.dose for scen_mat in scenario.scen_materials if
-                             scen_mat.fd_mode == 'DOSE'}
-            mat_dose_bkg_dict = {scen_mat.material.name: scen_mat.dose for scen_mat in scenario.scen_bckg_materials if
-                                 scen_mat.fd_mode == 'DOSE'}
-            mat_flux_dict = {scen_mat.material.name: scen_mat.dose for scen_mat in scenario.scen_materials if
-                             scen_mat.fd_mode == 'FLUX'}
-            mat_flux_bkg_dict = {scen_mat.material.name: scen_mat.dose for scen_mat in scenario.scen_bckg_materials if
-                                 scen_mat.fd_mode == 'FLUX'}
-            # mat_dose_dict = {scen_mat.material.name: scen_mat.dose for scen_mat in scenario.scen_materials}
-            # mat_dose_bkg_dict = {scen_mat.material.name: scen_mat.dose for scen_mat in scenario.scen_bckg_materials}
-            self.scenario_stats_df.loc[result_super_map_key] = [detector.name,
-                                                                  [detector.replay.name if detector.replay else None][0],
-                                                                  mat_dose_dict, mat_dose_bkg_dict,
-                                                                  mat_flux_dict, mat_flux_bkg_dict,
-                                                                  [infl.name for infl in scenario.influences],
-                                                                  scenario.acq_time,
-                                                                  scenario.replication,
-                                                                  scenario.comment,
-                                                                  pid_freq, P_CI_n, P_CI_p,
-                                                                  pfid_freq, CandC_freq, C_CI_n, C_CI_p,
-                                                                  tp_freq, fp_freq, fn_freq,
-                                                                  precision_freq, recall_freq, Fscore_freq,
-                                                                  wtp_freq, wfp_freq, wfn_freq,
-                                                                  wprecision_freq, wrecall_freq, wFscore_freq]
-
-
-        MatDose_df = self.scenario_stats_df['Mat_Dose'].apply(pd.Series).fillna(0)
-        MatDose_df = MatDose_df.add_prefix('Dose_')
-        BkgMatDose_df = self.scenario_stats_df['Bkg_Mat_Dose'].apply(pd.Series).fillna(0)
-        BkgMatDose_df = BkgMatDose_df.add_prefix('BkgDose_')
-        MatFlux_df = self.scenario_stats_df['Mat_Flux'].apply(pd.Series).fillna(0)
-        MatFlux_df = MatFlux_df.add_prefix('Flux_')
-        BkgMatFlux_df = self.scenario_stats_df['Bkg_Mat_Flux'].apply(pd.Series).fillna(0)
-        BkgMatFlux_df = BkgMatFlux_df.add_prefix('BkgFlux_')
-
-        dose_scen_desc = pd.concat([MatDose_df, BkgMatDose_df], axis=1).apply(lambda x: self._create_scenario_desc(x),
-                                                                              axis=1)
-        flux_scen_desc = pd.concat([MatFlux_df, BkgMatFlux_df], axis=1).apply(
-            lambda x: self._create_scenario_desc(x, italics=True), axis=1)
-        self.scenario_stats_df['Scen Desc'] = dose_scen_desc.str.cat(flux_scen_desc, sep=", ")
-        self.scenario_stats_df = pd.concat([self.scenario_stats_df[['Det', 'Replay']],
-                                            MatDose_df, BkgMatDose_df, MatFlux_df, BkgMatFlux_df,
-                                            self.scenario_stats_df.loc[:, 'Infl':]], axis=1)
-        # print(self.scenario_stats_df)
-        if not caller == 1:
-            progress.setValue(len(scen_det_list) + 1)
-
-    def _create_scenario_desc(self, row, italics=False):
-        desc = []
-        for k, v in row.items():
-            if v > 0:
-                k = k.split('_')
-                k = "".join(k[1:])
-                if italics:
-                    desc.append(f'<em>{k}({v:.3g})</em>')
-                else:
-                    desc.append(f'{k}({v:.3g})')
-        return ", ".join(desc)
 
     @Slot(int)
     def on_cmbScenarioGroups_currentIndexChanged(self, text):
@@ -2002,6 +1349,11 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         dialog.exec_()
 
     @Slot(bool)
+    def on_actionShielded_Base_Spectra_Creation_triggered(self, checked):
+        dialog = CreateShieldedSpectraDialog(self)
+        dialog.exec_()
+
+    @Slot(bool)
     def on_actionAutomated_Scurve_triggered(self, checked):
         """
         Launches S-curve
@@ -2009,174 +1361,114 @@ class Rase(ui_rase.Ui_MainWindow, QMainWindow):
         # must check if there is a correspondence table set, otherwise it will bug out
         corrTable = Session().query(CorrespondenceTable).filter_by(is_default=True).one_or_none()
         if not corrTable:
-            QMessageBox.critical(self, 'Set Correspondence Table', 'Must specify a Correspondence Table')
+            QMessageBox.critical(self, self.tr('Set Correspondence Table'),
+                                 self.tr('Must specify a Correspondence Table'))
             return
 
         dialog = AutomatedSCurve(self)
-        selection = dialog.exec_()
+        selection = dialog.exec()
         if selection == 1:
-            generate_curve(self, dialog.input_d, dialog.input_advanced)
+            generate_curve(dialog.input_d, dialog.input_advanced, self)
             self.populateScenarios()
             self.populateScenarioGroupCombo()
 
 
-class SampleSpectraGeneration(QObject):
+class SampleSpectraGenerationGUI(SampleSpectraGeneration, QObject):
     """
-    Generates Sample Spectra through its 'work' function
-    This class is designed to be moved to a separate thread for background execution
-    Signals are emitted for each sample generated and at the end of the process
-    Execution can be stopped by setting self.__abort to True
+    Shell class to enable GUI operation of spectra generation
     """
     sig_step = Signal(int)
     sig_done = Signal(bool)
 
-    def __init__(self, detector_scenarios, test=False, samplepath=None):
-        super().__init__()
-        self.settings = RaseSettings()
-        self.detector_scenarios = detector_scenarios
-        if samplepath is None:
-            self.sampleDir = self.settings.getSampleDirectory()
-        else:
-            self.sampleDir = os.path.join(samplepath, 'SampledSpectra')
-        self.sampling_algo = self.settings.getSamplingAlgo()
-        self.test = test
-        self.__abort = False
+    def __init__(self, sim_context_list: list[SimContext], test=False, samplepath=None):
+        super().__init__(sim_context_list, test, samplepath)
+        super(SampleSpectraGeneration, self).__init__()
 
-    @Slot()
-    def work(self):
-        count = 0
-
-        session = Session()
-        for detName, scenId in self.detector_scenarios:
-            detector = session.query(Detector).filter_by(name=detName).first()
-            sample_dir = get_sample_dir(self.sampleDir, detector, scenId)
-            replay_input_dir = get_replay_input_dir(self.sampleDir, detector, scenId)
-            scenario = session.query(Scenario).filter_by(id=scenId).first()
-
-            if (detector.includeSecondarySpectrum and detector.secondary_type == secondary_type['scenario'] and not scenario.scen_bckg_materials):
-                continue
-
-            os.makedirs(sample_dir, exist_ok=True)
-            os.makedirs(replay_input_dir, exist_ok=True)
-
-            # generate seed in order to later recreate sampleSpectra
-            if (self.settings.getRandomSeed() != self.settings.getRandomSeedDefault()):
-                seed = self.settings.getRandomSeed()
-            else:
-                seed = np.random.randint(0, pow(2, 30))
-            sampleSeed = session.query(SampleSpectraSeed).filter_by(scen_id=scenario.id,
-                                                                    det_name=detector.name).first() or \
-                         SampleSpectraSeed(scen_id=scenario.id, det_name=detector.name)
-            sampleSeed.seed = seed
-            session.add(sampleSeed)
-            session.commit()
-
-            countsDoseAndSensitivity = _getCountsDoseAndSensitivity(scenario, detector)
-
-            # Set appropriate secondary spectrum if needed
-            # ???: if present, should distorsions be applied to the secondary background? <SS>
-            secondary_spectrum = None
-            secondary_is_float = False
-            if detector.includeSecondarySpectrum:
-                secondary_spectrum = (session.query(BackgroundSpectrum).filter_by(detector_name=detector.name)).first()
-
-                if detector.secondary_type == secondary_type['scenario']:  # utilize background defined in the scenario for secondary background
-                    secondary_spectrum = BackgroundSpectrum()
-                    spec_info = []
-                    for background, spectrum in product(scenario.scen_bckg_materials, detector.base_spectra):
-                        if background.material_name == spectrum.material_name:
-                            cnts = spectrum.get_counts_as_np()
-                            secondary_is_float = secondary_is_float or not all([float(k) == int(k) for k in cnts])
-                            sens = spectrum.rase_sensitivity if background.fd_mode == 'DOSE' else spectrum.flux_sensitivity
-                            spec_info.append({'counts': cnts, 'livetime': spectrum.livetime, 'realtime': spectrum.realtime,
-                                              'sens': sens, 'bkg_dose': background.dose})
-
-                    secondary_spectrum.livetime = spec_info[0]['livetime']
-                    secondary_spectrum.realtime = spec_info[0]['realtime']
-                    for s in spec_info:
-                        if s['livetime'] > secondary_spectrum.livetime:
-                            secondary_spectrum.livetime = s['livetime']
-                            secondary_spectrum.realtime = s['realtime']
-                    # use maximum livetime of scenario bgnd specs unless bckg_spectra_dwell is specified
-                    if detector.bckg_spectra_dwell != 0:
-                        secondary_spectrum.realtime = detector.bckg_spectra_dwell * (secondary_spectrum.realtime /
-                                                                                     secondary_spectrum.livetime)
-                        secondary_spectrum.livetime = detector.bckg_spectra_dwell
-                    secondary_spectrum.counts = np.zeros(len(spec_info[0]['counts']))
-                    for s in spec_info:
-                        secondary_spectrum.counts += secondary_spectrum.livetime * s['sens'] * s['bkg_dose'] * \
-                                                        (s['counts'] / np.sum(s['counts']))
-                else:
-                    secondary_is_float = not all([float(k) == int(k) for k in secondary_spectrum.counts])
-                    if detector.bckg_spectra_dwell != 0:
-                        secondary_spectrum.counts *= detector.bckg_spectra_dwell / secondary_spectrum.livetime
-                        secondary_spectrum.realtime = detector.bckg_spectra_dwell * (secondary_spectrum.realtime /
-                                                                                     secondary_spectrum.livetime)
-                        secondary_spectrum.livetime = detector.bckg_spectra_dwell
-                if not secondary_is_float:
-                    secondary_spectrum.counts = secondary_spectrum.counts.astype(int)
-            n42_template = None
-            if detector.replay and detector.replay.type == ReplayTypes.standalone and detector.replay.n42_template_path:
-                n42_template = Template(filename=detector.replay.n42_template_path, input_encoding='utf-8')
-
-            # create 'replication' number of files
-            reps = 1 if self.test else scenario.replication
-            for filenum in range(reps):
-                # This is where the downsampling happens
-                if secondary_spectrum and detector.bckg_spectra_resample:
-                    if filenum == 0:
-                        secondary_is_float = secondary_spectrum.is_spectrum_float()
-                        original_secondary_spe_counts = secondary_spectrum.counts
-                    secondary_spectrum.counts = np.random.poisson(original_secondary_spe_counts)
-                    if not secondary_is_float:
-                        secondary_spectrum.counts = secondary_spectrum.counts.astype(int)
-
-                degradations = []
-                for influence in scenario.influences:
-                    influences = session.query(DetectorInfluence).filter_by(influence_name=influence.name).first()
-                    degradations.append([a * (filenum) for a in [influences.degrade_infl0, influences.degrade_infl1,
-                                    influences.degrade_infl2, influences.degrade_f_smear, influences.degrade_l_smear]])
-                    # If there is some degradation, we pass them in to apply degradations without doing it exponentially
-                if not all(v == 0 for deg in degradations for v in deg):
-                    countsDoseAndSensitivity = _getCountsDoseAndSensitivity(scenario, detector, degradations)
-
-                sampleCounts = self.sampling_algo(scenario, detector, countsDoseAndSensitivity, seed + filenum)
-
-                # write out to RASE n42 file
-                fname = os.path.join(sample_dir,
-                                     get_sample_spectra_filename(detector.id, scenario.id, filenum, ".n42"))
-                create_n42_file(fname, scenario, detector, sampleCounts, secondary_spectrum)
-
-                # write out to translated file format
-                if n42_template:
-                    fname = os.path.join(replay_input_dir,
-                                         get_sample_spectra_filename(detector.id, scenario.id, filenum,
-                                                                     detector.replay.input_filename_suffix))
-                    create_n42_file_from_template(n42_template, fname, scenario, detector, sampleCounts,
-                                                  secondary_spectrum)
-
-                count += 1
-                self.sig_step.emit(count)
-
-                # check if we need to abort the loop; need to process events to receive signals;
-                QApplication.processEvents()  # this could cause change to self.__abort
-
-                if self.__abort:
-                    # delete current folders since generation was incomplete
-                    if os.path.exists(sample_dir):
-                        shutil.rmtree(sample_dir)
-                    if os.path.exists(replay_input_dir):
-                        shutil.rmtree(replay_input_dir)
-                    break
-
-        session.close()
-        if self.__abort:
+    def _gui_sigdone_emit(self):
+        if self._abort:
             self.sig_done.emit(False)
         else:
             self.sig_done.emit(True)
 
-    def abort(self):
-        self.__abort = True
+    def _gui_process_events(self):
+        QApplication.processEvents()  # this could cause change to self._abort
+
+    def _gui_sigstep_emit(self, count):
+        self.sig_step.emit(count)
+
+
+class ReplayGenerationGUI(ReplayGeneration, QObject):
+    def __init__(self, parent, sim_context_list: list[SimContext], settings=None):
+        self.parent = parent
+        super().__init__(sim_context_list, settings)
+        super(ReplayGeneration, self).__init__()
+
+    def _gui_progress_bar(self):
+        progress = QProgressDialog(self.parent.tr('Replay in progress...'), None, 0, self.n + 1, self.parent)
+        progress.setMinimumDuration(0)
+        progress.setMaximum(self.n + 1)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.forceShow()
+        return progress
+
+    def _gui_set_value(self, value):
+        if self.progress is not None:
+            self.progress.setValue(value)
+
+    def _gui_set_label(self, label):
+        if self.progress is not None:
+            self.progress.setLabelText(label)
+
+    def _gui_QCritical(self, err_name='', err_message=''):
+        try:
+            QMessageBox.critical(self.parent, err_name, err_message)
+        except:
+            traceback.print_exc()
+            logging.exception(self.parent._handled_exception, exc_info=True)
+
+    def _gui_QInformation(self, info_name='', info_message=''):
+        try:
+            QMessageBox.information(self.parent, info_name, info_message)
+        except:
+            traceback.print_exc()
+            logging.exception(self.parent._handled_exception, exc_info=True)
+
+    def _gui_update_colors(self):
+        try:
+            self.parent.updateScenarioColors()
+        except:
+            traceback.print_exc()
+            logging.exception(self.parent._handled_exception, exc_info=True)
+
+
+class TranslationGenerationGUI(TranslationGeneration, QObject):
+    def __init__(self, parent=None, sim_context_list: list[SimContext]=None, settings=None):
+        self.parent = parent
+        super().__init__(sim_context_list, settings)
+        super(TranslationGeneration, self).__init__()
+
+    def _gui_progress_bar(self):
+        progress = QProgressDialog(self.parent.tr('Translation in progress...'), self.parent.tr('Abort'),
+                                   0, self.n + 1, self.parent)
+        progress.setMinimumDuration(0)
+        progress.setMaximum(self.n + 1)
+        progress.setWindowModality(Qt.WindowModal)
+        return progress
+
+    def _gui_set_value(self, value):
+        if self.progress is not None:
+            self.progress.setValue(value)
+
+    def _gui_set_label(self, label):
+        if self.progress is not None:
+            self.progress.setLabelText(label)
+
+    def _gui_QCritical(self, err_name='', err_message=''):
+        try:
+            QMessageBox.critical(self.parent, err_name, err_message)
+        except:
+            traceback.print_exc()
+            logging.exception(self.parent._handled_exception, exc_info=True)
 
 
 class HtmlDelegate(QStyledItemDelegate):

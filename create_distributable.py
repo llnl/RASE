@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -32,6 +32,7 @@
 ###############################################################################
 
 import os
+import glob
 import sys
 from shutil import copytree, rmtree, copy
 import platform
@@ -53,9 +54,15 @@ if r: exit(r)
 r = os.system(f"sphinx-build -M html \"{os.path.join(dirname, 'doc')}\" \"{os.path.join(dirname, 'doc', '_build')}\"")
 if r: exit(r)
 
+# Generate the binary QM format used by QTranslator objects for all translations files
+ts_files = glob.glob('translations/*.ts')
+for ts_file in ts_files:
+    r = os.system(f"lrelease {ts_file}")
+    if r: exit(r)
+
 # Main RASE app
 options = "--onedir --windowed" if platform.system() == "Darwin" else ""
-r = os.system(sys.executable + " -m PyInstaller -a -y " + options +
+r = os.system(sys.executable + " -m PyInstaller -y " + options +
           " --distpath \"" + distpath +
           "\" --workpath \"" + buildpath +
           "\" rase.spec")
@@ -68,41 +75,62 @@ for source_name in (templatepath_name, basespectra_name):
     copytree(os.path.join(dirname, source_name), destination_path)
 
 # tools
-tools_path = os.path.join(distpath, "replayTools")
+tools_path = os.path.join(distpath, "ReplayTools")
 rmtree(tools_path, ignore_errors=True)
 os.makedirs(tools_path)
-copy(os.path.join(dirname, "tools", "FLIR-R440-ReplayTool-Wrapper.cmd"), tools_path)
-copy(os.path.join(dirname, "tools", "KromekD5_replaytool_wrapper.sh"), tools_path)
-copy(os.path.join(dirname, "tools", "Dockerfile-KromekD5"), tools_path)
-
+wrappers = ['BNC_SAM9X0-ReplayTool-Wrapper.cmd', 'BTI-FSX5600-ReplayTool-Wrapper.cmd',
+            'DetectiveX_replaytool_wrapper.bat', 'Dockerfile-KromekD5', 'FLIR-R440-ReplayTool-Wrapper.cmd',
+            'FullSpec_replaytool_wrapper.cmd', 'KromekD5_replaytool_wrapper.sh', 'RsiRaseReplay_replaytool_wrapper.bat',
+            'MeasurementParams.xml']
+for wrapper in wrappers:
+    copy(os.path.join(dirname, "tools", wrapper), tools_path)
 
 # demo replay tool
-r = os.system(sys.executable + " -m PyInstaller -a -y -F --noupx" +
-          " --distpath \"" + os.path.join(distpath, 'replayTools') +
+r = os.system(sys.executable + " -m PyInstaller -y -F --noupx" +
+          " --distpath \"" + os.path.join(distpath, 'ReplayTools') +
           "\" --workpath \"" + buildpath + "\" \"" +
           os.path.join(dirname, "tools", "demo_replay.py") + "\"")
 if r: exit(r)
-
-# demo replay tool
-r = os.system(sys.executable + " -m PyInstaller -a -y -F --noupx" +
-          " --distpath \"" + os.path.join(distpath, 'replayTools') +
+r = os.system(sys.executable + " -m PyInstaller -y -F --noupx" +
+          " --distpath \"" + os.path.join(distpath, 'ReplayTools') +
           "\" --workpath \"" + buildpath + "\" \"" +
           os.path.join(dirname, "tools", "fixed_replay.py") + "\"")
+if r: exit(r)
+r = os.system(sys.executable + " -m PyInstaller -y -F --noupx" +
+          " --distpath \"" + os.path.join(distpath, 'ReplayTools') +
+          "\" --workpath \"" + buildpath + "\" \"" +
+          os.path.join(dirname, "tools", "LAMP_ID.py") + "\"")
 if r: exit(r)
 
 # gadras api clone detector template file
 demoscript_path = os.path.join(distpath, "demonstrationScripts")
 rmtree(demoscript_path, ignore_errors=True)
 os.makedirs(demoscript_path)
-copy(os.path.join(dirname, 'tools', 'gadras_clone_detector.py'), demoscript_path)
+demoscripts = ['example_api_workflow.py', 'example_api_backgrounds.py', 'example_api_scurves.py',
+               'gadras_clone_detector.py']
+for demoscript in demoscripts:
+    copy(os.path.join(dirname, 'demonstrationScripts', demoscript), demoscript_path)
 
-# base spectra configurations default settings
-copy(os.path.join(dirname, 'tools', 'base_spectra_config.yaml'), distpath)
-# python package requirements
-copy(os.path.join(dirname, 'tools', 'requirements.txt'), distpath)
+example_path = os.path.join(distpath, "examples")
+rmtree(example_path, ignore_errors=True)
+os.makedirs(example_path)
+precomputed_files = ['ANSI_scenario_import.csv', 'default_corrtable.csv', 'detimport_genericnai_wfullspec.yaml',
+                     'example_api_backgrounds.yaml', 'example_api_scurves.yaml']
+for precomputed in precomputed_files:
+    copy(os.path.join(dirname, 'examples', precomputed), example_path)
 
+# configuration and path default settings
+config_path = os.path.join(distpath, "configs")
+rmtree(config_path, ignore_errors=True)
+os.makedirs(config_path)
+config_files = ['base_spectra_config.yaml', 'shielding_paths_config.yaml']
+for cf in config_files:
+    copy(os.path.join(dirname, 'configs', cf), config_path)
 
-
+# shielding library
+shield_path = os.path.join(distpath, 'shielding_library')
+rmtree(shield_path, ignore_errors=True)
+copytree(os.path.join(dirname, 'shielding_library'), shield_path)
 
 # Translators
 r = os.system(sys.executable + " \"" + os.path.join(dirname, "translators", "create_translators_exe.py")+"\"")

@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -39,10 +39,10 @@ import csv
 from enum import IntEnum, auto
 
 import yaml
-from PySide6.QtCore import Slot, Qt, QRegularExpression, QTemporaryDir
-from PySide6.QtGui import QRegularExpressionValidator, QDoubleValidator, QColor, QValidator
-from PySide6.QtWidgets import QDialog, QFileDialog, QTableWidgetItem, QDialogButtonBox, QItemDelegate, QMessageBox, \
-    QLineEdit, QAbstractItemView, QWidget, QTableWidget, QPushButton, QVBoxLayout, QHBoxLayout
+from PySide6.QtCore import Slot, Qt, QRegularExpression, QTemporaryDir, QCoreApplication
+from PySide6.QtGui import QRegularExpressionValidator, QColor
+from PySide6.QtWidgets import QDialog, QFileDialog, QTableWidgetItem, QDialogButtonBox, QMessageBox, \
+    QAbstractItemView, QWidget, QTableWidget, QPushButton, QVBoxLayout, QHBoxLayout
 from src.rase_settings import RaseSettings
 from .pcf_tools import readpcf, PCFtoN42Writer
 from .qt_utils import DoubleOrEmptyDelegate
@@ -52,8 +52,10 @@ import traceback
 
 from glob import glob
 
-from .base_building_algos import base_output_filename, do_glob, validate_output, default_config, pcf_config, \
-    pcf_config_txt
+from .base_building_algos import base_output_filename, do_glob, validate_output, default_config, \
+    pcf_config, pcf_config_txt
+
+# translation_tag = 'cbs_d'
 
 
 class ColNum(IntEnum):
@@ -80,27 +82,27 @@ class CreateBaseSpectraTableWidget(QWidget):
         self.sourceTable = QTableWidget(self)
         self.sourceTable.setColumnCount(len(ColNum))
         self._dbl_empty_delegate = DoubleOrEmptyDelegate()
-        self.sourceTable.setHorizontalHeaderItem(ColNum.folder, QTableWidgetItem("Folder"))
+        self.sourceTable.setHorizontalHeaderItem(ColNum.folder, QTableWidgetItem(self.tr('Folder')))
         self.sourceTable.setColumnHidden(ColNum.folder, True)
-        self.sourceTable.setHorizontalHeaderItem(ColNum.file, QTableWidgetItem("File"))
-        self.sourceTable.setHorizontalHeaderItem(ColNum.matID, QTableWidgetItem("Source ID"))
-        self.sourceTable.setHorizontalHeaderItem(ColNum.otherID, QTableWidgetItem("Description"))
-        self.sourceTable.setHorizontalHeaderItem(ColNum.dose, QTableWidgetItem("Exposure Rate"))
+        self.sourceTable.setHorizontalHeaderItem(ColNum.file, QTableWidgetItem(self.tr('File')))
+        self.sourceTable.setHorizontalHeaderItem(ColNum.matID, QTableWidgetItem(self.tr('Source ID')))
+        self.sourceTable.setHorizontalHeaderItem(ColNum.otherID, QTableWidgetItem(self.tr('Description')))
+        self.sourceTable.setHorizontalHeaderItem(ColNum.dose, QTableWidgetItem(self.tr('Exposure Rate')))
         self.sourceTable.setItemDelegateForColumn(ColNum.dose, self._dbl_empty_delegate)
         self.sourceTable.horizontalHeaderItem(ColNum.dose).setToolTip("μSv / h")
-        self.sourceTable.setHorizontalHeaderItem(ColNum.flux, QTableWidgetItem("Flux"))
+        self.sourceTable.setHorizontalHeaderItem(ColNum.flux, QTableWidgetItem(self.tr('Flux')))
         self.sourceTable.setItemDelegateForColumn(ColNum.flux, self._dbl_empty_delegate)
-        self.sourceTable.horizontalHeaderItem(ColNum.flux).setToolTip("counts / cm<sup>2</sup> / s")
-        self.sourceTable.setHorizontalHeaderItem(ColNum.base_name, QTableWidgetItem("Base Spectrum Name"))
-        self.sourceTable.setHorizontalHeaderItem(ColNum.notes, QTableWidgetItem("Notes"))
-        self.sourceTable.setHorizontalHeaderItem(ColNum.specID, QTableWidgetItem("#"))
+        self.sourceTable.horizontalHeaderItem(ColNum.flux).setToolTip(self.tr('counts / cm<sup>2</sup> / s'))
+        self.sourceTable.setHorizontalHeaderItem(ColNum.base_name, QTableWidgetItem(self.tr('Base Spectrum Name')))
+        self.sourceTable.setHorizontalHeaderItem(ColNum.notes, QTableWidgetItem(self.tr('Notes')))
+        self.sourceTable.setHorizontalHeaderItem(ColNum.specID, QTableWidgetItem(self.tr('#')))
         self.sourceTable.horizontalHeader().setStretchLastSection(True)
         self.sourceTable.setSelectionBehavior(QAbstractItemView.SelectRows)
 
         self.buttonLayout = QHBoxLayout()
-        self.btnSetAsBkg = QPushButton("Set Selected Entry as Background")
-        self.btnClearBkgSel = QPushButton("Clear Background Selection")
-        self.btnRemoveSrc = QPushButton("Remove Selected Entry")
+        self.btnSetAsBkg = QPushButton(self.tr('Set Selected Entry as Background'))
+        self.btnClearBkgSel = QPushButton(self.tr('Clear Background Selection'))
+        self.btnRemoveSrc = QPushButton(self.tr('Remove Selected Entry'))
         self.buttonLayout.addWidget(self.btnSetAsBkg)
         self.buttonLayout.addWidget(self.btnClearBkgSel)
         self.buttonLayout.addWidget(self.btnRemoveSrc)
@@ -166,8 +168,8 @@ class CreateBaseSpectraTableWidget(QWidget):
         """
         t = item.tableWidget()
         row = item.row()
-        label = base_output_filename(self.VendorID, self.ModelID,
-                                     t.item(row, ColNum.matID).text(), t.item(row, ColNum.otherID).text())
+        label = base_output_filename(self.VendorID, self.ModelID, t.item(row, ColNum.matID).text(),
+                                     t.item(row, ColNum.otherID).text())
         t.item(row, ColNum.base_name).setText(label)
 
     def update_base_fname_all(self):
@@ -211,7 +213,7 @@ class CreateBaseSpectraTableWidget(QWidget):
     def set_row_as_bkg(self, checked):
         rows = self.sourceTable.selectionModel().selectedRows()
         if len(rows) > 1:
-            QMessageBox.information(self, 'Background File Selection', 'Please select only one row')
+            QMessageBox.information(self, self.tr('Background File Selection'), self.tr('Please select only one row'))
             return
         self.clear_background_selection()
         row = rows[0].row()
@@ -226,7 +228,9 @@ class CreateBaseSpectraTableWidget(QWidget):
         self.backgroundFileRow = None
 
     def get_table_data_as_list(self) -> list:
-        ''' Returns content of the table as a 2D list of strings'''
+        """
+        Returns content of the table as a 2D list of strings
+        """
         data = []
         for row in range(self.sourceTable.rowCount()):
             row_data = []
@@ -243,7 +247,7 @@ class CreateBaseSpectraTableWidget(QWidget):
         """
         exports to CSV
         """
-        path = QFileDialog.getSaveFileName(self, 'Save File', directory, 'CSV (*.csv)')
+        path = QFileDialog.getSaveFileName(self, self.tr('Save File'), directory, 'CSV (*.csv)')
         if path[0]:
             with open(path[0], mode='w', newline='') as stream:
                 writer = csv.writer(stream)
@@ -267,7 +271,7 @@ class CreateBaseSpectraTableWidget(QWidget):
         """
         imports from CSV
         """
-        path = QFileDialog.getOpenFileName(self, 'Open File', directory, 'CSV(*.csv)')
+        path = QFileDialog.getOpenFileName(self, self.tr('Open File'), directory, 'CSV(*.csv)')
         if path[0]:
             # FIXME: This doesn't check in any way that the format of the file is correct
             with open(path[0], mode='r') as stream:
@@ -293,15 +297,15 @@ class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_Dialog, QDialog):
     def __init__(self, session):
         QDialog.__init__(self)
         self.setupUi(self)
-        self.buttonBox.button(QDialogButtonBox.Ok).setText("Create")
+        self.buttonBox.button(QDialogButtonBox.Ok).setText(self.tr('Create'))
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
         self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(False)
 
         self.settings = RaseSettings()
 
-        self.txtVendorID.setValidator(QRegularExpressionValidator(QRegularExpression('[a-zA-Z0-9]{0,4}')))
-        self.txtModelID.setValidator(QRegularExpressionValidator(QRegularExpression('[a-zA-Z0-9]{0,3}')))
+        self.txtVendorID.setValidator(QRegularExpressionValidator(QRegularExpression('[a-zA-Z0-9]{0,20}')))
+        self.txtModelID.setValidator(QRegularExpressionValidator(QRegularExpression('[a-zA-Z0-9]{0,20}')))
 
         self.createBSTable = CreateBaseSpectraTableWidget()
         self.verticalLayout_reserved.addWidget(self.createBSTable)
@@ -328,7 +332,7 @@ class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_Dialog, QDialog):
         """
         options = QFileDialog.ShowDirsOnly
         if sys.platform.startswith('win'): options = QFileDialog.DontUseNativeDialog
-        path = QFileDialog.getExistingDirectory(self, 'Choose Base Spectra Directory',
+        path = QFileDialog.getExistingDirectory(self, self.tr('Choose Base Spectra Directory'),
                                                 self.settings.getLastDirectory(), options)
         if not path:
             return
@@ -336,8 +340,7 @@ class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_Dialog, QDialog):
         if self.comboConfig.currentText() == pcf_config_txt:
             filenames = [f for f in os.listdir(path) if f.lower().endswith(".pcf")]
             if not filenames:
-                QMessageBox.critical(self, 'Invalid Directory Selection',
-                                     'No PCF Files in selected Directory')
+                QMessageBox.critical(self, self.tr('Invalid Directory Selection'), self.tr('No PCF Files in selected Directory'))
                 return
 
             for f in sorted(filenames):
@@ -345,10 +348,9 @@ class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_Dialog, QDialog):
                     self.createBSTable.create_table_row(f, path, index+1, spectrum.title)
         else:
             if not self.checkBox_ComboFolder.isChecked():  # normal load
-                filenames = [f for f in os.listdir(path) if f.lower().endswith(".n42")]
+                filenames = [f for f in os.listdir(path) if (f.lower().endswith(".n42") or f.lower().endswith(".xml"))]
                 if not filenames:
-                    QMessageBox.critical(self, 'Invalid Directory Selection',
-                                         'No n42 Files in selected Directory')
+                    QMessageBox.critical(self, self.tr('Invalid Directory Selection'), self.tr('No n42 Files in selected Directory'))
                     return
 
                 for f in sorted(filenames):
@@ -359,6 +361,7 @@ class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_Dialog, QDialog):
                 bad_dirs = []
                 for it in os.scandir(path):
                     if it.is_dir():
+                        #TODO: allow for grabbing xml files as well
                         self.createBSTable.create_table_row(os.path.join(it.name, '*.n42'), path)
                         inputfiles = glob(os.path.join(it.path, '*.n42'))
                         if not bool(inputfiles):
@@ -367,8 +370,8 @@ class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_Dialog, QDialog):
 
                 if not found_all:
                     bad_dir_str = ', '.join(bad_dirs)
-                    QMessageBox.critical(self, 'Invalid Directory Selection',
-                                         f'Subdirectory(s) {bad_dir_str} does not contain n42 files.')
+                    QMessageBox.critical(self, self.tr('Invalid Directory Selection'),
+                                         self.tr('Subdirectory(s) {} does not contain n42 files.').format(bad_dir_str))
 
     @Slot(int)
     def combo_config_changed(self, index):
@@ -384,7 +387,7 @@ class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_Dialog, QDialog):
         """
         options = QFileDialog.ShowDirsOnly
         if sys.platform.startswith('win'): options = QFileDialog.DontUseNativeDialog
-        path = QFileDialog.getExistingDirectory(self, 'Choose Base Spectra Directory',
+        path = QFileDialog.getExistingDirectory(self, self.tr('Choose Base Spectra Directory'),
                                                 self.settings.getLastDirectory(), options)
 
         if path:
@@ -396,8 +399,8 @@ class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_Dialog, QDialog):
         Selects configuration file
         """
         if sys.platform.startswith('win'): options = QFileDialog.DontUseNativeDialog
-        path, __filter = QFileDialog.getOpenFileName(self, 'Choose Config YAML file',
-                                                self.settings.getLastDirectory(),'YAML(*.yaml)')
+        path, __filter = QFileDialog.getOpenFileName(self, self.tr('Choose Config YAML file'),
+                                                     self.settings.getLastDirectory(), 'YAML(*.yaml)')
 
         if path:
             self.txtConfigFile.setText(path)
@@ -409,7 +412,9 @@ class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_Dialog, QDialog):
         self.buttonBox.button(QDialogButtonBox.Ok).setEnabled(entries_are_valid)
 
     def validate_entries(self) -> bool:
-        '''Validates that all entries are properly set and enable the "Create" button'''
+        """
+        Validates that all entries are properly set and enable the "Create" button
+        """
         # TODO: add text box or tooltip explaining what is missing
         if not (self.txtVendorID.text() and self.txtModelID.text()
                 and self.txtOutFolder.text()):
@@ -422,15 +427,13 @@ class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_Dialog, QDialog):
         configdict = self.configs[self.comboConfig.currentText()]
 
         if configdict['calibration'] == "Replace this text with your instrument's calibration coefficients.":
-            QMessageBox.warning(self, 'Calibration Error', 'Calibration coefficients need to be manually set in '
-                                                           'the config file for this instrument.\n\nTo do this, '
-                                                           'determine the coefficients of a polynomial calibration '
-                                                           'fit using your favorite external tool, and change the '
-                                                           'calibration xpath field in the config file for this '
-                                                           'instrument to a string of those coefficients '
-                                                           '(e.g.: "0 2.998 0"). Then re-select the configuration '
-                                                           'file to refresh the field and re-select the desired '
-                                                           'instrument from the drop-down configuration menu.')
+            QMessageBox.warning(self, self.tr('Calibration Error'), self.tr('Calibration coefficients '
+                'need to be manually set in the config file for this instrument.\n\n'
+                'To do this, determine the coefficients of a polynomial calibration fit using your '
+                'favorite external tool, and change the calibration xpath field in the config file '
+                'for this instrument to a string of those coefficients (e.g.: "0 2.998 0"). Then '
+                're-select the configuration file to refresh the field and re-select the desired '
+                'instrument from the drop-down configuration menu.'))
             return
 
         pcf = (self.comboConfig.currentText() == pcf_config_txt)
@@ -443,14 +446,14 @@ class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_Dialog, QDialog):
                                                 self.txtVendorID.text(),
                                                 self.txtModelID.text())
         except BaseSpectraFormatException as e:
-            QMessageBox.warning(self, 'Base Spectrum Creation Error', e.args)
+            QMessageBox.warning(self, self.tr('Base Spectrum Creation Error'), e.args)
             return
         # except BaseSpectraFormatException as e:
         #     QMessageBox.warning(self, 'File Validation Error',
         #                         f'Base spectrum file was created, but the result could not be successfully read. Reading error was: \n{e.args}')
         #     return
         except Exception as e:
-            QMessageBox.warning(self, 'Error', str(e) + traceback.format_exc())
+            QMessageBox.warning(self, self.tr('Error'), str(e) + traceback.format_exc())
             return
 
         return QDialog.accept(self)
@@ -507,6 +510,7 @@ def create_base_spectra_from_input_data(config_dict: dict, pcf: bool, data: list
                                                          source=bkg_row[ColNum.matID],
                                                          description=bkg_row[ColNum.otherID]))
 
+    master_ecal = None
     for n, row in enumerate(data):
         in_file = os.path.join(row[ColNum.folder], row[ColNum.file])
 
@@ -518,6 +522,12 @@ def create_base_spectra_from_input_data(config_dict: dict, pcf: bool, data: list
             subtraction = bkg_out_file
             config_dict['subtraction_spectrum_xpath'] = './RadMeasurement[@id="Foreground"]/Spectrum'
 
+        if 'ndetectors' not in config_dict.keys():
+            config_dict['ndetectors'] = 1
+        for additional_key in ['additional_meas', 'additional_sub', 'additional_liv', 'additional_cal']:
+            if additional_key not in config_dict.keys():
+                config_dict[additional_key] = None
+
         os.makedirs(out_folder, exist_ok=True)
 
         # TODO: allow to indicate a different "radid" for the background spectrum to be subtracted
@@ -528,16 +538,16 @@ def create_base_spectra_from_input_data(config_dict: dict, pcf: bool, data: list
             else:
                 row[mode] = float(row[mode])
         try:
-            do_glob(inputfileglob=in_file, config=config_dict, outputfolder=out_folder,
+            master_ecal = do_glob(inputfileglob=in_file, config=config_dict, outputfolder=out_folder,
                     manufacturer=vendorID, model=modelID, source=row[ColNum.matID],
                     uSievertsph=row[ColNum.dose], fluxValue=row[ColNum.flux],
-                    subtraction=subtraction, description=row[ColNum.otherID])
+                    subtraction=subtraction, description=row[ColNum.otherID], master_ecal=master_ecal)
 
         except BaseSpectraFormatException as e:
-            print('Base Spectrum Creation Error', e.args)
+            print(QCoreApplication.translate('cbs_d', 'Base Spectrum Creation Error'), e.args)
             raise
         except Exception as e:
-            print('Error', str(e) + traceback.format_exc())
+            print(QCoreApplication.translate('cbs_d', 'Error'), str(e) + traceback.format_exc())
             raise
 
         try:
@@ -546,9 +556,9 @@ def create_base_spectra_from_input_data(config_dict: dict, pcf: bool, data: list
                             source=row[ColNum.matID],
                             description=row[ColNum.otherID])
         except BaseSpectraFormatException as e:
-            print('File Validation Error',
-                  f'Base spectrum file was created, but the result could not be successfully read. '
-                  f'Reading error was: \n{e.args}')
+            print(QCoreApplication.translate('cbs_d', 'File Validation Error'),
+                  QCoreApplication.translate('cbs_d', 'Base spectrum file was created, but the result '
+                            'could not be successfully read. Reading error was: \n{}').format(e.args))
             raise
 
 
@@ -558,11 +568,11 @@ def load_configs_from_file(parent, file_path) -> dict:
         with open(file_path, 'r') as file:
             file_configs = yaml.safe_load(file)
     except yaml.YAMLError as ex:
-        QMessageBox.warning(parent, 'Config File Error',
-                            f'Config file {file_path} cannot be read. '
-                            'Look for YAML format errors.\n' +
+        QMessageBox.warning(parent, QCoreApplication.translate('cbs_d', 'Config File Error'),
+                            QCoreApplication.translate('cbs_d', 'Config file {} cannot be read. '
+                            'Look for YAML format errors.\n').format(file_path) +
                             str(ex))
     except FileNotFoundError:
-        QMessageBox.warning(parent, 'Config File Error',
-                            'Config file not found. Load a working config file.\n')
+        QMessageBox.warning(parent, QCoreApplication.translate('cbs_d', 'Config File Error'),
+                            QCoreApplication.translate('cbs_d', 'Config file not found. Load a working config file.\n'))
     return file_configs

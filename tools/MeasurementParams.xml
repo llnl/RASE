@@ -1,0 +1,238 @@
+<?xml version="1.0"?>
+<!--This is the MeasurementParams.xml file required by the H3D A400-->
+<EnableNearField>false</EnableNearField>
+<UseLiveTime>false</UseLiveTime>
+<NSigmaThreshold>0.000000</NSigmaThreshold>
+<IDMethod>Advanced</IDMethod>
+<IntegrationTime>5.000000</IntegrationTime>
+<AutoInitial>false</AutoInitial>
+<Subpixel>0</Subpixel>
+<MaxDynamicRange>3000.000000</MaxDynamicRange>
+<UTCOffset>-5.000000</UTCOffset><ProductType>A400 v3.0</ProductType>
+<SourceDistance units="cm" type="Previous">45.699999</SourceDistance>
+<IsotopeLibrary name="All Isotopes">
+	<Isotope type="Dose" id="210596047829">
+		<Name>Dose</Name>
+		<Category>Unknown</Category>
+		<Range>
+			<Minimum units="keV">250</Minimum>
+			<Maximum units="keV">1500</Maximum>
+		</Range>
+	</Isotope>
+	<Isotope type="Discrete" id="7568023180366842">
+		<Name>HEU</Name>
+		<Category>SNM</Category>
+		<Energies units="keV">185.7</Energies>
+		<BranchingRatios units="%">57.2</BranchingRatios>
+	</Isotope>
+	<Isotope type="Discrete" id="249745063372973668">
+		<Name>Neutrons</Name>
+		<Category>Neutron</Category>
+		<Energies units="keV"></Energies>
+		<BranchingRatios units="%"></BranchingRatios>
+	</Isotope>
+	<Isotope type="ENDF" id="843617328515252124">
+		<Name>I-131</Name>
+		<Category>Medical</Category>
+		<Z>53</Z>
+		<A>131</A>
+		<LinesUsed>0,5,12,15</LinesUsed>
+	</Isotope>
+	<Isotope type="Discrete" id="1746490365044818493">
+		<Name>Tl-201</Name>
+		<Category>Medical</Category>
+		<Energies units="keV">70.8 135.3 167.4</Energies>
+		<BranchingRatios units="%">46.8 2.7 10</BranchingRatios>
+	</Isotope>
+	<Isotope type="ENDF" id="2477947039080944276">
+		<Name>Tc-99m</Name>
+		<Category>Medical</Category>
+		<Z>43</Z>
+		<A>99</A>
+		<Meta>1</Meta>
+		<LinesUsed>2</LinesUsed>
+	</Isotope>
+	<Isotope type="ENDF" id="2713387241130359754">
+		<Name>Pu-239</Name>
+		<Category>SNM</Category>
+		<Z>94</Z>
+		<A>239</A>
+		<LinesUsed>9,20,31,50,63,66,71,81,90,97,122,162,157</LinesUsed>
+	</Isotope>
+	<Isotope type="ENDF" id="5215420443246866678">
+		<Name>Ga-67</Name>
+		<Category>Medical</Category>
+		<Z>31</Z>
+		<A>67</A>
+		<LinesUsed>1,2,4,5</LinesUsed>
+	</Isotope>
+	<Isotope type="Discrete" id="5465002047479829393">
+		<Name>Np-237</Name>
+		<Category>SNM</Category>
+		<Energies units="keV">311.9 340.476 111 144 300.34</Energies>
+		<BranchingRatios units="%">38.463 4.446 6 0.443 6.62</BranchingRatios>
+	</Isotope>
+	<Isotope type="Discrete" id="6435797773923435006">
+		<Name>Ir-192Shielded</Name>
+		<Category>Industrial</Category>
+		<Energies units="keV">884.5 1061</Energies>
+		<BranchingRatios units="%">0.2922 0.0528</BranchingRatios>
+	</Isotope>
+	<Isotope type="ENDF" id="8186620992430485107">
+		<Name>Am-241</Name>
+		<Category>Industrial</Category>
+		<Z>95</Z>
+		<A>241</A>
+		<LinesUsed>8</LinesUsed>
+	</Isotope>
+	<Isotope type="Discrete" id="8241594460392038005">
+		<Name>U-238</Name>
+		<Category>Natural</Category>
+		<Energies units="keV">1001</Energies>
+		<BranchingRatios units="%">100</BranchingRatios>
+	</Isotope>
+	<Isotope type="ENDF" id="8735799562399949731">
+		<Name>Ba-133</Name>
+		<Category>Industrial</Category>
+		<Z>56</Z>
+		<A>133</A>
+		<LinesUsed>0,2,3,5,6,7,8</LinesUsed>
+	</Isotope>
+	<Isotope type="Discrete" id="9961961181588221913">
+		<Name>U-238Chain</Name>
+		<Category>Natural</Category>
+		<Energies units="keV">113.5 63.29 92.5 742.8 766.4 1001 1193.77</Energies>
+		<BranchingRatios units="%">0.01 4.83 5.58 0.08 0.29 0.83 0.28</BranchingRatios>
+	</Isotope>
+	<Isotope type="ENDF" id="10013976546343638679">
+		<Name>K-40</Name>
+		<Category>Natural</Category>
+		<Z>19</Z>
+		<A>40</A>
+		<LinesUsed>0</LinesUsed>
+	</Isotope>
+	<Isotope type="ENDF" id="10033604460859891943">
+		<Name>WGPu</Name>
+		<Category>SNM</Category>
+		<Z>94</Z>
+		<A>239</A>
+		<LinesUsed>90</LinesUsed>
+	</Isotope>
+	<Isotope type="ENDF" id="10175473284925120617">
+		<Name>Co-57</Name>
+		<Category>Industrial</Category>
+		<Z>27</Z>
+		<A>57</A>
+		<LinesUsed>1,2</LinesUsed>
+	</Isotope>
+	<Isotope type="ENDF" id="10907687298604589829">
+		<Name>Eu-152</Name>
+		<Category>Industrial</Category>
+		<Z>63</Z>
+		<A>152</A>
+		<LinesUsed>0,13,27,89,105,112,115,129</LinesUsed>
+	</Isotope>
+	<Isotope type="Discrete" id="11051585533201108246">
+		<Name>U-235</Name>
+		<Category>SNM</Category>
+		<Energies units="keV">93.35 89.95 109.2 143.8 163.4 185.7 205.3</Energies>
+		<BranchingRatios units="%">5.54 3.43 1.54 10.96 5.08 57.2 5.01</BranchingRatios>
+	</Isotope>
+	<Isotope type="ENDF" id="11553029423940066180">
+		<Name>Co-60</Name>
+		<Category>Industrial</Category>
+		<Z>27</Z>
+		<A>60</A>
+		<LinesUsed>2,3</LinesUsed>
+	</Isotope>
+	<Isotope type="ENDF" id="11825605134216413928">
+		<Name>Cs-137</Name>
+		<Category>Industrial</Category>
+		<Z>55</Z>
+		<A>137</A>
+		<LinesUsed>1</LinesUsed>
+	</Isotope>
+	<Isotope type="Discrete" id="12198219630259368693">
+		<Name>Pu-238</Name>
+		<Category>SNM</Category>
+		<Energies units="keV">152.72 100</Energies>
+		<BranchingRatios units="%">0.000937 0.00012</BranchingRatios>
+	</Isotope>
+	<Isotope type="Discrete" id="13398013006291976072">
+		<Name>DU</Name>
+		<Category>SNM</Category>
+		<Energies units="keV">93 112 186 766.4 1001</Energies>
+		<BranchingRatios units="%">100 10 10 1 100</BranchingRatios>
+	</Isotope>
+	<Isotope type="Discrete" id="13452252923266415012">
+		<Name>2614keVTh-232orU-232</Name>
+		<Category>Natural</Category>
+		<Energies units="keV">2614</Energies>
+		<BranchingRatios units="%">100</BranchingRatios>
+	</Isotope>
+	<Isotope type="Discrete" id="13473570799492251000">
+		<Name>Ra-226</Name>
+		<Category>Natural</Category>
+		<Energies units="keV">186.2 242 295.2 351.9 786 609.3 665.5 768.4 806.2 934.1 964.1 1120 1238 1378 1509 1764 2204</Energies>
+		<BranchingRatios units="%">3.59 7.43 19.3 37.6 1.07 46.1 1.46 4.94 1.22 3.08 0.362 15.1 5.79 4 2.11 15.4 5.08</BranchingRatios>
+	</Isotope>
+	<Isotope type="Discrete" id="13717444705086929051">
+		<Name>Cf-252</Name>
+		<Category>Neutron</Category>
+		<Energies units="keV">388</Energies>
+		<BranchingRatios units="%">100</BranchingRatios>
+	</Isotope>
+	<Isotope type="Discrete" id="14241836265767848277">
+		<Name>Se-75</Name>
+		<Category>Industrial</Category>
+		<Energies units="keV">264.66 136 279.54 400.66 121.12 198.61 306.92</Energies>
+		<BranchingRatios units="%">58.887 58.252 24.619 11.468 17.199 1.475 1.228</BranchingRatios>
+	</Isotope>
+	<Isotope type="ENDF" id="15162556452659308563">
+		<Name>Pu-240</Name>
+		<Category>SNM</Category>
+		<Z>94</Z>
+		<A>240</A>
+		<LinesUsed>1</LinesUsed>
+	</Isotope>
+	<Isotope type="Discrete" id="15593697359542321073">
+		<Name>RGPu</Name>
+		<Category>SNM</Category>
+		<Energies units="keV">104.2 413.7</Energies>
+		<BranchingRatios units="%">100 100</BranchingRatios>
+	</Isotope>
+	<Isotope type="Discrete" id="15640279889761748607">
+		<Name>Th-232Chain</Name>
+		<Category>Natural</Category>
+		<Energies units="keV">52 77 84 93 99.51 105 129.1 209.3 240 270.2 278.7 300.1 328 338.3 409.5 463 510 583.2 727.3 794.97 860.6 911.2 969 1247 2615</Energies>
+		<BranchingRatios units="%">1 10 1 5 1.26 2.5 1.73 3.89 47.4 2.5 2 3.278 2.95 6 1.92 4.4 11 42 6.57 7 12.42 25.8 15.8 2 50</BranchingRatios>
+	</Isotope>
+	<Isotope type="ENDF" id="16274123462659114745">
+		<Name>Ir-192</Name>
+		<Category>Industrial</Category>
+		<Z>77</Z>
+		<A>192</A>
+		<LinesUsed>10,13,20,21,24,27,28</LinesUsed>
+	</Isotope>
+	<Isotope type="ENDF" id="17097522878825818421">
+		<Name>Na-22</Name>
+		<Category>Industrial</Category>
+		<Z>11</Z>
+		<A>22</A>
+		<LinesUsed>0</LinesUsed>
+	</Isotope>
+	<Isotope type="ENDF" id="17574456305263274937">
+		<Name>Br-82</Name>
+		<Category>Industrial</Category>
+		<Z>35</Z>
+		<A>82</A>
+		<LinesUsed>5,10,13,17,21,27,18</LinesUsed>
+	</Isotope>
+</IsotopeLibrary>
+<DoseRateAlarmEnabled>true</DoseRateAlarmEnabled>
+<DoseRateAlarmLo>0.010000</DoseRateAlarmLo>
+<DoseRateAlarmHi>0.000000</DoseRateAlarmHi>
+<TotalDoseAlarm>0.001000</TotalDoseAlarm>
+<SIUnits>false</SIUnits>
+<AudibleAlarmsEnabled>true</AudibleAlarmsEnabled>
+<VisualAlarmsEnabled>true</VisualAlarmsEnabled>

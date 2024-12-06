@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -42,6 +42,7 @@ from src.rase_settings import RaseSettings
 from .ui_generated import ui_input_random_seed
 from math import pow
 
+# translation_tag = 'rseed'
 
 class RandomSeedDialog(ui_input_random_seed.Ui_InputRandomSeedDialog, QDialog):
     def __init__(self, parent):
@@ -68,8 +69,8 @@ class RandomSeedDialog(ui_input_random_seed.Ui_InputRandomSeedDialog, QDialog):
             super().accept()
 
         else:
-            QMessageBox.information(self, 'Invalid Random Seed Value',
-                                        'seed value must be numeric between 1 and 1,073,741,824')
+            QMessageBox.information(self, self.tr('Invalid Random Seed Value'),
+                                        self.tr('seed value must be numeric between 1 and 1,073,741,824'))
             super().accept()
             dialog = RandomSeedDialog(self)
             dialog.exec_()

@@ -1,0 +1,861 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RadInstrumentData xmlns="http://physics.nist.gov/N42/2011/N42" xmlns:n42="http://physics.nist.gov/N42/2011/N42" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:BTI="http://www.bubbletech.ca/FlexSpec/N42Extension" xsi:schemaLocation="http://physics.nist.gov/N42/2011/N42 https://www.nist.gov/system/files/documents/pml/div682/grp04/n42.xsd http://www.bubbletech.ca/FlexSpec/N42Extension http://www.bubbletech.ca/FlexSpec/N42Extension.xsd" n42DocUUID="30ea7ace-c182-4c88-87cb-29257b4a8f9b">
+	<RadInstrumentInformation id="RadInst01">
+		<RadInstrumentManufacturerName>BTI</RadInstrumentManufacturerName>
+		<RadInstrumentIdentifier>23-007</RadInstrumentIdentifier>
+		<RadInstrumentModelName>FlexSpec Backpack</RadInstrumentModelName>
+		<RadInstrumentClassCode>Backpack</RadInstrumentClassCode>
+		<RadInstrumentVersion>
+			<RadInstrumentComponentName>Software</RadInstrumentComponentName>
+			<RadInstrumentComponentVersion>2.7.3.2</RadInstrumentComponentVersion>
+		</RadInstrumentVersion>
+		<RadInstrumentVersion>
+			<RadInstrumentComponentName>BTI_TIA</RadInstrumentComponentName>
+			<RadInstrumentComponentVersion>3.17.0</RadInstrumentComponentVersion>
+		</RadInstrumentVersion>
+		<RadInstrumentVersion>
+			<RadInstrumentComponentName>Firmware SL1-23-007</RadInstrumentComponentName>
+			<RadInstrumentComponentVersion>4.17/4.15</RadInstrumentComponentVersion>
+		</RadInstrumentVersion>
+		<RadInstrumentVersion>
+			<RadInstrumentComponentName>Firmware SR1-23-007</RadInstrumentComponentName>
+			<RadInstrumentComponentVersion>4.17/4.15</RadInstrumentComponentVersion>
+		</RadInstrumentVersion>
+		<BTI:AnalysisMode>Continuous</BTI:AnalysisMode>
+	</RadInstrumentInformation>
+	<RadDetectorInformation id="SL1-23-007">
+		<RadDetectorCategoryCode>Gamma</RadDetectorCategoryCode>
+		<RadDetectorKindCode>Other</RadDetectorKindCode>
+		<RadDetectorDescription>NaIL</RadDetectorDescription>
+		<RadDetectorCharacteristics>
+			<CharacteristicGroup>
+				<CharacteristicGroupName>Dose conversion factors</CharacteristicGroupName>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 0</CharacteristicName>
+					<CharacteristicValue>4.85316e-05</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 1</CharacteristicName>
+					<CharacteristicValue>7.77024e-05</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 2</CharacteristicName>
+					<CharacteristicValue>0.0001344924</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 3</CharacteristicName>
+					<CharacteristicValue>0.0002263356</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 4</CharacteristicName>
+					<CharacteristicValue>0.0003497004</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 5</CharacteristicName>
+					<CharacteristicValue>0.000488286</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 6</CharacteristicName>
+					<CharacteristicValue>0.00062667</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 7</CharacteristicName>
+					<CharacteristicValue>0.0007715196</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 8</CharacteristicName>
+					<CharacteristicValue>0.000903006</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 9</CharacteristicName>
+					<CharacteristicValue>0.001024326</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 10</CharacteristicName>
+					<CharacteristicValue>0.0011283912</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 11</CharacteristicName>
+					<CharacteristicValue>0.0012381156</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 12</CharacteristicName>
+					<CharacteristicValue>0.0013472568</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 13</CharacteristicName>
+					<CharacteristicValue>0.0014664672</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 14</CharacteristicName>
+					<CharacteristicValue>0.0015787044</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 15</CharacteristicName>
+					<CharacteristicValue>0.001667196</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 16</CharacteristicName>
+					<CharacteristicValue>0.0017485128</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 17</CharacteristicName>
+					<CharacteristicValue>0.0018447444</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 18</CharacteristicName>
+					<CharacteristicValue>0.001923768</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 19</CharacteristicName>
+					<CharacteristicValue>0.0020185596</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 20</CharacteristicName>
+					<CharacteristicValue>0.0020672244</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 21</CharacteristicName>
+					<CharacteristicValue>0.0020962512</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 22</CharacteristicName>
+					<CharacteristicValue>0.0021560724</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 23</CharacteristicName>
+					<CharacteristicValue>0.0021908484</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 24</CharacteristicName>
+					<CharacteristicValue>0.0022278096</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 25</CharacteristicName>
+					<CharacteristicValue>0.0023092596</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 26</CharacteristicName>
+					<CharacteristicValue>0.0023884164</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 27</CharacteristicName>
+					<CharacteristicValue>0.0024375024</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 28</CharacteristicName>
+					<CharacteristicValue>0.0025431696</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 29</CharacteristicName>
+					<CharacteristicValue>0.0026390808</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+			</CharacteristicGroup>
+		</RadDetectorCharacteristics>
+		<RadDetectorCharacteristics>
+			<CharacteristicGroup>
+				<CharacteristicGroupName>Nonlinearity correction</CharacteristicGroupName>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 0</CharacteristicName>
+					<CharacteristicValue>0.5</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 1</CharacteristicName>
+					<CharacteristicValue>0.84984</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 2</CharacteristicName>
+					<CharacteristicValue>0.89951</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 3</CharacteristicName>
+					<CharacteristicValue>0.92377</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 4</CharacteristicName>
+					<CharacteristicValue>0.94871</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 5</CharacteristicName>
+					<CharacteristicValue>0.96208</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 6</CharacteristicName>
+					<CharacteristicValue>0.97329</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 7</CharacteristicName>
+					<CharacteristicValue>1</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 8</CharacteristicName>
+					<CharacteristicValue>1.01036</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 9</CharacteristicName>
+					<CharacteristicValue>1.01306</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+			</CharacteristicGroup>
+		</RadDetectorCharacteristics>
+		<RadDetectorCharacteristics>
+			<CharacteristicGroup>
+				<CharacteristicGroupName>Nonlinearity correction energies</CharacteristicGroupName>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 0</CharacteristicName>
+					<CharacteristicValue>0</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 1</CharacteristicName>
+					<CharacteristicValue>37.65435</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 2</CharacteristicName>
+					<CharacteristicValue>135.74</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 3</CharacteristicName>
+					<CharacteristicValue>201.249</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 4</CharacteristicName>
+					<CharacteristicValue>369.9746</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 5</CharacteristicName>
+					<CharacteristicValue>531.1384</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 6</CharacteristicName>
+					<CharacteristicValue>679.859</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 7</CharacteristicName>
+					<CharacteristicValue>1460.8</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 8</CharacteristicName>
+					<CharacteristicValue>1745.916</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 9</CharacteristicName>
+					<CharacteristicValue>2580.796</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+			</CharacteristicGroup>
+		</RadDetectorCharacteristics>
+		<RadDetectorCharacteristics>
+			<Characteristic>
+				<CharacteristicName>Max energy</CharacteristicName>
+				<CharacteristicValue>4100</CharacteristicValue>
+				<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+			</Characteristic>
+		</RadDetectorCharacteristics>
+		<RadDetectorCharacteristics>
+			<Characteristic>
+				<CharacteristicName>Zero low energy</CharacteristicName>
+				<CharacteristicValue>10.01</CharacteristicValue>
+				<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+			</Characteristic>
+		</RadDetectorCharacteristics>
+		<RadDetectorCharacteristics>
+			<Characteristic>
+				<CharacteristicName>Zero high energy</CharacteristicName>
+				<CharacteristicValue>2800</CharacteristicValue>
+				<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+			</Characteristic>
+		</RadDetectorCharacteristics>
+	</RadDetectorInformation>
+	<RadDetectorInformation id="SR1-23-007">
+		<RadDetectorCategoryCode>Gamma</RadDetectorCategoryCode>
+		<RadDetectorKindCode>Other</RadDetectorKindCode>
+		<RadDetectorDescription>NaIL</RadDetectorDescription>
+		<RadDetectorCharacteristics>
+			<CharacteristicGroup>
+				<CharacteristicGroupName>Dose conversion factors</CharacteristicGroupName>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 0</CharacteristicName>
+					<CharacteristicValue>4.85316e-05</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 1</CharacteristicName>
+					<CharacteristicValue>7.77024e-05</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 2</CharacteristicName>
+					<CharacteristicValue>0.0001344924</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 3</CharacteristicName>
+					<CharacteristicValue>0.0002263356</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 4</CharacteristicName>
+					<CharacteristicValue>0.0003497004</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 5</CharacteristicName>
+					<CharacteristicValue>0.000488286</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 6</CharacteristicName>
+					<CharacteristicValue>0.00062667</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 7</CharacteristicName>
+					<CharacteristicValue>0.0007715196</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 8</CharacteristicName>
+					<CharacteristicValue>0.000903006</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 9</CharacteristicName>
+					<CharacteristicValue>0.001024326</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 10</CharacteristicName>
+					<CharacteristicValue>0.0011283912</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 11</CharacteristicName>
+					<CharacteristicValue>0.0012381156</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 12</CharacteristicName>
+					<CharacteristicValue>0.0013472568</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 13</CharacteristicName>
+					<CharacteristicValue>0.0014664672</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 14</CharacteristicName>
+					<CharacteristicValue>0.0015787044</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 15</CharacteristicName>
+					<CharacteristicValue>0.001667196</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 16</CharacteristicName>
+					<CharacteristicValue>0.0017485128</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 17</CharacteristicName>
+					<CharacteristicValue>0.0018447444</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 18</CharacteristicName>
+					<CharacteristicValue>0.001923768</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 19</CharacteristicName>
+					<CharacteristicValue>0.0020185596</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 20</CharacteristicName>
+					<CharacteristicValue>0.0020672244</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 21</CharacteristicName>
+					<CharacteristicValue>0.0020962512</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 22</CharacteristicName>
+					<CharacteristicValue>0.0021560724</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 23</CharacteristicName>
+					<CharacteristicValue>0.0021908484</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 24</CharacteristicName>
+					<CharacteristicValue>0.0022278096</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 25</CharacteristicName>
+					<CharacteristicValue>0.0023092596</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 26</CharacteristicName>
+					<CharacteristicValue>0.0023884164</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 27</CharacteristicName>
+					<CharacteristicValue>0.0024375024</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 28</CharacteristicName>
+					<CharacteristicValue>0.0025431696</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Dose conversion factors 29</CharacteristicName>
+					<CharacteristicValue>0.0026390808</CharacteristicValue>
+					<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+			</CharacteristicGroup>
+		</RadDetectorCharacteristics>
+		<RadDetectorCharacteristics>
+			<CharacteristicGroup>
+				<CharacteristicGroupName>Nonlinearity correction</CharacteristicGroupName>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 0</CharacteristicName>
+					<CharacteristicValue>0.5</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 1</CharacteristicName>
+					<CharacteristicValue>0.84984</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 2</CharacteristicName>
+					<CharacteristicValue>0.89951</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 3</CharacteristicName>
+					<CharacteristicValue>0.92377</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 4</CharacteristicName>
+					<CharacteristicValue>0.94871</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 5</CharacteristicName>
+					<CharacteristicValue>0.96208</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 6</CharacteristicName>
+					<CharacteristicValue>0.97329</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 7</CharacteristicName>
+					<CharacteristicValue>1</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 8</CharacteristicName>
+					<CharacteristicValue>1.01036</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction 9</CharacteristicName>
+					<CharacteristicValue>1.01306</CharacteristicValue>
+					<CharacteristicValueUnits>unit-less</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+			</CharacteristicGroup>
+		</RadDetectorCharacteristics>
+		<RadDetectorCharacteristics>
+			<CharacteristicGroup>
+				<CharacteristicGroupName>Nonlinearity correction energies</CharacteristicGroupName>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 0</CharacteristicName>
+					<CharacteristicValue>0</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 1</CharacteristicName>
+					<CharacteristicValue>37.65435</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 2</CharacteristicName>
+					<CharacteristicValue>135.74</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 3</CharacteristicName>
+					<CharacteristicValue>201.249</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 4</CharacteristicName>
+					<CharacteristicValue>369.9746</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 5</CharacteristicName>
+					<CharacteristicValue>531.1384</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 6</CharacteristicName>
+					<CharacteristicValue>679.859</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 7</CharacteristicName>
+					<CharacteristicValue>1460.8</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 8</CharacteristicName>
+					<CharacteristicValue>1745.916</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+				<Characteristic>
+					<CharacteristicName>Nonlinearity correction energies 9</CharacteristicName>
+					<CharacteristicValue>2580.796</CharacteristicValue>
+					<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+				</Characteristic>
+			</CharacteristicGroup>
+		</RadDetectorCharacteristics>
+		<RadDetectorCharacteristics>
+			<Characteristic>
+				<CharacteristicName>Max energy</CharacteristicName>
+				<CharacteristicValue>4100</CharacteristicValue>
+				<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+			</Characteristic>
+		</RadDetectorCharacteristics>
+		<RadDetectorCharacteristics>
+			<Characteristic>
+				<CharacteristicName>Zero low energy</CharacteristicName>
+				<CharacteristicValue>10.01</CharacteristicValue>
+				<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+			</Characteristic>
+		</RadDetectorCharacteristics>
+		<RadDetectorCharacteristics>
+			<Characteristic>
+				<CharacteristicName>Zero high energy</CharacteristicName>
+				<CharacteristicValue>2800</CharacteristicValue>
+				<CharacteristicValueUnits>keV</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+			</Characteristic>
+		</RadDetectorCharacteristics>
+	</RadDetectorInformation>
+	<RadDetectorInformation id="C2-23-007">
+		<RadDetectorCategoryCode>Gamma</RadDetectorCategoryCode>
+		<RadDetectorKindCode>GMT</RadDetectorKindCode>
+		<RadDetectorCharacteristics>
+			<Characteristic>
+				<CharacteristicName>Dose conversion factors</CharacteristicName>
+				<CharacteristicValue>7.5</CharacteristicValue>
+				<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+			</Characteristic>
+		</RadDetectorCharacteristics>
+	</RadDetectorInformation>
+	<RadDetectorInformation id="C3-23-007">
+		<RadDetectorCategoryCode>Gamma</RadDetectorCategoryCode>
+		<RadDetectorKindCode>Other</RadDetectorKindCode>
+		<RadDetectorDescription>Compensated GMT</RadDetectorDescription>
+		<RadDetectorCharacteristics>
+			<Characteristic>
+				<CharacteristicName>Dose conversion factors</CharacteristicName>
+				<CharacteristicValue>8.2</CharacteristicValue>
+				<CharacteristicValueUnits>uSv/h/cps/sensor</CharacteristicValueUnits>
+				<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+			</Characteristic>
+		</RadDetectorCharacteristics>
+	</RadDetectorInformation>
+	<EnergyCalibration id="ECal-0">
+		<CoefficientValues>${detector.ecal0} ${detector.ecal1} ${detector.ecal2}</CoefficientValues>
+	</EnergyCalibration>
+	<EnergyCalibration id="ECal-1">
+		<CoefficientValues>${detector.ecal0} ${detector.ecal1} ${detector.ecal2}</CoefficientValues>
+	</EnergyCalibration>
+	<RadMeasurementGroup id="RadMeasurementGroup-1"/>
+	<RadMeasurement id="Background0" radMeasurementGroupReferences="RadMeasurementGroup-1">
+		<MeasurementClassCode>Background</MeasurementClassCode>
+		<StartDateTime>2024-01-16T16:14:27Z</StartDateTime>
+		<RealTimeDuration>PT24S</RealTimeDuration>
+		<GrossCounts id="GeigerBackground0-C2-23-007" radDetectorInformationReference="C2-23-007">
+			<LiveTimeDuration>PT24S</LiveTimeDuration>
+			<CountData>0</CountData>
+		</GrossCounts>
+		<GrossCounts id="GeigerBackground0-C3-23-007" radDetectorInformationReference="C3-23-007">
+			<LiveTimeDuration>PT24S</LiveTimeDuration>
+			<CountData>0</CountData>
+		</GrossCounts>
+		<RadDetectorState radDetectorInformationReference="C1-23-007" >
+			<RadDetectorCharacteristics>
+				<Characteristic>
+					<CharacteristicName>Detector temperature</CharacteristicName>
+					<CharacteristicValue>0</CharacteristicValue>
+					<CharacteristicValueUnits>Celsius</CharacteristicValueUnits>
+					<CharacteristicValueDataClassCode>decimal</CharacteristicValueDataClassCode>
+				</Characteristic>
+			</RadDetectorCharacteristics>
+		</RadDetectorState>
+		<BTI:BackgroundComponent>-0.000541682440462597 -0.0246694783883808 -0.025985315697447 -0.0260275349246778 -0.0275107271995307 -0.0298432094740796 -0.0316591763491997 -0.0321077728857289 -0.0389660065364417 -0.0450445535675093 -0.0490701351080882 -0.0548412529716779 -0.0626680333028631 -0.070919579664105 -0.0799820268971019 -0.0901706712239297 -0.101018138962875 -0.11149460847111 -0.120075171472434 -0.129783004088637 -0.137486353539117 -0.146047697888846 -0.151011352088857 -0.151804636585107 -0.152387990263206 -0.152110597909623 -0.152866742544708 -0.153093458017792 -0.151350486550801 -0.150839301940127 -0.147280816475538 -0.145169497966539 -0.142540252853156 -0.13996213342171 -0.138626182613083 -0.138274770017304 -0.137288868316904 -0.137734343303184 -0.138628709778814 -0.137101491291791 -0.136438008404108 -0.135763203622301 -0.133159422068051 -0.130729634397105 -0.129482481575654 -0.127131382229699 -0.12534849520692 -0.120961107308503 -0.119437008329028 -0.116067840553653 -0.114507797314319 -0.113095331340308 -0.110217303254389 -0.108732194596824 -0.107413932249787 -0.106964793343478 -0.106186243041343 -0.101876252788105 -0.100035831384542 -0.0993223848416454 -0.0970515150703311 -0.0963814537074305 -0.093700577582284 -0.093359869708309 -0.0936576440289609 -0.0923074892976917 -0.0902377519793162 -0.0859969237505488 -0.0815623824589759 -0.0770362482097196 -0.073397306956062 -0.0710748619413837 -0.0681236843735665 -0.0664411076599072 -0.0646588754852635 -0.0637035046319219 -0.0625184507400372 -0.0606218239756216 -0.0594263908266255 -0.0565530827996944 -0.0531690822262986 -0.0529165743080616 -0.0517197723136871 -0.0508194793265105 -0.0515348443576955 -0.0511366956593607 -0.0502625164773892 -0.0486957838827163 -0.0466997838126795 -0.0441475653483974 -0.0410483349845341 -0.0393364556231886 -0.0383262949515477 -0.0366784928701562 -0.0366327784885435 -0.0346696912529076 -0.0341291862401596 -0.0335374744617906 -0.032797944581322 -0.0330014142586789 -0.0323017419060046 -0.0316591352716524 -0.031057945999374 -0.0297163853749319 -0.0296769285077347 -0.0296318972011844 -0.0296830068226441 -0.029709103064855 -0.0299246232097432 -0.030217337798095 -0.0303796719237366 -0.0290491888601116 -0.0270791278091393 -0.0259864362536371 -0.0253911947102752 -0.0249055401853999 -0.0263357548061447 -0.0267815817379283 -0.0273948787122593 -0.0275534009104548 -0.0275935221112753 -0.0270251025123063 -0.0266206588471657 -0.0259654971571321 -0.0235171274659081 -0.022061590294681 -0.0213334619753804 -0.0210258670072678 -0.0211034223004197 -0.020256546152395 -0.0195935667116084 -0.0193904883569323 -0.0187627060648337 -0.018505793939043 -0.0190997313384755 -0.0185938300819328 -0.0182476586685391 -0.0184520896397963 -0.0182267837693549 -0.0179700872772247 -0.0178557830898852 -0.0178457210237676 -0.0170225563849132 -0.0168914199608978 -0.0166674124997096 -0.0167801524012833 -0.0164192259464063 -0.0168638473783514 -0.0164034848994938 -0.0169946232834622 -0.0173595589112555 -0.0179606955510771 -0.0183202152134346 -0.018071576621 -0.0174903080612107 -0.0177474423967609 -0.0178363781181334 -0.017942137910997 -0.0173024532546537 -0.0162241079431416 -0.0153629393655415 -0.0150288549424436 -0.0143822699465487 -0.0142625347494844 -0.0142536329411165 -0.0145237115724186 -0.0149331024647727 -0.0150839835191048 -0.0162979949848637 -0.0163818987757552 -0.0167611142486806 -0.0168914505829956 -0.0164900669164074 -0.0159342790752825 -0.015666122927586 -0.0147184854301825 -0.0140604831182879 -0.0125896233608646 -0.012033959571366 -0.0108836423651355 -0.00979164000871616 -0.00929802235400359 -0.00840277939118311 -0.00775834359087407 -0.00716898967211357 -0.00726940478615384 -0.00708272975259671 -0.00706152013559126 -0.00713789807972903 -0.0081760356092068 -0.0108728611462955 -0.0168161155958746 -0.0267765847518928 -0.0393978826151472 -0.049119633221678 -0.0483581516950893 -0.0399060882275778 -0.0265813678344829 -0.0148570264366173 -0.00769387585158862 -0.00443475603883208 -0.00320788717295267 -0.00302111458944556 -0.00286177573599986 -0.00288967492584151 -0.00254447883918364 -0.00244698382218282 -0.00232933783330045 -0.00202122262120496 -0.00213521391325008 -0.00228782416874889 -0.00254740966450803 -0.0027994124718697 -0.00304677849085402 -0.00349574832491372 -0.00317980664921311 -0.00300093496277639 -0.00255389333972467 -0.00220129341544855 -0.00195561334652127 -0.00191795367216091 -0.00178455452566906 -0.00171089725455206 -0.00151741368787549 -0.00157078501634498 -0.00158301642974787 -0.00151901874655705 -0.00148158044535911 -0.00134152984307149 -0.00145081987859431 -0.00154990590318958 -0.00155642366302876 -0.00193989398280507 -0.00222777456623206 -0.00234394255875277 -0.0022577896218259 -0.0020124167208819 -0.00203191166659423 -0.00188924747757939 -0.00216886591198172 -0.00186150823108228 -0.00177598874894966 -0.0015451425727425 -0.00151023167075693 -0.00143770771399145 -0.00133120225159 -0.0012073270210303 -0.00102800678584341 -0.000950482764786898 -0.000959738270932548 -0.000847604471758139 -0.000811085000354323 -0.000709376824954932 -0.00080456336877788 -0.000932895605974235 -0.00152906091630149 -0.00221930996829957 -0.00300520262724282 -0.00338743307346209 -0.0029748533584909 -0.00216540307598349 -0.00139078798026194 -0.000782810359352872 -0.000471033825452072 -0.000263643003727375 -0.000241133579362249 -0.000243313978614407 -6.69148056005931e-05 -6.10615279244817e-05 -6.36653144078599e-05 -6.93924856670719e-05 -7.67502113660702e-05 -5.99934693499616e-05 -5.16275772025847e-05 -5.04995923244306e-05 -4.98619549931501e-05 -5.74289779615558e-05 -6.66244154586643e-05 -7.49504750928504e-05 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </BTI:BackgroundComponent>
+		<BTI:BackgroundComponent>0.0955579286537517 -0.0964358226224395 -0.0966705817543035 -0.0843390343779143 -0.0678612565810696 -0.0338077026706789 0.00118468681167455 0.0117440291849563 -0.00038657633523225 -0.00310010678718455 0.00675843308542714 0.0124293275896455 0.0151559188251283 0.0215083482795852 0.0275532860089069 0.0306902370826531 0.032035245732215 0.0366439777171378 0.0440315846489819 0.0381467915801862 0.0430406848520604 0.0360248639130994 0.0119603155309242 -0.0275170225868413 -0.0548100962340139 -0.0635740574798321 -0.0749778044086789 -0.0839162712100527 -0.0839255018519272 -0.0945295199757437 -0.0915626906521052 -0.0959774828413303 -0.0948240694546849 -0.0955746285067711 -0.096284765378133 -0.0951388050024422 -0.0932922362925116 -0.0904525771439509 -0.076870373536207 -0.0599868172562824 -0.0595440597690089 -0.0610027575790159 -0.0528204558689082 -0.049379287497383 -0.0520603699563347 -0.0484026530291252 -0.0480285728120005 -0.0366206171156927 -0.0404934980563562 -0.0336682455293561 -0.0335110938659436 -0.032896722335752 -0.0252666742269287 -0.0244361773848711 -0.0241218047212047 -0.0267524780486301 -0.0320842053608749 -0.0178436579530893 -0.0158965880164343 -0.021033714075532 -0.018640128432225 -0.0210114991448343 -0.00972631646442694 -0.00921227813754596 -0.00901090139385072 0.00196110775408542 0.01466454327451 0.0358995431581137 0.0451028921102691 0.043896353556252 0.0400074760503909 0.0328705421244624 0.0351662724023099 0.0352519605182737 0.0394822773777716 0.0418953249903593 0.0441209749648986 0.0487507332547107 0.0485950418729327 0.0536035589333759 0.059554925017895 0.0512559359787525 0.052265353102871 0.054376025918231 0.0544614651527002 0.0613992271439347 0.0682357355391254 0.0732487705911992 0.0741186017553855 0.0722301444550967 0.0693316686614165 0.0617648565532621 0.0573754990175295 0.0596556547958173 0.0556887812498007 0.0629328180732757 0.0625279925371654 0.0617143810771085 0.061674168955013 0.0593764364171926 0.0619127413571395 0.0638573062842012 0.0654010108438756 0.0716138275547723 0.0712928099337419 0.0719004850975742 0.0737619817407609 0.0771585010849055 0.0804383843862646 0.0830249944769153 0.0891496807334378 0.0930569520469191 0.0919260288857037 0.0864647531702603 0.0828395492836246 0.0837534208178861 0.083023941868108 0.08912290764926 0.0930268851707537 0.0715580145899501 0.0608477893710643 0.0667520618626395 0.0925665714571309 0.0993495119479831 0.0944601759809018 0.0830455173499469 0.0718241219629266 0.0639212471218193 0.0571232916668601 0.0594136937382137 0.0601879111997573 0.0598495934295011 0.0633668029990231 0.064683347553149 0.0623124890905878 0.0651418152029393 0.0662539539417128 0.0657871493462523 0.0665236044108587 0.0667494037312214 0.066114037212469 0.0644912023865415 0.0662597292377491 0.0637205428389023 0.0623423240310264 0.0614302536221546 0.0617013068544104 0.0595418085292616 0.0618559464176181 0.0612788657387388 0.0634952339586536 0.0658000621929707 0.0666056543687198 0.070101772182357 0.0729992145892957 0.069687791425435 0.0674657983683657 0.0662237017962676 0.0662522080649091 0.0644523067369401 0.0615405478294519 0.0564267504237346 0.0541830545755171 0.0530180781242685 0.0526300209238619 0.0525091025923233 0.0525711793612453 0.056028292434193 0.0555218140460608 0.0608343744423449 0.0618719132106358 0.0601754362588579 0.0595259342669733 0.0574881690855001 0.0575933707116891 0.0609468092009408 0.0604711050610712 0.0622978545367881 0.0583514783679681 0.0572241792351968 0.055370801592038 0.0511617260109174 0.0435754473244268 0.038869592161834 0.0381120084397874 0.0348617719001759 0.0379481262428518 0.0408959533518127 0.0470525960479014 0.0578374770165026 0.0784705912808062 0.113125788520894 0.163965272956397 0.21511304472901 0.242852196036038 0.23578664795618 0.199792136905332 0.157610346388784 0.110270701755176 0.0692678703166794 0.0408988181852937 0.025849528467494 0.0182886846284902 0.0156266049976141 0.0135540011680759 0.0140321310837394 0.0126161200603322 0.011434843723115 0.0123003329592728 0.0116727933115923 0.0122378733357687 0.0144287198678023 0.017319264603533 0.0195241935338276 0.021100480382393 0.0221805650495329 0.018266984448503 0.01543104145962 0.0127367719979213 0.0115480391784778 0.0097596742955945 0.00855509207208742 0.00803549927613999 0.00835850042261147 0.00715657280768021 0.00655436906489396 0.00648320426159394 0.00620965113278381 0.00667651303003012 0.00660653111414638 0.00720901659231478 0.00885387417399339 0.00944017895987509 0.01066204564654 0.0111051546772867 0.0106071061989051 0.0112453476067287 0.0113258722988889 0.0117101110113524 0.00930130457799939 0.00910704136044753 0.00813010633107417 0.00803142097147576 0.00706785489624493 0.0063323642108255 0.00612541467628193 0.00559178133770167 0.0054013657534958 0.00537700861335198 0.00503920075875221 0.00501564079138753 0.00458665766087461 0.00487341379046378 0.00599114429909269 0.00966372710975078 0.014570637313597 0.0207490936231984 0.0240311637881064 0.0217435038367644 0.0174992087616187 0.0125803990282092 0.00717466113818476 0.00422240446114491 0.00245100732939061 0.00202193019674364 0.00143748526063689 0.000967419235242522 0.00180863755418282 0.00175097904754426 0.00179521615556174 0.00171874863454087 0.00160857160568606 0.00169081536014209 0.00176872333174248 0.00174065777991214 0.00171419958084365 0.00192175327918363 0.00224853370978821 0.00258405870035063 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </BTI:BackgroundComponent>
+		<BTI:BackgroundComponent>0.995422592833384 0.00889802335482033 0.00891075502021162 0.00776608029402494 0.00625089800180349 0.00310730565668444 -6.1692679911155e-05 -0.00110994785459953 -5.6973872915644e-05 0.000212918696927564 -0.000669033346617985 -0.00112556467350906 -0.00131440024333704 -0.00191876629732258 -0.0025152074345108 -0.00285911174472026 -0.00299680987950197 -0.00345293134665222 -0.00419274522577766 -0.00363995335047501 -0.00407448765974885 -0.00338669503703676 -0.00109936555444034 0.00266390045212123 0.00517804508622755 0.00595391742065765 0.00701133194966481 0.0078430420550939 0.00785033057279468 0.00886749768233757 0.00859402939971536 0.00899363457700435 0.00887592847869622 0.00899030871243251 0.00906214796614419 0.00891870547934234 0.00875140927497895 0.00851352146936635 0.00727941762171256 0.005698698045762 0.00563676937929255 0.00576328104556028 0.00499379492970635 0.00468902454736911 0.00494648587021316 0.00460746299205928 0.0045558923838886 0.00346682141240542 0.00384232777110842 0.00319587019034065 0.00318594995202701 0.00312053462625098 0.00240915971613982 0.00232454073396206 0.0022887983453077 0.00251357317396724 0.00302028279657536 0.00167908879867431 0.00147010231953809 0.00195351777511234 0.0017519753132811 0.00196850096164369 0.000909572287697178 0.000867754656236707 0.000831720507366138 -0.000223659042957781 -0.00143426751672281 -0.00342128277943902 -0.0043229114664568 -0.00424484463016656 -0.00386139398418686 -0.00317416016357389 -0.00337280669457725 -0.00338559268645022 -0.00377030888170749 -0.00400445733686614 -0.00422579627610186 -0.00466443941586529 -0.00465531519564018 -0.00512064436288709 -0.0056565918510626 -0.00491102984420068 -0.00499266722683801 -0.00518150075776385 -0.00520613101652834 -0.0058614475597315 -0.00653207542147419 -0.00703467073568033 -0.00710863434364387 -0.00691820122946796 -0.00663280285331824 -0.00590366582233241 -0.00549238795907316 -0.00570371323404503 -0.00532825123190109 -0.00601307828090454 -0.00598046498405793 -0.00590494397876824 -0.00589751120310056 -0.00568537756779932 -0.00592815944206225 -0.00610565048364979 -0.00625096060507135 -0.00683091536695919 -0.00681093282627259 -0.00687622081399046 -0.0070567768011734 -0.00737839740897902 -0.00769087802778586 -0.0079311074348217 -0.00851187705567008 -0.0088885571953481 -0.00878327706084601 -0.00825189495504616 -0.00789559236109839 -0.00796851537969915 -0.00789826243378752 -0.00846534307859711 -0.00885961175462666 -0.0068189777886221 -0.00579307624279415 -0.00635313352221685 -0.00882648499286962 -0.00949178178218336 -0.00902644249967379 -0.00794630901591263 -0.00688799618746611 -0.00612540015699433 -0.00547904834582207 -0.00569420123837436 -0.00577229864512548 -0.00573560175706448 -0.00605697335958638 -0.00618561390070348 -0.00596690725151357 -0.00623031419822744 -0.00633084224923667 -0.00628738212269537 -0.00636406510047503 -0.00638569041180059 -0.00632412291921658 -0.00617478924782897 -0.00634006050329425 -0.00609430387532083 -0.00596856244257674 -0.00588265082157128 -0.00590880898951979 -0.00570301240461189 -0.00592035554995537 -0.00587225629931205 -0.00607024319758582 -0.00628719598666462 -0.00637203108940197 -0.00671016347856162 -0.00697322181479562 -0.0066700059348913 -0.00646772023256172 -0.00635499329762014 -0.00635339536959814 -0.00617409751343685 -0.00590465760904975 -0.00542544135067719 -0.00520236991730038 -0.00509397371215014 -0.00505605613166289 -0.00503925346278051 -0.00505248170975656 -0.00536790612321868 -0.0053407406847218 -0.00584809920513879 -0.00594149797744286 -0.0057938942175184 -0.00573480146275874 -0.00553449945009195 -0.00555248480183157 -0.00587300493432851 -0.00581526323173599 -0.00597196182457899 -0.00559733798542036 -0.00548974338219202 -0.00530904855692008 -0.00490337031743999 -0.00416883734906182 -0.00372456292968896 -0.00365401929400417 -0.00334502089351957 -0.00363755916261019 -0.00391981189516466 -0.00451444270355511 -0.00556215564946253 -0.00759679346201949 -0.0110053274480786 -0.0160151768011419 -0.0210757472447897 -0.0238817020140262 -0.0232018515611775 -0.0196664517374415 -0.0154448979878385 -0.0107437084524465 -0.00671850115779942 -0.00394437164466444 -0.00247041435127883 -0.00173642730748426 -0.00148011656644333 -0.00128413240606077 -0.00132629202450956 -0.0011934082106895 -0.00108068478060105 -0.00116224074067988 -0.00110439256635269 -0.00116706086850423 -0.00137230799515691 -0.00164199247727731 -0.00185166958021242 -0.00200572604454866 -0.00210893715545452 -0.00173854049094435 -0.00146861318534716 -0.00120913281314731 -0.0010952228285683 -0.000926063897759281 -0.000810117569108973 -0.000764419479092316 -0.000795583533684736 -0.000681798372597272 -0.000624463166749002 -0.000614817764465819 -0.000590161472291461 -0.000634403755482625 -0.000627075843416107 -0.000683764136723121 -0.000836837018158958 -0.000892030066592409 -0.00100860869002551 -0.00105173443285953 -0.00100488823000485 -0.0010642085825872 -0.00107100363946232 -0.00110750240294857 -0.000883805240613927 -0.000862499275974648 -0.000773561521850235 -0.000764286265786792 -0.000670402182630002 -0.000600891670545178 -0.000580356549783885 -0.000529844702822943 -0.000510129633255886 -0.000509500248944379 -0.000479665022735549 -0.000478671237046196 -0.000437939689549063 -0.000463159590410101 -0.000570042978295792 -0.000915023355753365 -0.00137798925926362 -0.00196220397679631 -0.00227141361840065 -0.00205883016569702 -0.00165510323517271 -0.00118788067529902 -0.000675183032085073 -0.000396214837285091 -0.000230756595079644 -0.000190800902241191 -0.000137684601982353 -9.28688400943751e-05 -0.000169744971270192 -0.000165421869208379 -0.000169706274068551 -0.000160463802551943 -0.000147332936632605 -0.000159689964251996 -0.000169653149545486 -0.000167185030707169 -0.000164168511286573 -0.000183536049915025 -0.000215065914435177 -0.000247698556733794 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </BTI:BackgroundComponent>
+		<BTI:BackgroundComponent>-0.000202696074116633 -0.085617396699923 -0.0923605703084912 -0.085573731983149 -0.0712018765625446 -0.0554002102614022 -0.0122987566766894 -0.0351407510170913 -0.0782775566021803 -0.100773423240347 -0.0924648638995084 -0.0820668464214606 -0.0999076572120989 -0.124373872764889 -0.174806247994068 -0.210991062584657 -0.230828890008209 -0.235542690339935 -0.263493230252225 -0.26540161956715 -0.227284336007974 -0.216933282178664 -0.164704239106516 -0.113961667246159 -0.118519225167672 -0.112449219384347 -0.104045088664917 -0.11129845374094 -0.0732199195902264 -0.0762014057913546 -0.0499364671430775 -0.031606008090614 -0.00354603226579436 -0.00983827351502128 -0.00171139588588426 0.0273300650352121 0.0154463534612378 0.0460973225078413 0.0594637529419374 0.0440658294343138 0.0497325075936853 0.047123414820951 0.0829515453356943 0.0656911330999393 0.0889431347041205 0.0967252365228871 0.0928529379553151 0.106766670726141 0.0968720817296556 0.104000452081075 0.10136885699134 0.115510295359955 0.103199978607976 0.109115052537814 0.0974049380330053 0.0976878720126584 0.102242013153542 0.0961169944103226 0.0876639574016281 0.0887189039559273 0.109924205100909 0.0822680620104237 0.0828539736530668 0.0941631819616116 0.1100964324791 0.097845935583939 0.0942717215898138 0.0985182621090856 0.0726585753682918 0.0518156280916041 0.0719739034044126 0.0499390465620648 0.0570516710875617 0.0720269889846889 0.0620951592015261 0.0524203825691965 0.0587337668643257 0.0542955398998009 0.0562245047994587 0.0590604659437398 0.0590117574644333 0.0547155103681418 0.0618429956494423 0.0634513192641148 0.0457034646732799 0.0450752091180191 0.0476006601685897 0.0417384083640502 0.0456610980790622 0.0389207038240474 0.0311329213919362 0.0258352593109546 0.0399259654865661 0.035020010567479 0.02502303443386 0.0313242837397021 0.0296909617420823 0.0181310485083184 0.0217429908785827 0.0131341871052591 0.025041066995873 0.0210318101824852 0.0289836151581475 0.0291097058841522 0.0177790303506754 0.0146376099755811 0.0175534169456156 0.0266983106901543 0.0306060134260173 0.0210527016029598 0.0132140791287726 0.0127725885948057 0.0148245955441899 0.017997502491024 0.0184344179865498 0.0266972042013337 0.0325810746106158 0.0313980681368618 0.0328503291391823 0.0377238020776467 0.0345315147145812 0.0291935530721628 0.0199485300408886 0.0132611915474756 0.0146830582112833 0.0165722256173745 0.016002813508695 0.0190265969998984 0.0161718190606379 0.0217253344015193 0.014777983446888 0.0100833588821867 0.0144284705791589 0.0145739403989379 0.00892002413546104 0.0199758068439857 0.00982708563691579 0.00875043481331345 0.0104552032670602 0.0100818555709252 0.00696289675464844 0.00561432613050531 0.0132475625323218 0.00913448623741445 0.0154622341096983 0.00502494744747693 0.00876655608621187 0.00348665322953713 0.000145046163032472 0.0152385705507012 0.0154465617508452 0.00951443985731546 0.0140108427698075 0.00746411006361554 0.0123310875709362 0.00643509183683253 0.00371307954903915 0.00420070827526982 0.00867485891314392 0.0022088126293918 0.00538191917854427 0.00640100722306807 0.000774930701046003 0.00524908785506413 0.00470532773551066 0.0038661645136908 0.00269522552575141 0.00175097526654829 -0.00127294501554306 0.00693534761564303 0.00897554202450235 0.000657268702528649 0.0033351324440705 -0.00189906731642541 -0.000808417437449547 0.00239568077399528 0.000610626457629298 9.92913970935292e-05 0.000740917399260524 0.00481800922772404 0.00630281685266129 -0.0025734972723764 0.00124102149183157 0.00919909964642155 0.00666932544936147 0.00100845753530149 0.00152027678811127 0.0048261218985692 0.00538999282868453 0.00186760619874405 -0.000753624177931656 -0.0241570347807147 -0.035828952983994 -0.0629165909875628 -0.081067556615059 -0.0833467494178131 -0.074205810491831 -0.0388548929156966 -0.0243203264758151 -0.00861600753895509 -0.00095657451716375 0.00231422314520891 0.00246865859147942 0.00213916892858048 -0.000396287068348466 0.00407564727047711 0.000994969584782359 0.00195195438165956 0.00393841507972071 -0.0020732931293999 0.000524499242533158 0.00238566380041401 0.00511076838919201 0.00761468308514319 0.007740978929204 0.00454616816475184 0.0025043179126789 0.000255126779844276 0.000806428002806945 0.00177297774462632 0.00172723565410158 0.00220728998637018 0.00012985907120609 -0.000361488501831945 -0.00183696163980935 0.000490301185665439 0.00106636014482109 8.70735549832816e-06 0.00229309436490424 0.000495117449960484 0.00100485941022806 1.62769018969442e-05 -0.000335504279816259 0.0017914198329907 0.00270167413191864 0.00208626857141087 0.000662484363856974 0.00113481294810767 0.00246578416793434 0.00182044716225066 0.00227737131305261 0.00100445059109762 0.00188251518593076 6.35222141911297e-05 0.00140803039394844 8.14230510097591e-05 0.000147940393643182 -0.000704038404291573 0.00182704512021802 0.000773932731440222 0.000350533118672383 0.00122009379998268 -0.000676669782353419 0.00138240679629393 -0.000247273216201143 -0.0019047311633976 -0.00294587475490471 -0.00440989032226894 -0.00111945322718607 0.00497063609050553 0.00670700940519031 0.00225023522705279 0.00249007101487056 0.00106663277061397 0.000108396017591543 0.000276871014420725 0.000824797163572445 0.000801592493820472 0.000390086850974526 0.00074543474717116 0.00151304333255984 0.0024725411235731 0.000645478950372862 -0.000330626708652026 -0.000233484397814742 -0.000531394189523947 -0.000555599580017038 -0.000558867380809125 -0.000672278184609151 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </BTI:BackgroundComponent>
+		<BTI:BackgroundComponent>-0.00139979501031542 -0.109334768057582 -0.111233873585112 -0.098931481807174 -0.0773743279925616 -0.0352403262462754 0.0189203146271241 0.0181818057807144 -0.00399651381091758 0.00418795008029565 0.023678986927352 0.0438835405181615 0.0709780559165646 0.0779280135802998 0.0945570875247745 0.0850676061326455 0.100528106234191 0.102936968727836 0.106538320035714 0.103928527616696 0.108030655992815 0.117371080464748 0.0866752854494547 0.0515688155824239 0.0133154243832073 -0.0126963529751771 -0.029152101352546 -0.0382629087637257 -0.0464763299119138 -0.051246155887771 -0.0529227618658843 -0.0628835782271357 -0.0795347185580065 -0.0652074972313553 -0.0648318554089641 -0.0750744630985385 -0.0694653258560837 -0.0650338678415671 -0.0382976627135958 -0.0190844621672134 -0.0251133412300998 -0.0297696065216048 -0.0264133343597716 -0.0135393908512464 -0.0224674909886628 -0.0200085239585358 -0.0253107433051003 -0.0280953179874662 -0.0218868700282332 -0.0266419316119855 -0.0178158963848575 -0.0192088780895835 -0.0107837364694751 -0.0104453120587601 -0.00779682666509912 -0.0239246247622699 -0.0298723778882368 -0.0089152783682734 -0.0103261296486535 -0.013299044308123 -0.0218582165558538 -0.012981250976607 -0.00367082299179172 0.00317331861976179 -0.00790665273103533 -0.00658748267217623 0.00361844242012119 0.0262000800156318 0.0342730600672067 0.0283146685299674 0.0225188068512762 0.0175779599366673 0.0222352606530617 0.0122527276891966 0.0281113660975251 0.0346837820502937 0.0275205018410694 0.0299581920306363 0.0334030434990656 0.0372464208560375 0.0425171713623661 0.0264095502624604 0.0338684864079581 0.0363222061521509 0.0365643861306503 0.0466992699219506 0.0412183171884313 0.0426322053863643 0.0421313917420975 0.0460541700838227 0.0434729809278829 0.0387988194550832 0.0333223185296905 0.0381538570256946 0.034675155729713 0.038319713228972 0.0356350361598623 0.0365592705409271 0.0344090816905383 0.0366227964017698 0.0321677785901244 0.0379956037014886 0.0359240677021272 0.0416531810555495 0.0415000898506781 0.0413970093821765 0.038600699350717 0.0384535611388095 0.0413788082926926 0.0463373498791732 0.0532312597550101 0.0558192398486726 0.053093520280108 0.052473530909193 0.0505928450105656 0.0515774384771754 0.0538602315523446 0.0665530285897162 0.0609869843625377 0.0483583044422964 0.0441491804127817 0.0456090973522403 0.0632605538183986 0.064636958968088 0.0557542297241474 0.0436500772408294 0.0391029953693363 0.0343480745831041 0.0278117908356068 0.0286002201531013 0.0260883213037011 0.0293338878497062 0.0328648101932535 0.0318497837728781 0.0314816989872804 0.0319470605644806 0.0355466252965608 0.0342728917402245 0.0335782276110186 0.032053915265615 0.0335432094835125 0.0299037951465365 0.0323182563134283 0.0319097218750972 0.0271173178554441 0.0291803403194778 0.0277784657083181 0.02742691558597 0.0325340504004414 0.0255964010767573 0.0305099743897475 0.0350902735976793 0.0354082926373597 0.0356385706450617 0.0398482508124907 0.0371120260517493 0.0305273510802594 0.0291612569944917 0.0277977027814699 0.0321070583691076 0.0253803712356886 0.01629926133524 0.0221277862910993 0.0179583552433772 0.0183208653070054 0.020386339347473 0.0199308345499017 0.02571605523106 0.0177210582185914 0.020042811026679 0.0227609268434802 0.0198948313331784 0.0182185413040505 0.0180872889891757 0.0169791028232511 0.0169311607923372 0.0197624189693169 0.025503853925746 0.0232557883888696 0.0225826213382362 0.0223718907372118 0.0244379317815451 0.0218821726520683 0.0154970623965277 0.0155423600952373 0.0156772704882507 0.0166958464545942 0.0129368568839255 0.00396586286348522 -0.0170238198129364 -0.0638003107386475 -0.127876581721676 -0.223024358697718 -0.308689739803105 -0.380448874928921 -0.385563463937959 -0.329482893018571 -0.229449283335709 -0.125463165807653 -0.0580824426482903 -0.0183509574822267 0.00194267398533986 0.00993353750803931 0.0119332397304324 0.0107435732936254 0.0123038633798409 0.0112771491845158 0.010225495691021 0.0107046913691314 0.0112716352813054 0.00786784615686851 0.0100570428439802 0.013661236348669 0.0152121259627385 0.0157125088014154 0.0166431712223528 0.0132844766773924 0.0111818340424938 0.0113637054904415 0.00904664452658514 0.00698994083771737 0.00600963496674309 0.00531100734803546 0.00644944721798653 0.00556960881291914 0.00486974485134151 0.00462704888079067 0.00428259263500625 0.0033410615631486 0.00401918828123397 0.00500063623792234 0.00782180932589293 0.00802173758477854 0.00991081428144049 0.0087245195200965 0.00818772602337835 0.00973675757702877 0.00996092370191705 0.00925289440188777 0.00686577292908451 0.00676859062083012 0.00589671199364421 0.00466655938028043 0.00500917500977456 0.00428958903369455 0.00446656291793352 0.00407839274422848 0.00434461914065388 0.00364460959540651 0.00352959672103125 0.00245350594695859 0.00210060566721411 0.00304056778337055 0.00378425735645097 0.00791527859579664 0.0130159998110358 0.0190941336114425 0.0244153700291151 0.0210490481596376 0.0150747692661458 0.0105354405604141 0.0056879298662138 0.00299208092632777 0.00148887480890051 0.000909808964141409 -0.000377699948703988 -0.000667723309639088 0.000809607336272871 0.000444741826019313 0.000365430654814584 0.000626070726305201 0.000923969425281625 0.000304209898600322 3.17259094817771e-05 -2.30112913752405e-05 0.000135786782220494 0.00029570564905386 0.000298220449887952 0.000263751567499282 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </BTI:BackgroundComponent>
+		<BTI:BackgroundComponent>0.000490503863390737 0.319772520018154 0.329579597419427 0.291415836572502 0.22934635833486 0.103089814175314 -0.104795151276617 -0.0345812815616799 0.101272271774768 0.0836668103380094 0.0189866973568941 -0.110090358478412 -0.210664639043153 -0.2019477056673 -0.16940200236659 -0.104011380940256 -0.0814866650830165 -0.0461041382649395 0.00106749734218871 -0.00685773484306659 -0.0318710732893371 -0.0821242993863858 -0.0719530403100264 -0.109659027819528 -0.0143008801300128 0.0627748068265547 0.103328141322768 0.100415851333013 0.110734750756075 0.0564461589308435 0.0597545758487216 0.103614138909685 0.134009907712467 0.0414936442102444 0.0462242606738304 0.126668776131643 0.0834687079739519 0.0417264319906203 -0.0367132806193758 -0.0898052778071646 -0.0714352827270849 -0.0470474989834496 -0.0161887281948518 -0.0987183707077691 -0.0874433131050721 -0.108913396137596 -0.0776098338760455 -0.0541747316331796 -0.0583594175423518 -0.0647685151033006 -0.0908404322132822 -0.0573761793266092 -0.0928964084043434 -0.0638427467013927 -0.0647823338890988 -0.0222186396099116 -0.0331015118030891 -0.0387022976389902 -0.0114191674890017 0.0037971196591559 -0.0237385941392455 -0.0279568452077818 -0.0530981471312303 -0.0446527232380489 -0.00416062693182656 0.00839413268094912 0.0145199053698776 -0.0149649069407914 0.0243371542357152 0.0614653180895789 0.0567057463973329 0.00711087746082949 -0.00094529557388519 0.0284215610671555 0.00634487403195961 0.00231235115898768 0.0188294299755189 0.0145640910779538 0.0363027980902953 0.0178911281861821 -0.0277388562133445 0.0393784575484008 0.0119087061680216 0.00722979659702909 0.023069060086311 0.0253409035835722 0.0603391387390677 0.102066161190406 0.0936086652973938 0.070068580961723 0.0462185638832297 0.0249599616534979 0.0348699413866281 0.0369766355699308 0.0261645051158684 0.0243203977079578 0.0370254351120672 0.0315518015909492 0.033686381840819 0.0312895459708349 0.0355882261020997 0.0249781353435961 0.0312892676799516 0.0168555151909291 0.0208583530599936 0.0399018710553554 0.0398619151042882 0.0369760221343196 0.0300839592067599 0.0308975748786862 0.0232497644453883 0.0309130400489741 0.0294234184600036 0.0267674463368778 0.00709202159565331 -0.00982209148388715 -0.00490933585819087 -0.0136655357828659 0.0192553925750823 0.0206875938319239 0.00655475430142043 0.00680387815912769 0.0275665192095141 0.0604083622323059 0.056902816981405 0.070183506050042 0.0730770151959101 0.0625673507490082 0.0562629988731598 0.0593284264898316 0.0572953740887805 0.0409574188419627 0.0189422358727412 0.0306837884679304 0.031794908378381 0.032342238357013 0.0110110050569992 0.0184075552913761 0.0373940894785634 0.0391966354722911 0.0412401789543949 0.035862949655677 0.0346006527389542 0.0310778378741548 0.0378528371855543 0.0260596107561432 0.0342595258925915 0.0284809933719102 0.0264179539262394 0.0462493598635452 0.0285072087650532 0.0205721807957793 0.0386381915608152 0.044143124044585 0.0352641177484728 0.0436073593994923 0.0419182871271378 0.0486034016728799 0.046636476472701 0.0327421088810758 0.0497652290601928 0.0535179363761441 0.0390427773288693 0.0373244406092254 0.0354165705685197 0.029875544650909 0.0424115743005533 0.0178644140646596 0.0481310449330588 0.0600030880354604 0.0567684564981252 0.064874428441159 0.0684996018592151 0.0596249191098779 0.0650103183480358 0.0717652698427397 0.0598742986354793 0.0353557214296807 0.0362224022274586 0.0436837004324789 0.0461948782545628 0.0367122846726039 0.0194933466737362 0.0302671490659911 0.0341986851850314 0.0287900153271808 0.0202802330946557 0.0139724770949804 0.000790451885608042 -0.0341978440330294 -0.0569993095445024 -0.0947856647672402 -0.0848215660940543 -0.0642010126488089 -0.0250702049297119 -0.0422321909691311 -0.0476826255578361 -0.0731544592057033 -0.0780214152689948 -0.0373462332479341 -0.0169238763318152 -0.014040970343107 -0.00672412524146832 -0.00451736165122276 -0.00441295334452832 -0.00560573568456289 -0.00542367329482383 -0.00680766428171094 -0.00666749930792042 -0.00867353932858145 0.00598872730390841 0.00491029847987799 -0.00194114360232982 -0.000199196026738151 0.00995326277023758 0.00746106029408049 0.00879725930330483 0.00460748764295489 -0.000320178923544547 -0.0020610324589302 -0.000994462890789539 -0.00387880074236011 0.000768099049977542 0.000307427839933689 0.000522120741303894 0.0048779645061861 -0.00243847325919789 -0.00269247394217604 0.000397012963305305 0.000546507031861589 -0.000265968175750657 -0.00544995856039444 -0.00494920660124044 -0.00236715187734065 -0.0046897307331232 -0.00044031911828014 -0.00394833552994131 -0.00482669321166304 -0.007273209823428 0.000555190354693575 -0.00166351457392372 0.00211778737840525 0.00277622847150115 -0.00102893396467047 -0.000835056755555692 -0.00309729846443828 -0.00338315533899637 -0.00526432518019387 -0.00197463090279187 0.000630118080717897 0.00254470217871024 0.00265649829862317 -0.00175613362401324 0.00153305029304859 -0.00282791190810658 -0.00117305324443102 -0.00191325465939162 -0.0063159687178094 -0.00273886268620982 -0.00530954831442825 -0.00655457110509381 -0.0103060883660612 -0.00802437406140592 -0.00484699068831454 -0.00359026374506488 -0.000913132910265969 -0.00108304070667804 -0.00492169352374123 -0.00384441455731748 -0.00417540931910383 -0.00677844395955665 -0.0104821825974167 -0.00407611057411 -0.000336369099413664 -1.67116128425495e-05 -0.000334298779193821 -0.000953634298670695 -0.00074077632791801 -0.000151252904576587 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </BTI:BackgroundComponent>
+		<BTI:BackgroundComponent>1.37764237051832e-05 0.0971047324824879 0.044982522086486 0.0323033869182019 0.0405427916402047 0.000181569180295709 0.00128183833361892 -0.0270410102900849 -0.0735191035735892 0.00736662845367589 0.0454669702350018 -0.0432222789616236 -0.0100747257848495 -0.0987920970839083 0.0753117739242982 -0.133328414507707 0.178101941060896 0.0369467139133491 0.0528053188634103 0.0618058679927932 -0.103732714764223 -0.00945708243579761 0.067563361037212 0.0707013836143345 0.111163622136388 -0.0992815758934885 -0.0656063258536835 -0.069183510769101 -0.120016325367787 -0.0632457190447759 -0.142027420328004 -0.0140385262496247 -0.1287075088674 -0.110219613578796 -0.0138701319250856 0.090273959423279 0.0878304846485447 0.0297622707991885 0.0619562519441667 0.0683627786213536 -0.00800029651453404 -0.124439047954309 0.134296740918333 0.250850810777331 0.125942705489941 0.0373674457380615 0.0627073253967423 -0.0452753277603346 0.186735612562527 -0.108039718341179 -0.0509075708679563 0.00817279807802292 -0.078087818992041 0.101245818758719 -0.0169033284173487 -0.187422070917123 -0.101163347110356 0.162469687959776 0.137652040825373 0.0755557012632185 -0.104857564842114 -0.0867517720766425 -0.2103750321346 0.0997555577054828 0.0442004404130229 -0.069571356662444 -0.112317422810813 -0.036122167337477 -0.0254136121324072 0.0592492486041839 0.0869661928645359 -0.153236572196637 0.0156449263655726 -0.0729243894390718 0.0642248697627552 0.033461640485167 -0.0484264361653756 -0.0652036767084937 0.0998625219303555 0.0539238527645073 -0.0405047146915824 -0.062384166974142 -0.0526890282207269 0.0184530514838814 0.00940453905649519 0.0507760823752811 0.0289613410826746 0.071009204657252 0.0687974503509728 0.102509903258972 -0.000811883872440718 -0.00850227048905278 0.0307206406405589 0.0728003441994999 -0.0152184767967753 -0.070141844541322 0.0100738133019134 -0.0208942845848605 -0.0402535958185777 0.0244937420006426 0.0242903955281382 -0.00366248602512122 -0.000357095490578311 -0.044401940017107 -0.0464843709997692 -0.0117170015122433 -0.0371426664542755 -0.0345540961133423 -0.0128237840492744 0.0119756098734733 -0.010444658647671 -0.0371690267825253 -0.0352260768843879 0.0289522192912297 -0.0404676174334948 -0.0801249636706906 -0.0135970769938969 0.0922449641840825 -0.0610571508021378 0.00567259862728178 -0.0088454240425651 0.0170593399852507 0.0233952587743045 0.0518453545439756 0.0220168301396898 0.0483856553197312 0.14668345858435 0.220016778331963 0.134529019336815 0.113893457695368 -0.0102910746458441 0.00906029521083559 0.0109287946842363 -0.0176622963204213 -0.00547149713533098 -0.0290684889204571 -0.0457127986323835 -0.0783292666020166 0.00967325061666329 -0.0258719821468051 -0.0191285075492165 -0.0275422693492176 -0.0234977086657681 -0.0308581058566436 -0.0733940637434708 -0.0416458370567848 -0.0320411417524627 -0.027151312811785 0.00973674846199195 0.00873611259458647 -0.0562585323736821 -0.0361114383821442 -0.00845942731363708 -0.0394715837266325 -0.0432439738180887 0.000857768559302291 -0.0384240182175954 -0.0367404714411573 -0.0527564952772759 -0.000446645286504952 -0.000704448841426876 -0.0586570236380364 -0.0372081755388222 -0.0143366663779687 -0.0345352332983872 0.0279073465247397 -0.00381993783788825 0.000423222616401551 -0.0519396181204469 -0.0177024952125056 -0.0114991016916569 -0.00887099377191588 0.00645386266209708 -0.038740743401037 -0.0182938614007599 -0.0114422709372397 -0.0269531994010039 -0.0739830101293112 -0.000393476112782101 -0.0184895739319457 -0.00158584663746479 0.00424524788376183 0.017754696340962 -0.00323484370881341 0.027380880428765 0.0551041551571282 0.0358924992233798 0.0525475791156393 0.0130813935711531 0.0161737588303791 0.0174101863869613 0.0721458369122732 0.0554738777831229 0.152993455092242 0.0726903471438587 -0.0521292666141881 -0.100283800748414 -0.0962079981953197 -0.0228501482678364 -0.00456164713453102 -0.00890398821148902 0.00598604878848684 0.0120616321443003 -0.00982116758084852 -0.0298604642043978 -0.00447681113691277 0.0157245157918355 -0.00540719667473636 -0.000446475233497333 0.00784502756607439 -0.00996848546094163 -0.0033270175234865 0.00394578091107505 0.0176551541351346 0.0322097450938012 0.00758738352281499 0.0100136244752376 -0.00365815087977704 0.0132509498563353 0.00138555492841407 -0.0193518901141831 -0.000458261403471565 -0.0104276472059542 0.00356130827009842 -0.00382626353195293 0.0176976430508711 0.00272875200309324 -0.000578737939150766 -0.0175283516945667 -0.00745256098284594 -0.0125527563945947 0.00558912274664818 -0.00864800767852961 0.00457204775059222 -0.0196261830369596 -0.0188001183256311 -0.00886570673412205 0.00806131567839217 -0.00578775530133542 0.00215089173893943 -0.00742635512324646 0.00826956695651385 -0.0113115675989625 -0.00426609398873558 -0.00198281951192321 -0.0126086748245386 -0.00563715835593517 0.000820576045796613 -0.00969205649388658 0.0114066696347018 -0.00091549541165214 -0.00301272360989796 -0.00582240965157524 0.0103289523556568 -0.000412632181038071 -0.0065150978943866 -0.0249010203624241 0.000686323306755003 0.00972331666402937 -0.010995433978334 -0.00523027400567221 -0.0243648492707033 0.00412232093664437 0.00299546455746248 0.00230113079438538 0.00172989430657475 -0.00146076314195985 -0.000372632410242012 -0.000315898378943759 -0.000740175931040001 -0.00152304400472475 -0.0025979441777196 -0.000997213737077639 2.89004560506401e-06 5.5608175210194e-05 0.000131830549678247 4.69465013263867e-05 -5.84653511774363e-05 -5.47352494592531e-05 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </BTI:BackgroundComponent>
+		<BTI:BackgroundComponent>1.71576200172034e-05 0.00791041313145904 -0.0235537240978507 0.00337063149109811 0.0110887843134157 0.0579636933515782 0.0271561517571173 0.0702343572160227 -0.0326235520460392 0.0301357497041318 0.0207778795203905 0.0506270980492218 0.0640869926146019 0.0101122282924392 0.0286895716405073 0.0450754537161799 0.0208336714983981 -0.0187107495132879 0.0722599104152449 0.0531261024517871 -0.106002769879279 -0.164373939229506 -0.157605090844972 -0.10332555221297 0.0957630556423208 -0.0767166233707794 -0.0709381617293008 0.106969931127919 -0.0741353555863474 0.152051725138295 0.0511879222530752 -0.0563123351455451 -0.0197274554472262 0.111091933752968 0.0371707630596473 -0.120636353339791 0.0711751050755751 0.0347114386984973 -0.160587264002847 0.071341142844862 0.11718042652447 -0.0786287823460236 -0.192995739033759 0.116436913144447 0.0863250515422179 0.0485538619606947 0.0294956815906499 0.157491916241914 0.214578262689342 0.184171541625409 0.072305490755879 -0.0599571770285047 0.00547882862218126 0.0686843464437199 -0.164715732305344 0.00884165501131727 0.136798548997226 0.148843281688514 0.0644955192252809 -0.0632715324228403 -0.0301495404493355 -0.127149661782372 -0.108373905168757 -0.150824308730587 -0.171445395880459 -0.0115320351113452 0.00485518036892917 0.0183282763828634 0.00824555805392561 -0.0670945838761532 -0.0436741725018734 -0.105489663293332 0.0157205750769511 0.0639446728183622 0.00965261962157746 -0.0396599637275087 -0.11889387046637 -0.0521537045200397 -0.0532760677612445 -0.0215977599889582 0.0667755184571378 -0.0419390882920472 -0.117233572008014 -0.0706106681947642 -0.0942406870869363 -0.0545714125338446 -0.0787601222441884 -0.0982817788399929 -0.106678775327282 -0.0503129534374614 -0.0269245156097567 0.0381137943209281 -0.0613549095794787 -0.0285772557844846 -0.0196220907124489 -0.0818805478130759 0.0186751336335026 0.000115690992453313 0.0062574742686144 -0.0154800716750169 0.0753713246363667 0.0157463794507021 -0.00654041186032531 -0.0188684213920875 0.0385914398767839 0.0172566781427193 0.0253692101407671 0.0485147869172803 0.0155322648715263 0.0585827481283415 0.0411133057836178 -0.0235030039514829 -0.0207627330426253 -0.00260201791577807 0.0645005184883679 0.0493153299804821 0.0275667835997914 0.0327668927927663 -0.067460697428123 -0.129679913431267 -0.104188619986604 0.00904878369589718 -0.0265666327399285 -0.0705435426202242 -0.0399644263562911 -0.000616635330448647 0.0846444946609055 0.0946730334949874 0.0763433298463199 0.0916721683692361 0.0355352255686574 0.0463743290013452 0.0286020172327627 0.00957334708948785 0.04743146374562 -0.0129046452123362 0.0190336362729637 0.0722502735003406 0.0643731451686632 0.0223396913148217 -0.0217472662467375 0.0879160009956384 0.0555843106321656 0.0473761175734053 0.00429340495986212 0.0516183524816525 0.0105458410357951 0.0603973936798583 0.0672836980004924 0.000721046130023842 0.00486771856735247 0.0643190932305281 0.00329845883468286 0.0366321232730034 0.0287539151373023 -0.0443573909408497 0.0778747700539488 0.0283866670361069 0.0555372220797051 0.0455479299179137 0.0289517043775203 0.0600411879216477 0.00187189305903805 0.0780151013779863 0.0586779948588829 0.0834038234199066 0.0253763413313058 0.0269153876592179 0.0465404107696624 0.0488549735543689 0.0488823608754106 0.0146622222768171 0.00792896894949336 0.0106321104999689 0.0386104683127838 0.0487935932473947 0.0914116012578685 0.0418924604632481 0.0833768074745831 0.0337990818713038 0.00942167934025353 0.0126084340615474 0.0233658854932378 0.0141152347066158 0.0183633053225991 0.0198560130321661 0.00140249136171237 0.0135814880149771 0.00639640233336965 -0.00257266262620157 -0.040103648403839 -0.076360056348764 -0.0860348679328709 -0.158631279575464 -0.0593291683896002 0.109801754666973 0.0394378170268462 0.0574687429517432 0.0321238034444768 0.0103955531582951 -0.00770220293187106 5.65645303975113e-05 -0.00305122463543497 -0.0198025664622737 -0.00208550239529187 -0.0251688120679558 0.00992766211384919 -0.0171699481394552 -0.00965072633858347 0.00192259203057244 -0.00645003709598163 -0.0116877658255736 -0.017690310227617 -0.0172889674387923 -0.0147670539228578 -0.0210764106413013 -0.0162894790806024 -0.0269823212918709 -0.0245125378598966 0.00774838450336573 -0.0130149136983096 0.013538191085278 -0.0064529846176953 -0.00353936691132764 -0.00615389716808932 0.00334998563710725 0.0052979600928251 0.00365066931570878 0.0038901645587912 -0.00429037039191659 -0.00618742107166996 0.0109757913670982 0.0123008580567403 -0.00905169700469307 -0.00827274014974356 -0.00975838666386847 -0.0139775326945962 0.00453489880605239 0.0047181706042465 -0.0110943196535902 -0.0109745696845066 -0.00263847874652608 -0.00339935243136803 -0.000779528069711421 -0.00295469540208021 0.000457006866040588 7.00412870061569e-05 0.0166160100906974 -0.020507016049941 -0.00337186298353431 0.00894748089386722 0.00252790129090213 0.00567342505514539 0.0013886586807309 -0.00186150983811599 -0.0236133052956983 -0.0116673519761962 -0.0193620859966766 -0.00315058943188302 -0.0100943075634795 0.0117863748574427 0.00616145885359873 0.00704616911768351 0.00448992875397068 0.00280282186961629 0.00532251204065584 0.0060072219608279 0.00144686184391319 0.00202307566653147 0.00251110382858737 0.00233445625535219 0.0025843587647026 0.00258693532220623 0.00224134804755272 0.00204968847166902 0.00167935360139016 0.00196916352986158 0.00264450550377488 0.00331863834471097 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </BTI:BackgroundComponent>
+		<BTI:BackgroundComponent>-3.38286995856243e-05 -0.134130909302352 -0.0895807590285266 -0.0640660479868814 -0.0465470231262961 -0.0225287191450673 0.0221632147865502 -0.00870071285255435 -0.118432039528823 -0.0874704384501329 -0.0209618623933746 -0.0586789569365516 0.0164636262723749 0.0405208842729184 0.101246757552319 0.027528316226124 0.064735604484864 -0.0994289948477578 0.134438957913637 -0.0508797736184673 -0.0428111592019718 -0.095675926025166 -0.00148177227780271 -0.127259051493076 -0.05545505716026 -0.0553385382316776 0.032493926182317 0.287707525869293 0.177332828309006 0.0737528605150295 -0.167005480488632 0.0337038163426639 0.17129376405009 0.00601979137078143 0.130940996323546 0.0232926088070687 -0.0461346020366868 0.0438722324829139 -0.103093753509899 -0.0339673311974929 -0.0796455470218753 -0.0392623391405754 0.0749642872419931 -0.0571565115864948 0.0559641390750012 -0.0157982967401655 -0.076537152884339 -0.0965663131391117 -0.129329888508659 0.0861662762392968 -0.251731504183135 -0.159850143022926 0.073023213557841 -0.0430183223723622 -0.0569560614687808 -0.0323176605647296 0.00674470276028201 0.161701875105218 -0.00174646042635193 0.00794241833970444 -0.0446919488762449 -0.0187498702014828 -0.0546424653507096 0.017268963912072 0.163622435345163 0.295172315013843 -0.0206098380354195 -0.0441620193367087 0.1288917012458 0.0220191636126473 -0.0534581241269089 -0.0380399694102035 0.0937238387650536 0.0101247106887584 0.00773668583791807 0.0102935860468354 0.114576534760121 -0.0510266572585473 0.0391954334456468 -0.0562035870555517 -0.0186617292369328 0.127420592633538 -0.212983164098037 0.00244764102577882 0.018646113554603 -0.0741407238231979 0.0659820054783479 0.00376284822898252 -0.0268598109504869 0.00437170625755753 0.008366648672442 0.0445040452951868 -0.0736844124302029 0.0259138283158171 -0.125188594124067 -0.0108280216061078 0.0291142183709221 0.0587132283278972 0.00596207416153537 -0.0976294308748982 0.00469690504711283 -0.0176594549031757 -0.0207082091749441 0.0190006188831146 0.0582132158693459 0.00511627608255239 -0.00803459833166896 0.0129148223933458 -0.0149994886578258 0.08198873086577 0.0265252081246494 -0.016858585326555 -0.0281855448682152 -0.0270165507926373 -0.0144810339344728 0.0260005984673922 0.00838999425854184 0.0727853181079229 0.0579268666186018 -0.0660434842718986 0.0134660588006985 -0.0157712959355452 -0.0236522676753504 -0.00388479478587956 0.0289955485077379 -0.0416134188600034 -0.0339391556202092 0.0288857512201664 0.0367015531816972 -0.00570514100813767 0.0738380891554194 -0.0216845758163695 -0.00353768108686337 -0.0167185000395239 0.035798843566013 -0.0710867613564093 -0.0424653057679222 -0.0274595879216374 0.0187840315708254 0.0246569545173088 0.0368489931104319 -0.00464068905336458 0.0355020876174488 0.0281404255329313 0.0172357678367602 0.018458997219757 0.0265817411133033 0.0107388438796747 -0.0534790362620162 0.0242371991557387 -0.0332110468986597 0.0276159476467056 -0.0376336233219309 0.0699678023122138 -0.0129409744323011 0.00595161000769995 -0.0235353546082568 -0.062748321383469 0.017547527872223 -0.00572333238851257 0.0293087126667759 0.0126746014648162 -0.00932770956328736 -0.0249990755685603 0.031151146603714 -0.0287337901741455 -0.0882829364288863 -0.0553069071706279 0.0375313714294743 -0.0219672243646173 -0.0555325239755041 0.0163057902470088 -0.0608786313374825 -0.019457441997813 0.0213928965385013 -0.0612709002418155 -0.0215375096401716 -0.0330252458879479 -0.0349919472827926 -0.0224000352012724 -0.0114528290479275 -0.0239963821847311 -0.0370119279728279 0.0095298493605818 -0.00453964202706298 -0.0390723408940909 -0.0315188740688024 0.00775868566533538 0.0227888342638973 -0.00339199725976847 -0.0135756216895811 -0.0183504148071777 0.0436796089876591 0.18207162971368 0.00660744654153215 -0.0237995214518421 -0.0750091452587463 -0.0490364084665279 -0.106085315597776 -0.0359938272181849 -0.017227815289552 0.0121278205710773 -0.00139260157894402 0.00662221591649916 0.0278532292353849 0.0165240043315327 0.00710702660790479 -0.00204659964813159 -0.00943162962523604 -0.0243099728449184 0.00447304742343582 0.000257027853882622 0.0259100073275471 0.016790137180967 0.0182794138807694 0.00281635130834897 0.00726828686533356 -0.00187018230038743 -0.0032551553679908 0.0227330692649626 -0.0145490183315635 -0.00397400506923088 0.00412995186111611 -0.00474137581207966 -0.010253642541628 -0.00201643620483542 -0.0116915346418802 -0.00402518464738761 0.0261772526473535 0.0272126081142188 0.00155791445533358 0.0210889309649557 0.0176932916421606 0.00914491738779193 0.00715738368998755 -0.00250723627919216 0.026891602602388 0.000601278709404361 0.00676638494215297 0.000459141987195399 0.0153996611769035 0.0121368091387619 -0.00536839071388971 0.00954901889759053 -0.00448700474019012 -0.00642163575647858 0.0133586519981533 0.0175447088002136 -0.000549809316075651 -0.00041910840822282 0.02177187718735 0.00275311364032741 0.0049924117426275 0.00389166249083792 -0.00321431941814373 0.00826272441644849 0.0133213279941593 0.00502317193472692 0.0406474442084514 0.0143412553452463 0.0137232741226069 0.00112437930442502 -0.00308048719575566 -0.00455845282467403 0.00611928105407006 0.00327169518076975 -0.00151980501542682 0.000214227437968251 -0.000195299090870733 -0.00051814211781192 0.000111111285302133 0.000658963745738442 -0.000144325761604564 -0.000720832037506858 -0.000974037159078188 -0.000623871321404615 -0.000500374843067041 -0.000749584391106388 -0.00105252003363745 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 </BTI:BackgroundComponent>
+	</RadMeasurement><%! import numpy as np %>
+	<RadMeasurement id="Background12" radMeasurementGroupReferences="RadMeasurementGroup-1">
+		<MeasurementClassCode>Background</MeasurementClassCode>
+		<StartDateTime>2024-01-16T16:50:18Z</StartDateTime>
+		<RealTimeDuration>PT${secondary_spectrum.realtime}S</RealTimeDuration>
+		<Spectrum id="GammaBackground12-SL1-23-007" radDetectorInformationReference="SL1-23-007" energyCalibrationReference="ECal-0">
+			<LiveTimeDuration>PT${secondary_spectrum.realtime}S</LiveTimeDuration>
+			<ChannelData>${' '.join('{0:.0f}'.format(x) for x in np.random.poisson(secondary_spectrum.get_counts_as_np())/2)}</ChannelData>
+		</Spectrum>
+		<Spectrum id="GammaBackground12-SR1-23-007" radDetectorInformationReference="SR1-23-007" energyCalibrationReference="ECal-1">
+			<LiveTimeDuration>PT${secondary_spectrum.realtime}S</LiveTimeDuration>
+			<ChannelData>${' '.join('{0:.0f}'.format(x) for x in np.random.poisson(secondary_spectrum.get_counts_as_np())/2)}</ChannelData>
+		</Spectrum>
+	</RadMeasurement>
+	<DerivedData id="DerivedBackground">
+		<MeasurementClassCode>Background</MeasurementClassCode>
+		<StartDateTime>2024-01-16T16:14:27Z</StartDateTime>
+		<RealTimeDuration>PT0S</RealTimeDuration>
+		<Spectrum id="GammaBackground-R1" radRawSpectrumReferences="GammaBackground12-SL1-23-007 GammaBackground12-SR1-23-007" energyCalibrationReference="ECalDerived">
+			<LiveTimeDuration>PT0S</LiveTimeDuration>
+			<ChannelData></ChannelData>
+		</Spectrum>
+	</DerivedData>
+	<RadMeasurement id="Foreground0" radMeasurementGroupReferences="RadMeasurementGroup-1">
+		<MeasurementClassCode>Foreground</MeasurementClassCode>
+		<StartDateTime>2024-01-16T16:50:22Z</StartDateTime>
+		<RealTimeDuration>PT${scenario.acq_time}S</RealTimeDuration>
+		<Spectrum id="GammaForeground0-SL1-23-007" radDetectorInformationReference="SL1-23-007" energyCalibrationReference="ECal-0">
+			<LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+			<ChannelData>${' '.join('{0:.0f}'.format(x) for x in np.random.poisson(sample_counts_array)/2)}</ChannelData>
+		</Spectrum>
+		<Spectrum id="GammaForeground0-SR1-23-007" radDetectorInformationReference="SR1-23-007" energyCalibrationReference="ECal-1">
+			<LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+			<ChannelData>${' '.join('{0:.0f}'.format(x) for x in np.random.poisson(sample_counts_array)/2)}</ChannelData>
+		</Spectrum>
+	</RadMeasurement>
+	<RadMeasurement id="Foreground1" radMeasurementGroupReferences="RadMeasurementGroup-1">
+		<MeasurementClassCode>Foreground</MeasurementClassCode>
+		<StartDateTime>2024-01-16T16:50:23Z</StartDateTime>
+		<RealTimeDuration>PT0.000001S</RealTimeDuration>
+		<Spectrum id="GammaForeground1-SL1-23-007" radDetectorInformationReference="SL1-23-007" energyCalibrationReference="ECal-0">
+			<LiveTimeDuration>PT0.000001S</LiveTimeDuration>	
+			<ChannelData compressionCode="CountedZeroes">0 2048</ChannelData>
+		</Spectrum>
+		<Spectrum id="GammaForeground1-SR1-23-007" radDetectorInformationReference="SR1-23-007" energyCalibrationReference="ECal-1">
+			<LiveTimeDuration>PT0.000001S</LiveTimeDuration>
+			<ChannelData compressionCode="CountedZeroes">0 2048</ChannelData>
+		</Spectrum>
+	</RadMeasurement>
+	<RadMeasurement id="Foreground2" radMeasurementGroupReferences="RadMeasurementGroup-1">
+		<MeasurementClassCode>Foreground</MeasurementClassCode>
+		<StartDateTime>2024-01-16T16:50:24Z</StartDateTime>
+		<RealTimeDuration>PT0.000001S</RealTimeDuration>
+		<Spectrum id="GammaForeground2-SL1-23-007" radDetectorInformationReference="SL1-23-007" energyCalibrationReference="ECal-0">
+			<LiveTimeDuration>PT0.000001S</LiveTimeDuration>
+			<ChannelData compressionCode="CountedZeroes">0 2048</ChannelData>
+		</Spectrum>
+		<Spectrum id="GammaForeground2-SR1-23-007" radDetectorInformationReference="SR1-23-007" energyCalibrationReference="ECal-1">
+			<LiveTimeDuration>PT0.000001S</LiveTimeDuration>
+			<ChannelData compressionCode="CountedZeroes">0 2048</ChannelData>
+		</Spectrum>
+	</RadMeasurement>
+	<RadMeasurement id="Foreground3" radMeasurementGroupReferences="RadMeasurementGroup-1">
+		<MeasurementClassCode>Foreground</MeasurementClassCode>
+		<StartDateTime>2024-01-16T16:50:25Z</StartDateTime>
+		<RealTimeDuration>PT0.000001S</RealTimeDuration>
+		<Spectrum id="GammaForeground3-SL1-23-007" radDetectorInformationReference="SL1-23-007" energyCalibrationReference="ECal-0">
+			<LiveTimeDuration>PT0.000001S</LiveTimeDuration>
+			<ChannelData compressionCode="CountedZeroes">0 2048</ChannelData>
+		</Spectrum>
+		<Spectrum id="GammaForeground3-SR1-23-007" radDetectorInformationReference="SR1-23-007" energyCalibrationReference="ECal-1">
+			<LiveTimeDuration>PT0.000001S</LiveTimeDuration>
+			<ChannelData compressionCode="CountedZeroes">0 2048</ChannelData>
+		</Spectrum>
+	</RadMeasurement>
+	<DerivedData id="DerivedForeground11">
+		<MeasurementClassCode>Foreground</MeasurementClassCode>
+		<StartDateTime>2024-01-16T16:50:22Z</StartDateTime>
+		<RealTimeDuration></RealTimeDuration>
+		<Spectrum id="GammaForeground11-R1" radRawSpectrumReferences="GammaForeground0-SL1-23-007 GammaForeground0-SR1-23-007" energyCalibrationReference="ECalDerived">
+			<LiveTimeDuration></LiveTimeDuration>
+			<ChannelData></ChannelData>
+		</Spectrum>
+	</DerivedData>
+</RadInstrumentData>

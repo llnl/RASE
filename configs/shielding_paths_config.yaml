@@ -1,0 +1,351 @@
+inst_configs: shielding_library/FinalInstrumentConfigs
+shield_configs: shielding_library/FinalShieldingConfigs
+
+512:
+  PVT_1.5x14x70:
+    ecals: [ 0, 6, 0, 0 ]
+    null_inv: Null_0_6_0_bins512_responsed512_0.05_inverted.npz
+    PVT_1.5x14x70: PVT_1.5x14x70_bestresolution_0_6_0_bins512_responsed512_specs.csv
+    PVT_1.5x14x70_inv: PVT_1.5x14x70_bestresolution_0_6_0_bins512_responsed512_0.05_inverted.csv
+    Polyethylene:
+      0.12cm: Null_0_6_0_bins512_responsed512_0.12cmPoly_specs.npz
+      0.26cm: Null_0_6_0_bins512_responsed512_0.26cmPoly_specs.npz
+      0.5cm: Null_0_6_0_bins512_responsed512_0.5cmPoly_specs.npz
+      1cm: Null_0_6_0_bins512_responsed512_1cmPoly_specs.npz
+      2cm: Null_0_6_0_bins512_responsed512_2cmPoly_specs.npz
+      5cm: Null_0_6_0_bins512_responsed512_5cmPoly_specs.npz
+      10cm: Null_0_6_0_bins512_responsed512_10cmPoly_specs.npz
+      20cm: Null_0_6_0_bins512_responsed512_20cmPoly_specs.npz
+      30cm: Null_0_6_0_bins512_responsed512_30cmPoly_specs.npz
+    Wood:
+      0.12cm: Null_0_6_0_bins512_responsed512_0.12cmWood_specs.npz
+      0.26cm: Null_0_6_0_bins512_responsed512_0.26cmWood_specs.npz
+      0.5cm: Null_0_6_0_bins512_responsed512_0.5cmWood_specs.npz
+      1cm: Null_0_6_0_bins512_responsed512_1cmWood_specs.npz
+      2cm: Null_0_6_0_bins512_responsed512_2cmWood_specs.npz
+      5cm: Null_0_6_0_bins512_responsed512_5cmWood_specs.npz
+      10cm: Null_0_6_0_bins512_responsed512_10cmWood_specs.npz
+      20cm: Null_0_6_0_bins512_responsed512_20cmWood_specs.npz
+      30cm: Null_0_6_0_bins512_responsed512_30cmWood_specs.npz
+    Water:
+      0.12cm: Null_0_6_0_bins512_responsed512_0.12cmH2O_specs.npz
+      0.26cm: Null_0_6_0_bins512_responsed512_0.26cmH2O_specs.npz
+      1cm: Null_0_6_0_bins512_responsed512_1cmH2O_specs.npz
+      2cm: Null_0_6_0_bins512_responsed512_2cmH2O_specs.npz
+      5cm: Null_0_6_0_bins512_responsed512_5cmH2O_specs.npz
+      10cm: Null_0_6_0_bins512_responsed512_10cmH2O_specs.npz
+    Concrete:
+      0.12cm: Null_0_6_0_bins512_responsed512_0.12cmConcrete_specs.npz
+      0.26cm: Null_0_6_0_bins512_responsed512_0.26cmConcrete_specs.npz
+      0.5cm: Null_0_6_0_bins512_responsed512_0.5cmConcrete_specs.npz
+      1cm: Null_0_6_0_bins512_responsed512_1cmConcrete_specs.npz
+      2cm: Null_0_6_0_bins512_responsed512_2cmConcrete_specs.npz
+    Aluminum:
+      0.12cm: Null_0_6_0_bins512_responsed512_0.12cmAl_specs.npz
+      0.26cm: Null_0_6_0_bins512_responsed512_0.26cmAl_specs.npz
+      0.5cm: Null_0_6_0_bins512_responsed512_0.5cmAl_specs.npz
+      1cm: Null_0_6_0_bins512_responsed512_1cmAl_specs.npz
+      2cm: Null_0_6_0_bins512_responsed512_2cmAl_specs.npz
+    Stainless Steel:
+      0.05cm: Null_0_6_0_bins512_responsed512_0.05cmSS_specs.npz
+      0.12cm: Null_0_6_0_bins512_responsed512_0.12cmSS_specs.npz
+      0.26cm: Null_0_6_0_bins512_responsed512_0.26cmSS_specs.npz
+      0.5cm: Null_0_6_0_bins512_responsed512_0.5cmSS_specs.npz
+      1cm: Null_0_6_0_bins512_responsed512_1cmSS_specs.npz
+    Tungsten:
+      0.05cm: Null_0_6_0_bins512_responsed512_0.05cmW_specs.npz
+      0.12cm: Null_0_6_0_bins512_responsed512_0.12cmW_specs.npz
+      0.26cm: Null_0_6_0_bins512_responsed512_0.26cmW_specs.npz
+    Lead:
+      0.05cm: Null_0_6_0_bins512_responsed512_0.05cmPb_specs.npz
+      0.12cm: Null_0_6_0_bins512_responsed512_0.12cmPb_specs.npz
+      0.26cm: Null_0_6_0_bins512_responsed512_0.26cmPb_specs.npz
+      0.5cm: Null_0_6_0_bins512_responsed512_0.5cmPb_specs.npz
+      1cm: Null_0_6_0_bins512_responsed512_1cmPb_specs.npz
+      2cm: Null_0_6_0_bins512_responsed512_2cmPb_specs.npz
+      5cm: Null_0_6_0_bins512_responsed512_5cmPb_specs.npz
+      10cm: Null_0_6_0_bins512_responsed512_10cmPb_specs.npz
+    Uranium:
+      0.05cm: Null_0_6_0_bins512_responsed512_0.05cmU_specs.npz
+      0.12cm: Null_0_6_0_bins512_responsed512_0.12cmU_specs.npz
+      0.26cm: Null_0_6_0_bins512_responsed512_0.26cmU_specs.npz
+      0.5cm: Null_0_6_0_bins512_responsed512_0.5cmU_specs.npz
+
+1024:
+  GenericNaI_2x2:
+    ecals: [ 0, 3, 0, 0 ]
+    null_inv: Null_0_3_0_bins1024_responsed1024_0.01_inverted.npz
+    GenericNaI_2x2: GenericNaI_2x2_betterresolution_0_3_0_bins1024_responsed1024_specs.npz
+    GenericNaI_2x2_inv: GenericNaI_2x2_betterresolution_0_3_0_bins1024_responsed1024_0.01_inverted.npz
+    Polyethylene:
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmPoly_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmPoly_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmPoly_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmPoly_specs.npz
+      2cm: Null_0_3_0_bins1024_responsed1024_2cmPoly_specs.npz
+      5cm: Null_0_3_0_bins1024_responsed1024_5cmPoly_specs.npz
+      10cm: Null_0_3_0_bins1024_responsed1024_10cmPoly_specs.npz
+      20cm: Null_0_3_0_bins1024_responsed1024_20cmPoly_specs.npz
+      30cm: Null_0_3_0_bins1024_responsed1024_30cmPoly_specs.npz
+    Wood:
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmWood_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmWood_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmWood_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmWood_specs.npz
+      2cm: Null_0_3_0_bins1024_responsed1024_2cmWood_specs.npz
+      5cm: Null_0_3_0_bins1024_responsed1024_5cmWood_specs.npz
+      10cm: Null_0_3_0_bins1024_responsed1024_10cmWood_specs.npz
+      20cm: Null_0_3_0_bins1024_responsed1024_20cmWood_specs.npz
+      30cm: Null_0_3_0_bins1024_responsed1024_30cmWood_specs.npz
+    Water:
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmH2O_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmH2O_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmH2O_specs.npz
+      2cm: Null_0_3_0_bins1024_responsed1024_2cmH2O_specs.npz
+      5cm: Null_0_3_0_bins1024_responsed1024_5cmH2O_specs.npz
+      10cm: Null_0_3_0_bins1024_responsed1024_10cmH2O_specs.npz
+    Concrete:
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmConcrete_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmConcrete_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmConcrete_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmConcrete_specs.npz
+      2cm: Null_0_3_0_bins1024_responsed1024_2cmConcrete_specs.npz
+    Aluminum:
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmAl_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmAl_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmAl_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmAl_specs.npz
+      2cm: Null_0_3_0_bins1024_responsed1024_2cmAl_specs.npz
+    Stainless Steel:
+      0.05cm: Null_0_3_0_bins1024_responsed1024_0.05cmSS_specs.npz
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmSS_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmSS_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmSS_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmSS_specs.npz
+    Tungsten:
+      0.05cm: Null_0_3_0_bins1024_responsed1024_0.05cmW_specs.npz
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmW_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmW_specs.npz
+    Lead:
+      0.05cm: Null_0_3_0_bins1024_responsed1024_0.05cmPb_specs.npz
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmPb_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmPb_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmPb_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmPb_specs.npz
+      2cm: Null_0_3_0_bins1024_responsed1024_2cmPb_specs.npz
+      5cm: Null_0_3_0_bins1024_responsed1024_5cmPb_specs.npz
+      10cm: Null_0_3_0_bins1024_responsed1024_10cmPb_specs.npz
+    Uranium:
+      0.05cm: Null_0_3_0_bins1024_responsed1024_0.05cmU_specs.npz
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmU_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmU_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmU_specs.npz
+  GenericNaI_2x4x16:
+    ecals: [ 0, 3, 0, 0 ]
+    null_inv: Null_0_3_0_bins1024_responsed1024_0.01_inverted.npz
+    GenericNaI_2x4x16: GenericNaI_2x4x16_betterresolution_0_3_0_bins1024_responsed1024_specs.npz
+    GenericNaI_2x4x16_inv: GenericNaI_2x4x16_betterresolution_0_3_0_bins1024_responsed1024_0.01_inverted.npz
+    Polyethylene:
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmPoly_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmPoly_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmPoly_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmPoly_specs.npz
+      2cm: Null_0_3_0_bins1024_responsed1024_2cmPoly_specs.npz
+      5cm: Null_0_3_0_bins1024_responsed1024_5cmPoly_specs.npz
+      10cm: Null_0_3_0_bins1024_responsed1024_10cmPoly_specs.npz
+      20cm: Null_0_3_0_bins1024_responsed1024_20cmPoly_specs.npz
+      30cm: Null_0_3_0_bins1024_responsed1024_30cmPoly_specs.npz
+    Wood:
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmWood_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmWood_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmWood_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmWood_specs.npz
+      2cm: Null_0_3_0_bins1024_responsed1024_2cmWood_specs.npz
+      5cm: Null_0_3_0_bins1024_responsed1024_5cmWood_specs.npz
+      10cm: Null_0_3_0_bins1024_responsed1024_10cmWood_specs.npz
+      20cm: Null_0_3_0_bins1024_responsed1024_20cmWood_specs.npz
+      30cm: Null_0_3_0_bins1024_responsed1024_30cmWood_specs.npz
+    Water:
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmH2O_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmH2O_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmH2O_specs.npz
+      2cm: Null_0_3_0_bins1024_responsed1024_2cmH2O_specs.npz
+      5cm: Null_0_3_0_bins1024_responsed1024_5cmH2O_specs.npz
+      10cm: Null_0_3_0_bins1024_responsed1024_10cmH2O_specs.npz
+    Concrete:
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmConcrete_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmConcrete_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmConcrete_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmConcrete_specs.npz
+      2cm: Null_0_3_0_bins1024_responsed1024_2cmConcrete_specs.npz
+    Aluminum:
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmAl_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmAl_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmAl_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmAl_specs.npz
+      2cm: Null_0_3_0_bins1024_responsed1024_2cmAl_specs.npz
+    Stainless Steel:
+      0.05cm: Null_0_3_0_bins1024_responsed1024_0.05cmSS_specs.npz
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmSS_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmSS_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmSS_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmSS_specs.npz
+    Tungsten:
+      0.05cm: Null_0_3_0_bins1024_responsed1024_0.05cmW_specs.npz
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmW_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmW_specs.npz
+    Lead:
+      0.05cm: Null_0_3_0_bins1024_responsed1024_0.05cmPb_specs.npz
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmPb_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmPb_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmPb_specs.npz
+      1cm: Null_0_3_0_bins1024_responsed1024_1cmPb_specs.npz
+      2cm: Null_0_3_0_bins1024_responsed1024_2cmPb_specs.npz
+      5cm: Null_0_3_0_bins1024_responsed1024_5cmPb_specs.npz
+      10cm: Null_0_3_0_bins1024_responsed1024_10cmPb_specs.npz
+    Uranium:
+      0.05cm: Null_0_3_0_bins1024_responsed1024_0.05cmU_specs.npz
+      0.12cm: Null_0_3_0_bins1024_responsed1024_0.12cmU_specs.npz
+      0.26cm: Null_0_3_0_bins1024_responsed1024_0.26cmU_specs.npz
+      0.5cm: Null_0_3_0_bins1024_responsed1024_0.5cmU_specs.npz
+
+2048:
+  GenericLaBr_1x1:
+    ecals: [ 0, 1.5, 0, 0 ]
+    null_inv: Null_0_1.5_0_bins2048_responsed2048_0.005_inverted.npz
+    GenericLaBr_1x1: GenericLaBr_1x1_betterresolution_0_1.5_0_bins2048_responsed2048_specs.npz
+    GenericLaBr_1x1_inv: GenericLaBr_1x1_betterresolution_0_1.5_0_bins2048_responsed2048_0.005_inverted.npz
+    Polyethylene:
+      0.12cm: Null_0_1.5_0_bins2048_responsed2048_0.12cmPoly_specs.npz
+      0.26cm: Null_0_1.5_0_bins2048_responsed2048_0.26cmPoly_specs.npz
+      0.5cm: Null_0_1.5_0_bins2048_responsed2048_0.5cmPoly_specs.npz
+      1cm: Null_0_1.5_0_bins2048_responsed2048_1cmPoly_specs.npz
+      2cm: Null_0_1.5_0_bins2048_responsed2048_2cmPoly_specs.npz
+      5cm: Null_0_1.5_0_bins2048_responsed2048_5cmPoly_specs.npz
+      10cm: Null_0_1.5_0_bins2048_responsed2048_10cmPoly_specs.npz
+      20cm: Null_0_1.5_0_bins2048_responsed2048_20cmPoly_specs.npz
+      30cm: Null_0_1.5_0_bins2048_responsed2048_30cmPoly_specs.npz
+    Wood:
+      0.12cm: Null_0_1.5_0_bins2048_responsed2048_0.12cmWood_specs.npz
+      0.26cm: Null_0_1.5_0_bins2048_responsed2048_0.26cmWood_specs.npz
+      0.5cm: Null_0_1.5_0_bins2048_responsed2048_0.5cmWood_specs.npz
+      1cm: Null_0_1.5_0_bins2048_responsed2048_1cmWood_specs.npz
+      2cm: Null_0_1.5_0_bins2048_responsed2048_2cmWood_specs.npz
+      5cm: Null_0_1.5_0_bins2048_responsed2048_5cmWood_specs.npz
+      10cm: Null_0_1.5_0_bins2048_responsed2048_10cmWood_specs.npz
+      20cm: Null_0_1.5_0_bins2048_responsed2048_20cmWood_specs.npz
+      30cm: Null_0_1.5_0_bins2048_responsed2048_30cmWood_specs.npz
+    Water:
+      0.12cm: Null_0_1.5_0_bins2048_responsed2048_0.12cmH2O_specs.npz
+      0.26cm: Null_0_1.5_0_bins2048_responsed2048_0.26cmH2O_specs.npz
+      1cm: Null_0_1.5_0_bins2048_responsed2048_1cmH2O_specs.npz
+      2cm: Null_0_1.5_0_bins2048_responsed2048_2cmH2O_specs.npz
+      5cm: Null_0_1.5_0_bins2048_responsed2048_5cmH2O_specs.npz
+      10cm: Null_0_1.5_0_bins2048_responsed2048_10cmH2O_specs.npz
+    Concrete:
+      0.12cm: Null_0_1.5_0_bins2048_responsed2048_0.12cmConcrete_specs.npz
+      0.26cm: Null_0_1.5_0_bins2048_responsed2048_0.26cmConcrete_specs.npz
+      0.5cm: Null_0_1.5_0_bins2048_responsed2048_0.5cmConcrete_specs.npz
+      1cm: Null_0_1.5_0_bins2048_responsed2048_1cmConcrete_specs.npz
+      2cm: Null_0_1.5_0_bins2048_responsed2048_2cmConcrete_specs.npz
+    Aluminum:
+      0.12cm: Null_0_1.5_0_bins2048_responsed2048_0.12cmAl_specs.npz
+      0.26cm: Null_0_1.5_0_bins2048_responsed2048_0.26cmAl_specs.npz
+      0.5cm: Null_0_1.5_0_bins2048_responsed2048_0.5cmAl_specs.npz
+      1cm: Null_0_1.5_0_bins2048_responsed2048_1cmAl_specs.npz
+      2cm: Null_0_1.5_0_bins2048_responsed2048_2cmAl_specs.npz
+    Stainless Steel:
+      0.05cm: Null_0_1.5_0_bins2048_responsed2048_0.05cmSS_specs.npz
+      0.12cm: Null_0_1.5_0_bins2048_responsed2048_0.12cmSS_specs.npz
+      0.26cm: Null_0_1.5_0_bins2048_responsed2048_0.26cmSS_specs.npz
+      0.5cm: Null_0_1.5_0_bins2048_responsed2048_0.5cmSS_specs.npz
+      1cm: Null_0_1.5_0_bins2048_responsed2048_1cmSS_specs.npz
+    Tungsten:
+      0.05cm: Null_0_1.5_0_bins2048_responsed2048_0.05cmW_specs.npz
+      0.12cm: Null_0_1.5_0_bins2048_responsed2048_0.12cmW_specs.npz
+      0.26cm: Null_0_1.5_0_bins2048_responsed2048_0.26cmW_specs.npz
+    Lead:
+      0.05cm: Null_0_1.5_0_bins2048_responsed2048_0.05cmPb_specs.npz
+      0.12cm: Null_0_1.5_0_bins2048_responsed2048_0.12cmPb_specs.npz
+      0.26cm: Null_0_1.5_0_bins2048_responsed2048_0.26cmPb_specs.npz
+      0.5cm: Null_0_1.5_0_bins2048_responsed2048_0.5cmPb_specs.npz
+      1cm: Null_0_1.5_0_bins2048_responsed2048_1cmPb_specs.npz
+      2cm: Null_0_1.5_0_bins2048_responsed2048_2cmPb_specs.npz
+      5cm: Null_0_1.5_0_bins2048_responsed2048_5cmPb_specs.npz
+      10cm: Null_0_1.5_0_bins2048_responsed2048_10cmPb_specs.npz
+    Uranium:
+      0.05cm: Null_0_1.5_0_bins2048_responsed2048_0.05cmU_specs.npz
+      0.12cm: Null_0_1.5_0_bins2048_responsed2048_0.12cmU_specs.npz
+      0.26cm: Null_0_1.5_0_bins2048_responsed2048_0.26cmU_specs.npz
+      0.5cm: Null_0_1.5_0_bins2048_responsed2048_0.5cmU_specs.npz
+
+
+3000:
+  GenericCZT_1.16x1.16x1.16:
+    ecals: [ 0, 1, 0, 0 ]
+    null_inv: Null_0_1_0_bins3000_responsed3000_0.001_inverted.npz
+    GenericCZT_1.16x1.16x1.16: GenericCZT_1.16x1.16x1.16_betterresolution_0_1_0_bins3000_responsed3000_specs.npz
+    GenericCZT_1.16x1.16x1.16_inv: GenericCZT_1.16x1.16x1.16_betterresolution_0_1_0_bins3000_responsed3000_0.001_inverted.npz
+    Polyethylene:
+      0.12cm: Null_0_1_0_bins3000_responsed3000_0.12cmPoly_specs.npz
+      0.26cm: Null_0_1_0_bins3000_responsed3000_0.26cmPoly_specs.npz
+      0.5cm: Null_0_1_0_bins3000_responsed3000_0.5cmPoly_specs.npz
+      1cm: Null_0_1_0_bins3000_responsed3000_1cmPoly_specs.npz
+      2cm: Null_0_1_0_bins3000_responsed3000_2cmPoly_specs.npz
+      5cm: Null_0_1_0_bins3000_responsed3000_5cmPoly_specs.npz
+      10cm: Null_0_1_0_bins3000_responsed3000_10cmPoly_specs.npz
+      20cm: Null_0_1_0_bins3000_responsed3000_20cmPoly_specs.npz
+      30cm: Null_0_1_0_bins3000_responsed3000_30cmPoly_specs.npz
+    Wood:
+      0.12cm: Null_0_1_0_bins3000_responsed3000_0.12cmWood_specs.npz
+      0.26cm: Null_0_1_0_bins3000_responsed3000_0.26cmWood_specs.npz
+      0.5cm: Null_0_1_0_bins3000_responsed3000_0.5cmWood_specs.npz
+      1cm: Null_0_1_0_bins3000_responsed3000_1cmWood_specs.npz
+      2cm: Null_0_1_0_bins3000_responsed3000_2cmWood_specs.npz
+      5cm: Null_0_1_0_bins3000_responsed3000_5cmWood_specs.npz
+      10cm: Null_0_1_0_bins3000_responsed3000_10cmWood_specs.npz
+      20cm: Null_0_1_0_bins3000_responsed3000_20cmWood_specs.npz
+      30cm: Null_0_1_0_bins3000_responsed3000_30cmWood_specs.npz
+    Water:
+      0.12cm: Null_0_1_0_bins3000_responsed3000_0.12cmH2O_specs.npz
+      0.26cm: Null_0_1_0_bins3000_responsed3000_0.26cmH2O_specs.npz
+      1cm: Null_0_1_0_bins3000_responsed3000_1cmH2O_specs.npz
+      2cm: Null_0_1_0_bins3000_responsed3000_2cmH2O_specs.npz
+      5cm: Null_0_1_0_bins3000_responsed3000_5cmH2O_specs.npz
+      10cm: Null_0_1_0_bins3000_responsed3000_10cmH2O_specs.npz
+    Concrete:
+      0.12cm: Null_0_1_0_bins3000_responsed3000_0.12cmConcrete_specs.npz
+      0.26cm: Null_0_1_0_bins3000_responsed3000_0.26cmConcrete_specs.npz
+      0.5cm: Null_0_1_0_bins3000_responsed3000_0.5cmConcrete_specs.npz
+      1cm: Null_0_1_0_bins3000_responsed3000_1cmConcrete_specs.npz
+      2cm: Null_0_1_0_bins3000_responsed3000_2cmConcrete_specs.npz
+    Aluminum:
+      0.12cm: Null_0_1_0_bins3000_responsed3000_0.12cmAl_specs.npz
+      0.26cm: Null_0_1_0_bins3000_responsed3000_0.26cmAl_specs.npz
+      0.5cm: Null_0_1_0_bins3000_responsed3000_0.5cmAl_specs.npz
+      1cm: Null_0_1_0_bins3000_responsed3000_1cmAl_specs.npz
+      2cm: Null_0_1_0_bins3000_responsed3000_2cmAl_specs.npz
+    Stainless Steel:
+      0.05cm: Null_0_1_0_bins3000_responsed3000_0.05cmSS_specs.npz
+      0.12cm: Null_0_1_0_bins3000_responsed3000_0.12cmSS_specs.npz
+      0.26cm: Null_0_1_0_bins3000_responsed3000_0.26cmSS_specs.npz
+      0.5cm: Null_0_1_0_bins3000_responsed3000_0.5cmSS_specs.npz
+      1cm: Null_0_1_0_bins3000_responsed3000_1cmSS_specs.npz
+    Tungsten:
+      0.05cm: Null_0_1_0_bins3000_responsed3000_0.05cmW_specs.npz
+      0.12cm: Null_0_1_0_bins3000_responsed3000_0.12cmW_specs.npz
+      0.26cm: Null_0_1_0_bins3000_responsed3000_0.26cmW_specs.npz
+    Lead:
+      0.05cm: Null_0_1_0_bins3000_responsed3000_0.05cmPb_specs.npz
+      0.12cm: Null_0_1_0_bins3000_responsed3000_0.12cmPb_specs.npz
+      0.26cm: Null_0_1_0_bins3000_responsed3000_0.26cmPb_specs.npz
+      0.5cm: Null_0_1_0_bins3000_responsed3000_0.5cmPb_specs.npz
+      1cm: Null_0_1_0_bins3000_responsed3000_1cmPb_specs.npz
+      2cm: Null_0_1_0_bins3000_responsed3000_2cmPb_specs.npz
+      5cm: Null_0_1_0_bins3000_responsed3000_5cmPb_specs.npz
+      10cm: Null_0_1_0_bins3000_responsed3000_10cmPb_specs.npz
+    Uranium:
+      0.05cm: Null_0_1_0_bins3000_responsed3000_0.05cmU_specs.npz
+      0.12cm: Null_0_1_0_bins3000_responsed3000_0.12cmU_specs.npz
+      0.26cm: Null_0_1_0_bins3000_responsed3000_0.26cmU_specs.npz
+      0.5cm: Null_0_1_0_bins3000_responsed3000_0.5cmU_specs.npz

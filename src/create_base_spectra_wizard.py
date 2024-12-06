@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -53,21 +53,20 @@ from src.spectrum_file_reading import BaseSpectraFormatException
 from src.rase_settings import RaseSettings, BASE_SPECTRUM_CREATION_CONFIG_DEFAULT
 from src.utils import natural_keys, get_bundle_dir
 
-
 class IntroPage(QWizardPage):
     def __init__(self):
         QWizardPage.__init__(self)
         self.layout = QFormLayout(self)
 
-        self.setWindowTitle("Base Spectra Creation Wizard")
-        self.setTitle("Base Spectra Creation Wizard")
-        self.setSubTitle("Welcome to the base spectra creation wizard! \n\n "
-                         "Please enter the vendor name and the model of the instrument.")
+        self.setWindowTitle(self.tr('Base Spectra Creation Wizard'))
+        self.setTitle(self.tr('Base Spectra Creation Wizard'))
+        self.setSubTitle(self.tr('Welcome to the base spectra creation wizard!\n\nPlease enter '
+                                     'the vendor name and the model of the instrument.'))
 
         self.txtVendorID = QLineEdit(self)
-        self.lblVendorID = QLabel("Vendor ID")
+        self.lblVendorID = QLabel(self.tr('Vendor ID'))
         self.txtModelID = QLineEdit(self)
-        self.lblModelID = QLabel("Instrument Model")
+        self.lblModelID = QLabel(self.tr('Instrument Model'))
         self.txtVendorID.setValidator(QRegularExpressionValidator(QRegularExpression('[a-zA-Z0-9]{0,10}')))
         self.txtModelID.setValidator(QRegularExpressionValidator(QRegularExpression('[a-zA-Z0-9]{0,10}')))
 
@@ -88,15 +87,15 @@ class MethodPage(QWizardPage):
         QWizardPage.__init__(self)
         self.layout = QVBoxLayout(self)
 
-        self.setWindowTitle("Base Spectra Creation Wizard")
-        self.setTitle("Source for Base Spectra")
-        self.setSubTitle("RASE can generate base spectra from different input files. \n"
-                         "Please select among the following: ")
+        self.setWindowTitle(self.tr('Base Spectra Creation Wizard'))
+        self.setTitle(self.tr('Source for Base Spectra'))
+        self.setSubTitle(self.tr('RASE can generate base spectra from different input files.\n'
+                         'Please select among the following: '))
 
-        self.n42Radio = QRadioButton("n42 files of experimental or simulated data")
+        self.n42Radio = QRadioButton(self.tr('n42 files of experimental or simulated data'))
         self.n42Radio.setChecked(True)
-        self.pcfRadio = QRadioButton("PCF files from GADRAS")
-        self.gadrasRadio = QRadioButton("Generate directly with GADRAS")
+        self.pcfRadio = QRadioButton(self.tr('PCF files from GADRAS'))
+        self.gadrasRadio = QRadioButton(self.tr('Generate directly with GADRAS'))
         self.gadrasRadio.setEnabled(False)
 
         self.layout.addWidget(self.n42Radio)
@@ -121,14 +120,14 @@ class n42FormatPage(QWizardPage):
         QWizardPage.__init__(self)
         self.layout = QVBoxLayout(self)
 
-        self.setWindowTitle("Base Spectra Creation Wizard")
-        self.setTitle("n42 Format Selection")
-        self.setSubTitle("Please select the format from the dropdown menu. \n\n"
-                         "RASE has built-in capabilities to process generic n42 files as well as "
-                         "custom formats for some instruments. \n\n"
-                         "Previously created user-defined custom formats are saved "
-                         "in a config file in RASE application path and pre-loaded here too. \n\n"
-                         "If you need to define a new custom format, select \"Other\" ")
+        self.setWindowTitle(self.tr('Base Spectra Creation Wizard'))
+        self.setTitle(self.tr('n42 Format Selection'))
+        self.setSubTitle(self.tr('Please select the format from the dropdown menu. \n\n'
+                         'RASE has built-in capabilities to process generic n42 files as well as '
+                         'custom formats for some instruments. \n\n'
+                         'Previously created user-defined custom formats are saved '
+                         'in a config file in RASE application path and pre-loaded here too. \n\n'
+                         'If you need to define a new custom format, select "Other" '))
 
         self.configs = default_config
         self.comboConfig = QComboBox(self)
@@ -141,16 +140,16 @@ class n42FormatPage(QWizardPage):
             if os.path.isfile(self.wizard().user_config_file):
                 file_configs = load_configs_from_file(self, self.wizard().user_config_file)
                 self.configs = {**self.configs, **file_configs}
-            self.comboConfig.addItems([key for key in self.configs.keys()] + ['Other'])
+            self.comboConfig.addItems([key for key in self.configs.keys()] + [self.tr('Other')])
 
     @Slot(int)
     def combo_config_changed(self, index):
         # This variable is stored directly in the wizard class
-        if self.comboConfig.currentText() != 'Other':
+        if self.comboConfig.currentText() != self.tr('Other'):
             self.wizard().n42_config_dict = self.configs[self.comboConfig.currentText()]
 
     def nextId(self) -> int:
-        if self.comboConfig.currentText() == 'Other':
+        if self.comboConfig.currentText() == self.tr('Other'):
             return Pages.customFormat
         else:
             return Pages.n42Load
@@ -161,17 +160,17 @@ class CustomFormatPage(QWizardPage):
         QWizardPage.__init__(self)
         self.layout = QVBoxLayout(self)
 
-        self.setWindowTitle("Base Spectra Creation Wizard")
-        self.setTitle("Specify Custom n42 Format")
-        self.setSubTitle("Please enter the custom n42 format as YAML \n"
-                         "See the RASE manual for details on the YAML format ")
+        self.setWindowTitle(self.tr('Base Spectra Creation Wizard'))
+        self.setTitle(self.tr('Specify Custom n42 Format'))
+        self.setSubTitle(self.tr('Please enter the custom n42 format as YAML \n'
+                         'See the RASE manual for details on the YAML format '))
 
         self.txtEditor = QPlainTextEdit()
         # use the first entry in default_config as placeholder
         tmp_dict = {'Example n42 parser': default_config[next(iter(default_config))]}
         self.txtEditor.setPlaceholderText(yaml.dump(tmp_dict))
         self.txtEditor.textChanged.connect(lambda: self.completeChanged.emit())
-        self.chkBox_saveformat = QCheckBox("Save custom format for future use")
+        self.chkBox_saveformat = QCheckBox(self.tr('Save custom format for future use'))
         self.layout.addWidget(self.txtEditor)
         self.layout.addWidget(self.chkBox_saveformat)
 
@@ -183,10 +182,9 @@ class CustomFormatPage(QWizardPage):
         try:
             custom_config = yaml.safe_load(self.txtEditor.toPlainText().strip())
         except yaml.YAMLError as err:
-            QMessageBox.warning(self, 'Config Error',
-                                f'The text entered cannot be parsed. '
-                                'Look for YAML format errors.\n' +
-                                str(err))
+            QMessageBox.warning(self, self.tr('Config Error'),
+                                self.tr(f'The text entered cannot be parsed. '
+                                'Look for YAML format errors.\n') + str(err))
             return False
 
         if self.chkBox_saveformat.isChecked():
@@ -195,10 +193,9 @@ class CustomFormatPage(QWizardPage):
                 with open(self.wizard().user_config_file, 'a') as file:
                     file.write(f'\n{self.txtEditor.toPlainText().strip()}\n')
             except Exception as err:
-                QMessageBox.warning(self, 'Config Save Error',
-                                    f'Failed to save the text as a new entry in '
-                                    f'{self.wizard().user_config_file}.\n' +
-                                    str(err))
+                QMessageBox.warning(self, self.tr('Config Save Error'),
+                                    self.tr(f'Failed to save the text as a new entry in '
+                                    f'{self.wizard().user_config_file}.\n') + str(err))
                 return False
 
         self.wizard().n42_config_dict = custom_config[next(iter(custom_config))]
@@ -213,13 +210,13 @@ class PCFFileLoadPage(QWizardPage):
         QWizardPage.__init__(self)
         self.layout = QVBoxLayout(self)
 
-        self.setWindowTitle("Base Spectra Creation Wizard")
-        self.setTitle("Select PCF Files")
-        self.setSubTitle("Click on the button to select the folder containing the PCF files. \n"
-                         "The operation can be repeated multiple times to select files "
-                         "from multiple folders")
+        self.setWindowTitle(self.tr('Base Spectra Creation Wizard'))
+        self.setTitle(self.tr('Select PCF Files'))
+        self.setSubTitle(self.tr('Click on the button to select the folder containing the '
+                                     'PCF files. \n The operation can be repeated multiple '
+                                     'times to select files from multiple folders'))
 
-        self.btnLoadSources = QPushButton("Add Files from Folder...")
+        self.btnLoadSources = QPushButton(self.tr('Add Files from Folder...'))
         self.btnLoadSources.clicked.connect(self.get_path)
         self.pathLabel = QLabel('')
         self.lstPCFFiles = QListWidget(self)
@@ -232,7 +229,7 @@ class PCFFileLoadPage(QWizardPage):
     def get_path(self, checked):
         options = QFileDialog.ShowDirsOnly
         if sys.platform.startswith('win'): options = QFileDialog.DontUseNativeDialog
-        path = QFileDialog.getExistingDirectory(self, 'Choose Data Directory',
+        path = QFileDialog.getExistingDirectory(self, self.tr('Choose Data Directory'),
                                                 RaseSettings().getLastDirectory(), options)
         if path:
             self.pathLabel.setText(path)
@@ -241,10 +238,10 @@ class PCFFileLoadPage(QWizardPage):
     @Slot(bool)
     def get_PCF_file_list(self, checked):
         if self.pathLabel.text():
-            filenames = [f for f in os.listdir(self.pathLabel.text()) if f.lower().endswith(".pcf")]
+            filenames = [f for f in os.listdir(self.pathLabel.text()) if f.lower().endswith('.pcf')]
             if not filenames:
-                QMessageBox.critical(self, 'Invalid Directory Selection',
-                                     'No PCF Files in selected Directory')
+                QMessageBox.critical(self, self.tr('Invalid Directory Selection'),
+                                     self.tr('No PCF Files in selected Directory'))
                 return
 
             filenames.sort(key=natural_keys)
@@ -265,17 +262,17 @@ class n42FileLoadPage(QWizardPage):
         QWizardPage.__init__(self)
         self.layout = QVBoxLayout(self)
 
-        self.setWindowTitle("Base Spectra Creation Wizard")
-        self.setTitle("Select n42 Files")
-        self.setSubTitle("Click on the button to select the folder containing the n42 files. \n"
-                         "The operation can be repeated multiple times to select files "
-                         "from multiple folders")
+        self.setWindowTitle(self.tr('Base Spectra Creation Wizard'))
+        self.setTitle(self.tr('Select n42 Files'))
+        self.setSubTitle(self.tr('Click on the button to select the folder containing the '
+                                     'n42 files. \n The operation can be repeated multiple times '
+                                     'to select files from multiple folders'))
 
-        self.btnLoadSources = QPushButton("Add Files from Folder...")
+        self.btnLoadSources = QPushButton(self.tr('Add Files from Folder...'))
         self.btnLoadSources.clicked.connect(self.get_path)
         self.pathLabel = QLabel('')
         self.lstn42Files = QListWidget(self)
-        self.checkBox_ComboFolder = QCheckBox("Sum sources in subfolders")
+        self.checkBox_ComboFolder = QCheckBox(self.tr('Sum sources in subfolders'))
         self.checkBox_ComboFolder.toggled.connect(self.clear_and_reload)
 
         self.layout.addWidget(self.btnLoadSources)
@@ -287,7 +284,7 @@ class n42FileLoadPage(QWizardPage):
     def get_path(self, checked):
         options = QFileDialog.ShowDirsOnly
         if sys.platform.startswith('win'): options = QFileDialog.DontUseNativeDialog
-        path = QFileDialog.getExistingDirectory(self, 'Choose Data Directory',
+        path = QFileDialog.getExistingDirectory(self, self.tr('Choose Data Directory'),
                                                 RaseSettings().getLastDirectory(), options)
         if path:
             self.pathLabel.setText(path)
@@ -302,10 +299,10 @@ class n42FileLoadPage(QWizardPage):
     def get_n42_file_list(self, sum_subfolders):
         if self.pathLabel.text():
             if not sum_subfolders:  # normal load
-                filenames = [f for f in os.listdir(self.pathLabel.text()) if f.lower().endswith(".n42")]
+                filenames = [f for f in os.listdir(self.pathLabel.text()) if f.lower().endswith('.n42')]
                 if not filenames:
-                    QMessageBox.critical(self, 'Invalid Directory Selection',
-                                         'No n42 Files in selected Directory')
+                    QMessageBox.critical(self, self.tr('Invalid Directory Selection'),
+                                         self.tr('No n42 Files in selected Directory'))
                     return
             else:
                 found_all = True
@@ -320,8 +317,8 @@ class n42FileLoadPage(QWizardPage):
                             bad_dirs.append(it.name)
                 if not found_all:
                     bad_dir_str = ', '.join(bad_dirs)
-                    QMessageBox.critical(self, 'Invalid Directory Selection',
-                                         f'Subdirectory(s) {bad_dir_str} does not contain n42 files.')
+                    QMessageBox.critical(self, self.tr('Invalid Directory Selection'),
+                         self.tr(f'Subdirectory(s) {bad_dir_str} does not contain n42 files.'))
                     return
             # TODO: check that each n42 is sane otherwise skip the file and notify the user
             filenames.sort(key=natural_keys)
@@ -343,12 +340,12 @@ class TableEditingPage(QWizardPage):
 
         self.layout = QVBoxLayout(self)
 
-        self.setWindowTitle("Base Spectra Creation Wizard")
-        self.setTitle("Provide Source Details")
-        self.setSubTitle("For each file, RASE needs to know the true source ID "
-                         "e.g. (\"Cu-60\" or (\"Cs-137\"), the exposure rate and/or source flux. "
-                         "If data include background, the file with the representative background "
-                         "spectrum should also be selected.")
+        self.setWindowTitle(self.tr('Base Spectra Creation Wizard'))
+        self.setTitle(self.tr('Provide Source Details'))
+        self.setSubTitle(self.tr('For each file, RASE needs to know the true source ID '
+                         'e.g. ("Cu-60" or ("Cs-137"), the exposure rate and/or source flux. '
+                         'If data include background, the file with the representative background '
+                         'spectrum should also be selected.'))
 
         self.createBSTable = CreateBaseSpectraTableWidget()
         self.layout.addWidget(self.createBSTable)
@@ -382,12 +379,12 @@ class SelectOutputPage(QWizardPage):
         QWizardPage.__init__(self)
         self.layout = QVBoxLayout(self)
 
-        self.setWindowTitle("Base Spectra Creation Wizard")
-        self.setTitle("Select Output Folder")
-        self.setSubTitle("The base spectra have been processed and are ready to be saved to disk. \n"
-                         "Please select the output folder location")
+        self.setWindowTitle(self.tr('Base Spectra Creation Wizard'))
+        self.setTitle(self.tr('Select Output Folder'))
+        self.setSubTitle(self.tr('The base spectra have been processed and are ready to be '
+                                     'saved to disk.\nPlease select the output folder location'))
 
-        self.btnOutFolder = QPushButton("Select Output Folder...")
+        self.btnOutFolder = QPushButton(self.tr('Select Output Folder...'))
         self.btnOutFolder.clicked.connect(self.get_path)
         self.txtOutFolder = QLineEdit(self)
 
@@ -400,7 +397,7 @@ class SelectOutputPage(QWizardPage):
     def get_path(self, checked):
         options = QFileDialog.ShowDirsOnly
         if sys.platform.startswith('win'): options = QFileDialog.DontUseNativeDialog
-        path = QFileDialog.getExistingDirectory(self, 'Choose Output Directory',
+        path = QFileDialog.getExistingDirectory(self, self.tr('Choose Output Directory'),
                                                 RaseSettings().getLastDirectory(), options)
         if path:
             self.txtOutFolder.setText(path)
@@ -416,12 +413,13 @@ class SelectOutputPage(QWizardPage):
                                                 self.field('VendorID'),
                                                 self.field('ModelID'))
         except BaseSpectraFormatException as e:
-            QMessageBox.warning(self, 'Base Spectrum Creation Error', e.args)
+            QMessageBox.warning(self, self.tr('Base Spectrum Creation Error'), e.args)
             return False
         except Exception as e:
-            QMessageBox.warning(self, 'Error', str(e) + traceback.format_exc())
+            QMessageBox.warning(self, self.tr('Error'), str(e) + traceback.format_exc())
             return False
-        QMessageBox.information(self, 'Success!', 'Base spectra creation completed succesfully!')
+        QMessageBox.information(self, self.tr('Success!'), self.tr('Base spectra creation '
+                                                                       'completed succesfully!'))
         return True
 
 

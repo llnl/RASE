@@ -1,0 +1,35 @@
+Bgnd,,K40;K-40;Potassium-40;Th;Th232;Th-232;Th-232Counts;Thorium-232;Ra226;Ra-226;Radium-226;NORM;No ID;Insufficient Counts;Spt cnts > Bkg;No iso. found;Not Identified
+Am241,Am241;Am-241;Americium-241;Am-241 (unshielded),
+Ba133,Ba133;Ba-133;Barium-133,
+Cd109,Cd109;Cd-109;Cadmium-109,
+Cf252,Cf252;Cf-252;Californium-252,Neutrons
+Cs137,Cs137;Cs-137;Cesium-137,
+Co57,Co57;Co-57;Cobalt-57,
+Co60,Co60;Co-60;Cobalt-60,Annihilation;Annihilation Photons
+Cr51,Cr51;Cr-51;Chromium-51,
+Cu67,Cu67;Cu-67;Copper-67,Ga67;Ga-67;Gallium-67
+DU,DU;U238;U_238;U-238;U238_DU;Uranium-238;DU-238;Uranium,LEU
+Ga67,Ga67;Ga-67;Gallium-67,Cu67;Cu-67;Copper-67
+HEU,HEU;U235;U_235;U-235;Uranium;Uranium-235;U risk,U_238;U-238;U238;Uranium-238;DU-238;LEU
+I131,I131;I-131;Iodine-131,
+K40,K40;K-40;Potassium;Potassium-40,NORM
+LEU,LEU;U235;U-235;Uranium;Uranium-235;U risk,DU;HEU;U238;U-238;DU-238;Uranium-238
+Lu177,Lu177;Lu-177;Lutetium-177;Lu177m;Lu-177m;Lu-177m;Lutetium-177m,Ta177;Ta-177
+Mo99,Mo99;Mo-99;Molybdenum-99,Tc99m;Tc-99m;Tc-99;Technetium-99m
+Na22,Na22;Na-22;Sodium-22;Beta+@Na,Annihilation;Annihilation Photons
+Np237,Np237;Np-237;Neptunium-237,
+Pu239,Pu239;Pu-239;WGPu;WGPu_S;WGPu-HS;Plutonium-239;Plutonium;Pu;LB Pu;MB Pu,Am241;Am-241;Americium-241;Am-241 (unshielded);Neutrons
+Ra226,Ra226;Ra-226;Radium-226,Rn222;Rn-222;Radon-222;Radon;Po210;Po-210;Bi210;Bi-210
+RGPu,RGPu;Pu239;Pu-239;Plutonium;Plutonium-239;Reactor Grade Plutonium;LB Pu;MB Pu;WGPu;WGPu-HS;WGPu-S,Am241;Am-241;Americium-241;Am-241 (unshielded);Neutrons;
+Se75,Se75;Se-75;Selenium-75,
+Sr85,Sr85;Sr-85;Strontium-85,
+Tc99m,Tc99m;Tc-99m;Tc-99M;Technetium-99m;Tc-99,Mo99;Mo-99;Molybdenum-99
+Tl201,Tl201;Tl-201;Thallium-201,
+Th228,Th228;Th-228;Thorium;Thorium-228;Thorium;Th;U232;U-232;Uranium-232;U-232D;Th-232Chain,NORM;
+Th232,Th232;Th-232;Thorium;Thorium-232;Th;Th-232Chain,Th228;Th-228;NORM
+U232,U232;U-232;Uranium;Uranium-232;U risk;Th228;Th-228;,Th232;Th-232;Thorium
+U233,U233;U-233;Uranium;Uranium-233;U risk,U232;U-232
+U235,HEU;U235;U_235;U-235;Uranium;Uranium-235;U risk,U_238;U-238;U238;Uranium-238;DU-238;LEU
+U238,DU;U238;U_238;U-238;U238_DU;Uranium-238;DU-238,Uranium;LEU
+WGPu,WGPu;WGPu_S;WGPu-HS;Plutonium-239;Pu-239;Pu239;Plutonium;Pu;LB Pu;MB Pu,Am241;Am-241;Americium-241;Am-241 (unshielded);Neutrons;RGPu
+PuO2,PuO2;RGPu;WGPu;WGPu_S;WGPu-HS;Plutonium-239;Pu-239;Pu239;Plutonium;Pu;LB Pu;MB Pu,Am241;Am-241;Americium-241;Am-241 (unshielded);Neutrons

@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 
 #
 # All rights reserved.
@@ -37,15 +37,18 @@ replay identification results
 """
 
 import csv
+import re
 
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import QTableWidgetItem, QDialog, QFileDialog, \
-     QMessageBox, QHeaderView, QItemDelegate, QComboBox, QMenu
+    QMessageBox, QHeaderView, QItemDelegate, QComboBox, QMenu
 from PySide6.QtGui import QAction
 
 from src.rase_settings import RaseSettings
 from .table_def import CorrespondenceTableElement, CorrespondenceTable, Session, Material
 from .ui_generated import ui_correspondence_table_dialog
+
+# translation_tag = 'corr_d'
 
 
 class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_dlgCorrTable, QDialog):
@@ -67,7 +70,7 @@ class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_dlgCorrTable, 
         self.tblCCCLists.setItemDelegate(Delegate(self.tblCCCLists, isotopeCol=0))
         self.tblCCCLists.setRowCount(self.NUM_ROWS)
         self.tblCCCLists.setColumnCount(self.NUM_COLS)
-        self.columnLabels = ['Source', 'Correct ID', 'Allowed ID']
+        self.columnLabels = [self.tr('Source'), self.tr('Correct ID'), self.tr('Allowed ID')]
         self.tblCCCLists.setHorizontalHeaderLabels(self.columnLabels)
         self.tblCCCLists.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.tblCCCLists.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
@@ -76,11 +79,10 @@ class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_dlgCorrTable, 
         self.tblCCCLists.setSortingEnabled(False)
 
         if corTableRows:
-          for row, line in enumerate(corTableRows):
-            self.tblCCCLists.setItem(row, 0, QTableWidgetItem(line.isotope))
-            self.tblCCCLists.setItem(row, 1, QTableWidgetItem(line.corrList1))
-            self.tblCCCLists.setItem(row, 2, QTableWidgetItem(line.corrList2))
-
+            for row, line in enumerate(corTableRows):
+                self.tblCCCLists.setItem(row, 0, QTableWidgetItem(line.isotope))
+                self.tblCCCLists.setItem(row, 1, QTableWidgetItem(line.corrList1))
+                self.tblCCCLists.setItem(row, 2, QTableWidgetItem(line.corrList2))
 
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
@@ -107,13 +109,13 @@ class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_dlgCorrTable, 
         deletes selected rows
         """
         rows = self.tblCCCLists.selectionModel().selectedRows()
-        indices =[]
+        indices = []
         for r in rows:
             indices.append(r.row())
         indices.sort(reverse=True)
         for index in indices:
             self.tblCCCLists.removeRow(index)
-        self.NUM_ROWS =self.NUM_ROWS - len(indices)
+        self.NUM_ROWS = self.NUM_ROWS - len(indices)
 
     def setDefaultCorrTable(self, tableName):
         """
@@ -132,17 +134,17 @@ class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_dlgCorrTable, 
         if not self.readCorrTableRows():
             return
         corTableRows = self.readCorrTableRows()
-        row =0
+        row = 0
         if corTableRows:
-          for line in corTableRows:
-            self.NUM_ROWS = row+1
-            self.tblCCCLists.setRowCount(self.NUM_ROWS)
-            for col in range(self.NUM_COLS):
-                self.tblCCCLists.setItem(row, col, QTableWidgetItem())
-            self.tblCCCLists.setItem(row, 0, QTableWidgetItem(line.isotope))
-            self.tblCCCLists.setItem(row, 1, QTableWidgetItem(line.corrList1))
-            self.tblCCCLists.setItem(row, 2, QTableWidgetItem(line.corrList2))
-            row = row + 1
+            for line in corTableRows:
+                self.NUM_ROWS = row + 1
+                self.tblCCCLists.setRowCount(self.NUM_ROWS)
+                for col in range(self.NUM_COLS):
+                    self.tblCCCLists.setItem(row, col, QTableWidgetItem())
+                self.tblCCCLists.setItem(row, 0, QTableWidgetItem(line.isotope))
+                self.tblCCCLists.setItem(row, 1, QTableWidgetItem(line.corrList1))
+                self.tblCCCLists.setItem(row, 2, QTableWidgetItem(line.corrList2))
+                row = row + 1
         self.setSaveAsTableName()
 
     def populateDefaultComboBox(self):
@@ -170,7 +172,8 @@ class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_dlgCorrTable, 
         if corrTable is None:
             return None
         else:
-            return self.session.query(CorrespondenceTableElement).filter_by(corr_table_name=corrTable.name)
+            return self.session.query(CorrespondenceTableElement).filter_by(
+                corr_table_name=corrTable.name)
 
     def addRow(self):
         """
@@ -179,13 +182,12 @@ class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_dlgCorrTable, 
         self.NUM_ROWS = self.NUM_ROWS + 1
         self.tblCCCLists.setRowCount(self.NUM_ROWS)
         for col in range(self.NUM_COLS):
-            self.tblCCCLists.setItem(self.NUM_ROWS-1, col, QTableWidgetItem())
+            self.tblCCCLists.setItem(self.NUM_ROWS - 1, col, QTableWidgetItem())
 
     def accept(self):
         table_name = self.txtCorrespondenceTable.text()
         if table_name == "":
-            QMessageBox.information(self, 'Correspondence Table Name Needed',
-                                    'Please Specify New Table Name')
+            QMessageBox.information(self, self.tr('Correspondence Table Name Needed'), self.tr('Please Specify New Table Name'))
             return
 
         self.delete_old_corr_table(self.session, table_name)
@@ -207,7 +209,7 @@ class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_dlgCorrTable, 
         """
         exports to CSV
         """
-        path = QFileDialog.getSaveFileName(self, 'Save File', self.settings.getDataDirectory(), 'CSV (*.csv)')
+        path = QFileDialog.getSaveFileName(self, self.tr('Save File'), self.settings.getDataDirectory(), 'CSV (*.csv)')
         if path[0]:
             with open(path[0], mode='w', newline='') as stream:
                 writer = csv.writer(stream)
@@ -226,7 +228,7 @@ class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_dlgCorrTable, 
         """
         imports from CSV
         """
-        path = QFileDialog.getOpenFileName(self, 'Open File', self.settings.getDataDirectory(), 'CSV(*.csv)')
+        path = QFileDialog.getOpenFileName(self, self.tr('Open File'), self.settings.getDataDirectory(), 'CSV(*.csv)')
         if path[0]:
             # FIXME: This doesn't check in any way that the format of the file is correct
             with open(path[0], mode='r') as stream:
@@ -234,7 +236,7 @@ class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_dlgCorrTable, 
                 self.tblCCCLists.setColumnCount(0)
                 for rowdata in csv.reader(stream):
                     row = self.tblCCCLists.rowCount()
-                    if 'Correct ID' in str(rowdata):
+                    if self.tr('Correct ID') in str(rowdata):
                         continue
                     self.tblCCCLists.insertRow(row)
                     self.tblCCCLists.setColumnCount(len(rowdata))
@@ -266,14 +268,14 @@ class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_dlgCorrTable, 
             sortingList = []
             rowMap = {}
             for row in range(self.NUM_ROWS):
-                if self.tblCCCLists.item(row,0).text() == "":
+                if self.tblCCCLists.item(row, 0).text() == "":
                     continue
                 rowMapItem = {}
                 for col in range(self.NUM_COLS):
                     if col != sortingCol:
-                        rowMapItem[col] = self.tblCCCLists.item(row,col).text()
-                rowMap[self.tblCCCLists.item(row,sortingCol).text()] = rowMapItem
-                sortingList.append(self.tblCCCLists.item(row,sortingCol).text())
+                        rowMapItem[col] = self.tblCCCLists.item(row, col).text()
+                rowMap[self.tblCCCLists.item(row, sortingCol).text()] = rowMapItem
+                sortingList.append(self.tblCCCLists.item(row, sortingCol).text())
             sortingList.sort()
             row = 0
             for token in sortingList:
@@ -300,7 +302,9 @@ class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_dlgCorrTable, 
 
     @staticmethod
     def add_corr_table_entry(table, iso, l1='', l2=''):
-        corrTsbleEntry = CorrespondenceTableElement(isotope=iso, table=table, corrList1=l1, corrList2=l2)
+        corrTsbleEntry = CorrespondenceTableElement(isotope=iso, table=table, corrList1=l1,
+                                                    corrList2=l2)
+        Session().add(corrTsbleEntry)
         return table
 
 
@@ -314,7 +318,8 @@ class Delegate(QItemDelegate):
     def createEditor(self, parent, option, index):
         if index.column() == self.isotopeCol:
             # generate list of unique material names
-            materialList = sorted(set([name for material in Session().query(Material) for name in material.name_no_shielding()]))
+            materialList = sorted(set([name for material in Session().query(Material) for name in
+                                       material.name_no_shielding()]))
 
             # remove any materials already used
             for row in range(self.tblCorr.rowCount()):
@@ -322,7 +327,7 @@ class Delegate(QItemDelegate):
                 if item and item.text() in materialList:
                     materialList.remove(item.text())
 
-            #create and populate comboEdit
+            # create and populate comboEdit
             comboEdit = QComboBox(parent)
             comboEdit.setEditable(self.editable)
             comboEdit.addItem('')
@@ -330,3 +335,72 @@ class Delegate(QItemDelegate):
             return comboEdit
         else:
             return super(Delegate, self).createEditor(parent, option, index)
+
+
+class CorrespondenceData:
+    def __init__(self, gui=None):
+        self.gui = gui
+        self.corrHash = {}
+        self.settings = RaseSettings()
+
+    def getCorrHash(self):
+        """
+        Reads the Correspondence Table and creates
+        association of isotopes to correct and allowed ids
+        :return: association of isotopes to correct and allowed ids
+        """
+        corrTable = Session().query(CorrespondenceTable).filter_by(is_default=True).one_or_none()
+        if not corrTable and self.gui is not None:
+            QMessageBox.critical(self.gui, self.tr('Set Correspondence Table'), self.tr('Must specify a Correspondence Table'))
+            return
+        # if the corrHash dict has already been populated and the Correspondence Table Dialog has not
+        # been called since it was populated, there is no need to re-populate it
+        if self.corrHash and not self.settings.getIsAfterCorrespondenceTableCall():
+            return self.corrHash
+        self.corrHash = {}
+        self.settings.setIsAfterCorrespondenceTableCall(False)
+        corTableRows = (
+            Session().query(CorrespondenceTableElement).filter_by(corr_table_name=corrTable.name))
+        for line in corTableRows:
+            isotope = line.isotope.strip()
+            # correct_ids is a list of ";" delimited strings
+            correct_ids = [l.strip() for l in line.corrList1.split(';') if l.strip()]
+            # allowed_ids is a single ";" delimited string
+            allowed_ids = [l.strip() for l in line.corrList2.split(';') if l.strip()]
+            self.corrHash[isotope] = [correct_ids, allowed_ids]
+        return self.corrHash
+
+    def getCorrTableData(self, scenarioIsotopes, backgroundIsotopes):
+        allowed_list = []
+        correct_list = []
+        # store source and background isotopes together with source/background info
+        isoPairList = []
+        for iso in scenarioIsotopes:
+            isoPairList.append((iso, "source"))
+        for iso in backgroundIsotopes:
+            isoPairList.append((iso, "background"))
+        for isoP in isoPairList:
+            iso = isoP[0]
+            if isoP[1] == "source":
+                isSource = True
+            else:
+                isSource = False
+            # get the correspondence table entry for this isotope
+            # or use default names if nothing is specified
+            # print("iso="+iso)
+            isohash = self.getCorrHash()
+            if iso not in isohash:
+                if isSource:
+                    tmp = re.split('(\d+)', iso)  # split by numbers
+                    correct_ids = [iso, tmp[0] + '-' + ''.join(tmp[1:])]  # e.g. Am241 and Am-241
+                    allowed_ids = []
+                else:
+                    correct_ids = []
+                    allowed_ids = []
+            else:
+                correct_ids, allowed_ids = isohash[iso]
+            # Build the list of all allowed isotopes
+            allowed_list += allowed_ids
+            correct_list.append(correct_ids)
+
+        return [i[0] for i in isoPairList], correct_list, allowed_list

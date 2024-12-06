@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RadInstrumentData xmlns="http://physics.nist.gov/N42/2011/N42" xmlns:H3D="https://www.h3dgamma.com/">
+	<RadInstrumentInformation id="RadInstrumentInformation-1">
+		<RadInstrumentManufacturerName>H3D, Inc.</RadInstrumentManufacturerName>
+		<RadInstrumentIdentifier>Q0202002Marcelle</RadInstrumentIdentifier>
+		<RadInstrumentModelName>Polaris-Q 2</RadInstrumentModelName>
+		<RadInstrumentClassCode>Radionuclide Identifier</RadInstrumentClassCode>
+		<RadInstrumentVersion>
+			<RadInstrumentComponentName>Software</RadInstrumentComponentName>
+			<RadInstrumentComponentVersion>Web: V2.9.1W-0-gd05a1f7 IMG: V2.9.1I-0-g05bdab9, V2.9.1I-0-g0cc3749, V2.9.1I-0-gb6b3cfd, V2.9.1I-0-g1ecc488 DAQ: V3.3.1Q-0-g8683308, V3.3.1Q-0-g9498660</RadInstrumentComponentVersion>
+		</RadInstrumentVersion>
+	</RadInstrumentInformation>
+	<RadDetectorInformation id="Gamma-0">
+		<RadDetectorCategoryCode>Gamma</RadDetectorCategoryCode>
+		<RadDetectorKindCode>CZT</RadDetectorKindCode>
+	</RadDetectorInformation>
+	<EnergyCalibration id="EnergyCalibration-0">
+		<CoefficientValues>${detector.ecal0} ${detector.ecal1} ${detector.ecal2}</CoefficientValues>
+	</EnergyCalibration>
+	<RadMeasurement id="RadMeasurement-1">
+		<MeasurementClassCode>Foreground</MeasurementClassCode>
+		<StartDateTime>2024-03-11T11:15:10-06:00</StartDateTime>
+		<RealTimeDuration>PT610.060974S</RealTimeDuration>
+        <Spectrum id="RadMeasurement-1-Spectrum-1-PUR" radDetectorInformationReference="Gamma-0" energyCalibrationReference="EnergyCalibration-0">
+			<LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+			<ChannelData compressionCode="CountedZeroes">${compressed_sample_counts} </ChannelData>
+		</Spectrum>
+		<ExposureRate id="RadMeasurement-1-ExposureRate-1" radDetectorInformationReference="Gamma-0">
+			<CountData units="mR/h">0.229349</CountData>
+		</ExposureRate>
+		<RadInstrumentState radInstrumentInformationReference="RadInstrumentInformation-1">
+			<RadInstrumentModeCode>Long Dwell</RadInstrumentModeCode>
+			<StateVector>
+				<RelativeLocation>
+					<DistanceValue type="Laser">2.14</DistanceValue>
+				</RelativeLocation>
+			</StateVector>
+		</RadInstrumentState>
+	</RadMeasurement>
+</RadInstrumentData>

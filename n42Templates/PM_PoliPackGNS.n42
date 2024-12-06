@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><?xml-model href="http://physics.nist.gov/N42/2011/N42/schematron/n42.sch" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<RadInstrumentData xmlns="http://physics.nist.gov/N42/2011/N42" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://physics.nist.gov/N42/2011/N42 http://physics.nist.gov/N42/2011/n42.xsd">
+<RadInstrumentDataCreatorName>PM3200GN-S</RadInstrumentDataCreatorName>
+<RadInstrumentInformation id="InstrumentInformation"><RadInstrumentManufacturerName>Polimaster</RadInstrumentManufacturerName>
+<RadInstrumentIdentifier>SN 00210003</RadInstrumentIdentifier>
+<RadInstrumentModelName>PM3200GN-S</RadInstrumentModelName>
+<RadInstrumentClassCode>Radionuclide Identifier</RadInstrumentClassCode>
+<RadInstrumentVersion><RadInstrumentComponentName>Software</RadInstrumentComponentName>
+<RadInstrumentComponentVersion>1.66</RadInstrumentComponentVersion>
+</RadInstrumentVersion>
+</RadInstrumentInformation>
+<RadDetectorInformation id="Gamma">
+<RadDetectorCategoryCode>Gamma</RadDetectorCategoryCode>
+<RadDetectorKindCode>CsI</RadDetectorKindCode>
+<RadDetectorDescription>4 CsI 36cc</RadDetectorDescription>
+<RadDetectorVolumeValue>144.0</RadDetectorVolumeValue>
+</RadDetectorInformation>
+<RadDetectorInformation id="Neutron">
+<RadDetectorCategoryCode>Neutron</RadDetectorCategoryCode>
+<RadDetectorKindCode>LiF</RadDetectorKindCode>
+<RadDetectorDescription>11 Neutron Detectors</RadDetectorDescription>
+<RadDetectorVolumeValue>221.8</RadDetectorVolumeValue>
+</RadDetectorInformation>
+<EnergyCalibration id="EnergyCal-1">
+<CoefficientValues>${detector.ecal0} ${detector.ecal1} ${detector.ecal2}</CoefficientValues>
+</EnergyCalibration>
+<EnergyCalibration id="EnergyCal-2">
+<CoefficientValues>${detector.ecal0} ${detector.ecal1} ${detector.ecal2}</CoefficientValues>
+</EnergyCalibration>
+<EnergyCalibration id="EnergyCal-3">
+<CoefficientValues>${detector.ecal0} ${detector.ecal1} ${detector.ecal2}</CoefficientValues>
+</EnergyCalibration>
+<EnergyCalibration id="EnergyCal-4">
+<CoefficientValues>${detector.ecal0} ${detector.ecal1} ${detector.ecal2}</CoefficientValues>
+</EnergyCalibration>
+<FWHMCalibration id="FWHMCal-1">
+<EnergyValues>122.00 662.00</EnergyValues>
+<FWHMValues>17.44 49.44</FWHMValues>
+</FWHMCalibration>
+<FWHMCalibration id="FWHMCal-2">
+<EnergyValues>122.00 662.00</EnergyValues>
+<FWHMValues>18.02 55.77</FWHMValues>
+</FWHMCalibration>
+<FWHMCalibration id="FWHMCal-3">
+<EnergyValues>122.00 662.00</EnergyValues>
+<FWHMValues>17.10 48.40</FWHMValues>
+</FWHMCalibration>
+<FWHMCalibration id="FWHMCal-4">
+<EnergyValues>122.00 662.00</EnergyValues>
+<FWHMValues>17.47 48.60</FWHMValues>
+</FWHMCalibration>
+<RadMeasurement id="SPEC0067"><MeasurementClassCode>Foreground</MeasurementClassCode><%! import numpy as np %>
+<StartDateTime>2024-03-21T20:08:25-00:00</StartDateTime>
+<RealTimeDuration>PT${scenario.acq_time}S</RealTimeDuration>
+<Spectrum id="ForegroundSpectrum-1" radDetectorInformationReference="Gamma-1" energyCalibrationReference="EnergyCal-1" FWHMCalibrationReference="FWHMCal-1">
+<LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+<ChannelData compressionCode="None">${' '.join('{0:.0f}'.format(x) for x in np.random.poisson(sample_counts_array)/4)} </ChannelData>
+</Spectrum>
+<Spectrum id="ForegroundSpectrum-2" radDetectorInformationReference="Gamma-2" energyCalibrationReference="EnergyCal-2" FWHMCalibrationReference="FWHMCal-2">
+<LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+<ChannelData compressionCode="None">${' '.join('{0:.0f}'.format(x) for x in np.random.poisson(sample_counts_array)/4)} </ChannelData>
+</Spectrum>
+<Spectrum id="ForegroundSpectrum-3" radDetectorInformationReference="Gamma-3" energyCalibrationReference="EnergyCal-3" FWHMCalibrationReference="FWHMCal-3">
+<LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+<ChannelData compressionCode="None">${' '.join('{0:.0f}'.format(x) for x in np.random.poisson(sample_counts_array)/4)} </ChannelData>
+</Spectrum>
+<Spectrum id="ForegroundSpectrum-4" radDetectorInformationReference="Gamma-4" energyCalibrationReference="EnergyCal-4" FWHMCalibrationReference="FWHMCal-4">
+<LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+<ChannelData compressionCode="None">${' '.join('{0:.0f}'.format(x) for x in np.random.poisson(sample_counts_array)/4)} </ChannelData>
+</Spectrum>
+<DoseRate id="GammaDoseRate" radDetectorInformationReference="Gamma">
+<DoseRateValue>0.16</DoseRateValue>
+</DoseRate>
+<GrossCounts id="NeutronGrossCounts" radDetectorInformationReference="Neutron">
+<LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+<CountData>1</CountData>
+</GrossCounts>
+<RadInstrumentState radInstrumentInformationReference="InstrumentInformation">
+<RadInstrumentCharacteristics><Characteristic valueOutOfLimits="false"><CharacteristicName>BatteryCharge</CharacteristicName>
+<CharacteristicValue>100</CharacteristicValue>
+<CharacteristicValueUnits>% charge</CharacteristicValueUnits>
+<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+</Characteristic>
+<Characteristic valueOutOfLimits="false"><CharacteristicName>Temperature</CharacteristicName>
+<CharacteristicValue>25</CharacteristicValue>
+<CharacteristicValueUnits>degree Celsius</CharacteristicValueUnits>
+<CharacteristicValueDataClassCode>double</CharacteristicValueDataClassCode>
+</Characteristic>
+</RadInstrumentCharacteristics>
+</RadInstrumentState>
+</RadMeasurement>

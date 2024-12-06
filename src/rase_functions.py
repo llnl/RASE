@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -33,15 +33,15 @@
 """
 This module defines key functions used in RASE
 """
-
+import csv
 import glob
 import io
 import logging
-import ntpath
 import os
 import re
 import shutil
-import sys
+from dataclasses import dataclass
+
 from lxml import etree
 from pathlib import Path
 import isodate, datetime
@@ -50,14 +50,20 @@ from mako import exceptions
 from sqlalchemy.engine import create_engine, Engine
 from sqlalchemy import event
 
+from PySide6.QtCore import QCoreApplication
 from src.scenarios_io import ScenariosIO
-from src.table_def import BaseSpectrum, BackgroundSpectrum, SecondarySpectrum, Detector, Scenario, \
+from src.table_def import BaseSpectrum, SecondarySpectrum, Detector, Scenario, \
     SampleSpectraSeed, Session, Base, ScenarioMaterial, ScenarioBackgroundMaterial, Material, \
-    DetectorInfluence
+    Replay, ScenarioGroup
 from src.utils import compress_counts, indent
 
+# translation_tag = 'funcs'
+
 # Key variables used in several places
-secondary_type = {'base_spec': 0, 'scenario': 1, 'file': 2}
+secondary_type = {'base_spec': 0, 'scenario': 1, 'file': 2, 'None': None}
+
+# Allowed results extensions
+allowed_results_file_exts = (".n42", ".res", ".csv", ".xml", ".txt", ".json")
 
 
 def initializeDatabase(databaseFilepath):
@@ -66,11 +72,14 @@ def initializeDatabase(databaseFilepath):
 
     :param databaseFilepath: path to src.sqlite file
     """
-    Session.remove()
-    engine = create_engine('sqlite:///' + databaseFilepath)
-    Session.configure(bind=engine)
+
+    if Session.bind is None: #do not create engine if it already exists; this is important for tests which initialize the DB during tests and then sometimes do it again when opening a main RASE dialog
+        engine = create_engine('sqlite:///' + databaseFilepath)
+        Session.remove() #need to remove existing session created when we checked the bind above, or the old session will persist with no bind.
+        Session.configure(bind=engine)
+
     if not os.path.exists(databaseFilepath):
-        Base.metadata.create_all(engine)
+        Base.metadata.create_all(Session.bind)
         return False
     return True
 
@@ -124,37 +133,57 @@ class ResultsFileFormatException(Exception):
     pass
 
 
-def process_confidences(confidences: list, results: list, use_confs: bool) -> list:
+def process_confidences(confidences: list, results: list, use_confs: bool, confidence_map=
+                                        Replay.confidence_scale_default_map, confidence_range=
+                                        Replay.confidence_scale_default_range) -> list:
     """
-    Process the confidence values from the results files.
-    If `use_confs == True` then confidences are mapped to 'low', 'medium', 'high' values
-    of 0.33, 0.66 and 1 respectively, otherwise confidences are converted to 1 for each result.
-    Returns the updated list of confidences
+    Updates confidence handling. A provided map or range will be used to interpret the values in the file on a scale of 0-1.
     """
+    converted = [1] * len(results)
     if use_confs and confidences:
         # for some instruments (e.g.: RadEagle), the confidences are zeros while the isotopes are dashes
         if len(confidences) > len(results):
             confidences = confidences[0:len(results)]
         if confidences:
             try:
-                # 0 - 3 = low, 4 - 6 = medium, 7 - 10 = high
-                confidences = [(int(float(c) / 3.4) + 1) / 3 for c in confidences]
-            except Exception as e:
-                raw_confidences = confidences
-                confidences = []
-                for c in raw_confidences:
-                    if c == 'low':
-                        confidences.append(1 / 3)
-                    elif c == 'medium':
-                        confidences.append(2 / 3)
-                    else:
-                        confidences.append(1)  # default to full confidence in results
-    else:
-        confidences = [1] * len(results)
-    return confidences
+                converted = [confidence_map[c] for c in confidences]
+            except KeyError:
+                try:
+                    converted = [np.interp(c,confidence_range[0],confidence_range[1]) for c in confidences]
+                except:
+                    logging.info('At least one reported confidence is non-numeric or in the user confidence map. Defaulting to 1.')
+            confidences = converted
+    return converted
 
 
-def readTranslatedResultFile(filename, use_confs):
+def H3D_results_parser(filename: str or os.PathLike, use_confs=True, confidence_scale_range=[[0,100],[0,1]]):
+    """
+    Parse H3D replay tool results output which is a 3-column tab-separated text file with 1 header line.
+    The three columns are: IsotopeName, Confidence, Uncertainty
+    Confidence is a value in [0 - 100]
+    """
+    with open(filename) as f:
+        cells = list(csv.reader(f, delimiter='\t'))
+    results = [r[0] for r in cells[1:]]
+    confidences = process_confidences([float(r[1]) for r in cells[1:]],
+                                      results, use_confs, confidence_range=confidence_scale_range)
+    return results, confidences
+
+
+def DetectiveX_results_parser(filename: str or os.PathLike, use_confs=True, confidence_scale_range=[[0,100],[0,1]]):
+    """
+    Parse DetectiveX replay tool results output which is in json format.
+    """
+    import json
+    with open(filename) as f:
+        data = json.load(f)
+    ids = data[0]['Results']['IdentifiedNuclides']
+    results = [id['Name'] for id in ids]
+    confidences = process_confidences([id['ProbabilityPresentInSpectrum'] for id in ids],
+                                      results, use_confs, confidence_range=confidence_scale_range)
+    return results, confidences
+
+def readTranslatedResultFile(filename, use_confs, replay):
     """
     Reads translated results file from defaults formats
 
@@ -200,15 +229,30 @@ def readTranslatedResultFile(filename, use_confs):
     if os.path.getsize(os.path.join(str(filename))) == 0:
         return [], []
 
-    # Parse CSV format (Kromek D5 PCS Offline)
+    if str(filename).endswith(".txt"):
+        return H3D_results_parser(filename, use_confs, replay.confidence_scale_range)
+
+    if str(filename).endswith(".json"):
+        return DetectiveX_results_parser(filename, use_confs, replay.confidence_scale_range)
+
+    # Parse CSV format (Kromek D5 PCS Offline or BNC SAM940)
     # Label1, Label2, Integration time, Messages(i.e.errors), Result1 confidence, Result1 isotope, Result2 confidence, Result2 isotope, ...
     if str(filename).endswith(".csv"):
         with open(filename) as f:
-            f.readline()  # skip header line
+            header = f.readline()  # skip header line
             line = f.readline()
-            raw_results = [s.strip() for s in line.split(',')[4:]]
+            if [s.strip() for s in header.split(',')][0] == 'EventNumber':  # BNC SAM940
+                if line == '':
+                    raw_results = ['']
+                else:
+                    raw_results = [s.strip() for s in line.split(',')][-2].split(' ')
+                if raw_results != ['']:
+                    raw_results.reverse()
+                    raw_results[::2] = [str(float(s.replace('%', '')) / 100) for s in raw_results[::2]]
+            else:
+                raw_results = [s.strip() for s in line.split(',')[4:]]
         results = raw_results[1::2]
-        confidences = process_confidences(raw_results[0::2], results, use_confs)
+        confidences = process_confidences(raw_results[0::2], results, use_confs, replay.confidence_scale_map, replay.confidence_scale_range)
         return results, confidences
 
     root = etree.parse(str(filename)).getroot()
@@ -218,29 +262,39 @@ def readTranslatedResultFile(filename, use_confs):
             and (root.tag != 'Event')):  # ICD2/HPRDS
         raise ResultsFileFormatException(f'{filename}: bad file format')
 
-    # Parse RASE format 1
     confidences = []
     results = []
-    if len(root.findall('Isotopes')) > 0:
-        isotopes = root.find('Isotopes').text
-        if isotopes:
-            results = list(filter(lambda x: x.strip() not in ['-', ''], isotopes.split('\n')))
-            confidences_str = ''
-            if root.find('ConfidenceIndex') is not None:
-                confidences_str = root.find('ConfidenceIndex').text
-            elif root.find('Confidences') is not None:
-                confidences_str = root.find('Confidences').text
-            if confidences_str:
-                confidences = list(filter(lambda x: x.strip() not in ['-', ''], confidences_str.split('\n')))
-    # Parse RASE Format 2
-    elif len(root.findall('Identification')) > 0:
-        for identification in root.findall('Identification'):
-            idname = identification.find('IDName')
-            if idname.text:
-                results.append(idname.text.strip())
-                confidences.append(identification.find('IDConfidence').text.strip())
-            else:
-                confidences.append('')
+    if root.tag == "IdentificationResults":
+        # Parse RASE format 1
+        if len(root.findall('Isotopes')) > 0:
+            isotopes = root.find('Isotopes').text
+            if isotopes:
+                results = [stripped for x in isotopes.split('\n') if (stripped := x.strip()) not in {'-', ''}]
+                confidences_str = ''
+                if root.find('ConfidenceIndex') is not None:
+                    confidences_str = root.find('ConfidenceIndex').text
+                elif root.find('Confidences') is not None:
+                    confidences_str = root.find('Confidences').text
+                if confidences_str:
+                    confidences = [stripped for x in confidences_str.split('\n') if (stripped := x.strip()) not in {'-', ''}]
+        # Parse RASE format 1.5 (MicroDetective; lists all IDs/confidences in one block separated by spaces)
+        elif len(root.findall('Isotope')) > 0:
+            isotopes = root.find('Isotope').text
+            if isotopes:
+                # split all identifications using regex
+                results = [m.strip() for mm in re.findall(r'"([^"]*)"|( [^"]\S*)|(^[^"]\S*)', isotopes) for m in mm if m]
+            confidenceValue = root.find('ConfidenceIndex')
+            if confidenceValue is not None:
+                confidences = confidenceValue.text.split()
+        # Parse RASE Format 2
+        elif len(root.findall('Identification')) > 0:
+            for identification in root.findall('Identification'):
+                idname = identification.find('IDName')
+                if idname.text:
+                    results.append(idname.text.strip())
+                    confidences.append(identification.find('IDConfidence').text.strip())
+                else:
+                    confidences.append('')
     # Parse BARNI output format
     elif len(root.findall('NuclideResult')) > 0:
         for identification in root.findall('NuclideResult'):
@@ -265,13 +319,8 @@ def readTranslatedResultFile(filename, use_confs):
     else:
         raise ResultsFileFormatException(f'{filename}: bad file format')
 
-    confidences = process_confidences(confidences, results, use_confs)
+    confidences = process_confidences(confidences, results, use_confs, replay.confidence_scale_map, replay.confidence_scale_range)
     return results, confidences
-
-
-
-
-
 
 
 def uncompressCountedZeroes(chanData,counts):
@@ -316,17 +365,22 @@ def remove_control_characters(xml):
 
 
 def get_ET_from_file(inputfile):
-    with open(inputfile, 'r') as inputf:
+    try:
+        et = parse_ET(inputfile, 'utf-8')
+    except:
+        et = parse_ET(inputfile, 'utf-8-sig')
+    return et
+
+
+def parse_ET(inputfile, encoding='utf-8'):
+    with open(inputfile, 'r', encoding=encoding) as inputf:
         inputstr = inputf.read()
         inputstr = remove_control_characters(inputstr)
-        inputstr_io = io.BytesIO(bytes(inputstr,encoding='utf-8'))
         parser = etree.XMLParser(recover=True)
-        et =  etree.parse(inputstr_io,parser)
-        # et = copy.deepcopy((et_orig))
+        inputstr_io = io.BytesIO(bytes(inputstr, encoding=encoding))
+        et = etree.parse(inputstr_io, parser)
         strip_namespaces(et)
-        return et
-
-
+    return et
 
 
 def getSeconds(text):
@@ -342,7 +396,7 @@ def getSeconds(text):
         seconds += int(hours) * 3600
     if not text == "" and 'm' in text:
         minutes, text = text.split('m')
-        seconds +=  int(minutes) * 60
+        seconds += int(minutes) * 60
     if not text == "":
         seconds += float(text)
     return seconds
@@ -406,7 +460,7 @@ def _getCountsDoseAndSensitivity(scenario, detector, degradations=None):
     session = Session()
 
     # distortion:  distort ecal with influence factors
-    ecal = [detector.ecal3, detector.ecal2, detector.ecal1, detector.ecal0]
+    # ecal = [detector.ecal3, detector.ecal2, detector.ecal1, detector.ecal0]
     #get ecal: either the only ecal in the list of sources, or the preferred ecal of the detector if the sources differ
     scenMaterialnames =  [m.material_name for m in scenario.scen_materials + scenario.scen_bckg_materials]
     baseSpectra = session.query(BaseSpectrum).filter(BaseSpectrum.detector_name == detector.name,
@@ -415,10 +469,11 @@ def _getCountsDoseAndSensitivity(scenario, detector, degradations=None):
     ecals = [bs.ecal for bs in baseSpectra]
     all_same_ecal = all(np.array_equal(ecals[0], other) for other in ecals)
 
-    if all_same_ecal:
-        ecal = ecals[0]
-    else:
-        ecal = detector.ecal
+    # if all_same_ecal:
+    #     ecal = ecals[0]
+    # else:
+    #     ecal = detector.ecal
+    ecal = detector.ecal
 
     new_influences, bin_widths, energies = calculate_influence(scenario,detector,degradations,ecal)
 
@@ -429,10 +484,7 @@ def _getCountsDoseAndSensitivity(scenario, detector, degradations=None):
                         .filter_by(detector_name=detector.name,
                                    material_name=scenMaterial.material_name)
                         ).first()
-        counts = baseSpectrum.counts
-        if not (np.array_equal(ecal, baseSpectrum.ecal)):
-            oldenergies = np.polyval(np.flip(baseSpectrum.ecal), np.arange(detector.chan_count))
-            counts = rebin(counts, oldenergies, ecal)
+        counts = rebin_ecal_disagreement(ecal, baseSpectrum.ecal, detector.chan_count, baseSpectrum.counts)
 
         if scenario.influences:
             for index, infl in enumerate(new_influences):
@@ -449,7 +501,8 @@ def _getCountsDoseAndSensitivity(scenario, detector, degradations=None):
         secondary_spectra = session.query(SecondarySpectrum).filter_by(detector_name=detector.name).all()
         secondary_spectrum = [k for k in secondary_spectra if k.classcode == detector.intrinsic_classcode][0]
         # secondary_spectrum = (session.query(BackgroundSpectrum).filter_by(detector_name=detector.name)).first()
-        counts = secondary_spectrum.get_counts_as_np()
+        counts = rebin_ecal_disagreement(ecal, secondary_spectra.ecal, detector.chan_count,
+                                         secondary_spectrum.get_counts_as_np())
 
         # apply distortion on counts
         if scenario.influences:
@@ -465,8 +518,14 @@ def _getCountsDoseAndSensitivity(scenario, detector, degradations=None):
 
     return countsDoseAndSensitivity
 
+def rebin_ecal_disagreement(newEcal, oldEcal, chancount, counts):
+    if not (np.array_equal(newEcal, oldEcal)):
+        oldenergies = np.polyval(np.flip(oldEcal), np.arange(chancount))
+        return rebin(counts, oldenergies, newEcal)
+    else:
+        return counts
 
-def create_n42_file(filename, scenario, detector, sample_counts, secondary_spectrum=None):
+def create_n42_file(filename, scenario, detector, sample_counts, secondary_spectrum=None, neutrons=0):
     """
     Creates n42 file from input
     :param filename: path of resultant n42 file
@@ -497,6 +556,12 @@ def create_n42_file(filename, scenario, detector, sample_counts, secondary_spect
         f.write('{}'.format(' '.join('{:f}'.format(x) for x in sample_counts)))
     f.write('</ChannelData>\n')
     f.write('    </Spectrum>\n')
+    #neutrons
+    f.write(f'''    <GrossCounts id="NeutronForeground">
+        <LiveTimeDuration>PT{scenario.acq_time}S</LiveTimeDuration>
+        <CountData>{neutrons}</CountData>
+    </GrossCounts>
+''')
     if secondary_spectrum:
         if (detector.secondary_type == secondary_type['scenario']):
             type_str = 'Background'
@@ -520,12 +585,18 @@ def create_n42_file(filename, scenario, detector, sample_counts, secondary_spect
 
         f.write('</ChannelData>\n')
         f.write('    </Spectrum>\n')
+        #background neutrons
+        f.write(f'''    <GrossCounts id="NeutronBackground">
+        <LiveTimeDuration>PT{secondary_spectrum.livetime}S</LiveTimeDuration>
+        <CountData>{secondary_spectrum.neutrons}</CountData>
+    </GrossCounts>
+''')
     f.write('  </Measurement>\n')
     f.write('</N42InstrumentData>\n')
     f.close()
 
 
-def create_n42_file_from_template(n42_mako_template, filename, scenario, detector, sample_counts : np.ndarray, secondary_spectrum=None):
+def create_n42_file_from_template(n42_mako_template, filename, scenario, detector, sample_counts : np.ndarray, secondary_spectrum=None, neutrons=None):
     """
     Creates n42 file from input using teplate
     :param n42_mako_template: template used to make file
@@ -553,10 +624,13 @@ def create_n42_file_from_template(n42_mako_template, filename, scenario, detecto
         secondary_spectrum.counts = secondary_spectrum.counts.astype(int)
         template_data.update(dict(secondary_spectrum=secondary_spectrum))
 
+    if neutrons:
+        template_data['neutrons'] = neutrons
+
     try:
         templated_content = n42_mako_template.render(**template_data)
     except:
-        logging.info("Mako Template exception:")
+        logging.info(QCoreApplication.translate('funcs', 'Mako Template exception:'))
         err_msg = exceptions.text_error_template().render()
         logging.info(err_msg)
         print(err_msg)
@@ -598,43 +672,56 @@ def strip_xml_tag(str):
     return re.sub('<[^<]+>', "", str)
 
 
-def get_sample_dir(sample_root_dir, detector, scenario_id):
+def get_sample_dir(sample_root_dir, detector: Detector, scenario_id: str):
     """
     Returns the name of the folder where the generated sample spectra are saved
     """
-    return os.path.join(sample_root_dir, '{}___{}'.format(detector.id, scenario_id))
+    return os.path.join(sample_root_dir, f'{scenario_id}--{detector.id}')
 
 
-def get_replay_input_dir(sample_root_dir, detector, scenario_id):
+def get_replay_input_dir(sample_root_dir, detector: Detector, replay: Replay, scenario_id: str):
     """
     Returns the name of the folder where the sample spectra are saved in the format for the replay tool
     """
-    if not (detector.replay and detector.replay.n42_template_path):
-        replay_id = ""
-    else:
-        replay_id = detector.replay.id
-    return os.path.join(get_sample_dir(sample_root_dir, detector, scenario_id), replay_id)
+    return os.path.join(get_sample_dir(sample_root_dir, detector, scenario_id),
+                        replay.id if (replay and replay.n42_template_path) else '')
 
 
-def get_replay_output_dir(sample_root_dir, detector, scenario_id):
+def get_replay_output_dir(sample_root_dir, detector: Detector, replay: Replay, scenario_id: str):
     """
     Returns the name of the folder where the output of the replay tool is placed
     """
-    return os.path.join(get_replay_input_dir(sample_root_dir, detector, scenario_id) + "_results", "")
+    dir_name = f'{replay.id}_results' if replay else 'results'
+    return os.path.join(get_replay_input_dir(sample_root_dir, detector, replay, scenario_id), dir_name, "")
 
 
-def get_results_dir(sample_root_dir, detector, scenario_id):
+def get_results_dir(sample_root_dir, detector:Detector, replay: Replay, scenario_id: str) -> str:
     """
     Returns the name of the folder with the analyzed files (after replay) in RASE format
     """
-    if not (detector.replay and detector.replay.translator_exe_path):
-        return get_replay_output_dir(sample_root_dir, detector, scenario_id)
+    if replay and replay.translator_exe_path:
+        return os.path.join(get_replay_input_dir(sample_root_dir, detector, replay, scenario_id) + f"{replay.id}_translatedResults", "")
     else:
-        return os.path.join(get_replay_input_dir(sample_root_dir, detector, scenario_id) + "_translatedResults","")
+        return get_replay_output_dir(sample_root_dir, detector, replay, scenario_id)
 
 
 def get_sample_spectra_filename(detector_id: str, scenario_id: str, filenum: int, suffix=".n42"):
     return f"{detector_id}___{scenario_id}___{filenum}{suffix}"
+
+
+def get_results_files(sample_root_dir: str | os.PathLike, detector: Detector, replay: Replay, scenario_id: str) -> list[str]:
+    """
+    Returns the list of results files. Allowed extensions are processed in order of precedence to handle the case
+    of multitple results file types. Empty list is returned if no results files are found.
+    """
+    res_dir = get_results_dir(sample_root_dir, detector, replay, scenario_id)
+    res_dir = Path(res_dir)
+    fc_fileList = []
+    if res_dir.exists() and res_dir.is_dir():
+        for ext in allowed_results_file_exts:
+            fc_fileList = [str(f) for f in Path(res_dir).glob(f"*{ext}")]
+            if fc_fileList: break
+    return fc_fileList
 
 
 def files_endswith_exists(dir, endswith_filters):
@@ -675,8 +762,6 @@ def delete_scenario(scenario_ids, sample_root_dir):
     session = Session()
     for id in scenario_ids:
         scenDelete = session.query(Scenario).filter(Scenario.id == id)
-        matDelete = session.query(ScenarioMaterial).filter(ScenarioMaterial.scenario_id == id)
-        backgMatDelete = session.query(ScenarioBackgroundMaterial).filter(ScenarioBackgroundMaterial.scenario_id == id)
 
         # folders
         folders = [name for name in glob.glob(os.path.join(sample_root_dir, "*" + id + "*"))]
@@ -687,26 +772,44 @@ def delete_scenario(scenario_ids, sample_root_dir):
         scenObj = scenDelete.first()
         scenObj.scenario_groups.clear()
         scenObj.influences.clear()
-        matDelete.delete()
-        backgMatDelete.delete()
         scenDelete.delete()
+
+        matDelete = session.query(ScenarioMaterial).filter(ScenarioMaterial.scenario_id == id)
+        matDelete.delete()
+        backgMatDelete = session.query(ScenarioBackgroundMaterial).filter(ScenarioBackgroundMaterial.scenario_id == id)
+        backgMatDelete.delete()
+
         session.commit()
 
     session.close()
 
 
 def delete_instrument(session, name):
+    """Delete one instrument from database given its name"""
     sssDelete = session.query(SampleSpectraSeed).filter(SampleSpectraSeed.det_name == name)
     sssDelete.delete()
-    detReplayDelete = session.query(Detector).filter(Detector.name == name)
-    detReplayDelete.first().influences.clear()
-    detReplayDelete.delete()
+    detReplayDelete = session.query(Detector).filter(Detector.name == name).first()
+    if detReplayDelete:
+        detReplayDelete.influences.clear()
+        detReplayDelete.replays.clear()
+        session.delete(detReplayDelete)
+
+    # delete any unattached backgrounds (should there be any?)
+    # for bg in session.query(BackgroundSpectrum).filter_by(detectors=None).all():
+    #     session.delete(bg)
+
     # detBaseRelationDelete = session.query(BaseSpectrum).filter(BaseSpectrum.detector_name == name)
     # detBaseRelationDelete.delete()
     # detBackRelationDelete = session.query(BackgroundSpectrum).filter(BackgroundSpectrum.detector_name == name)
     # detBackRelationDelete.delete()
     session.commit()
 
+def delete_replay(session, replay_name:str):
+    """Delete one instrument from database given its name"""
+    replay = session.query(Replay).filter_by(name=replay_name).first()
+    if replay:
+        replay.detectors.clear()
+        session.delete(replay)
 
 def get_or_create_material(session, matname, include_intrinsic=False):
     material_name = Material.get_name(matname, include_intrinsic)
@@ -716,6 +819,16 @@ def get_or_create_material(session, matname, include_intrinsic=False):
         session.commit()
     return material
 
+
+def check_groups():
+    """
+    Make sure there is a default group (a group that cannot be deleted) for
+    scenarios to exist in initially if they are not added to another at creation
+    """
+    session = Session()
+    if not session.query(ScenarioGroup).filter_by(name='default_group').first():
+        session.add(ScenarioGroup(name='default_group'))
+        session.commit()
 
 def export_scenarios(scenarios_ids, file_path):
     """

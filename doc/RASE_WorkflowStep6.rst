@@ -8,8 +8,8 @@ View Results
 ============
 
 The “View Results” button will display the table with a summary of the replay tool results for the selected instrument
-and scenario combination. If multiple scenario/instrument combinations are selected, the results button will remain clickable so long as
-at least one instrument/scenario combination in the selected instruments/scenarios has results that are ready to be viewed.
+and scenario combination. If multiple scenario/instrument/replay combinations are selected, the results button will remain clickable so long as
+at least one of the selected instrument/scenario/replay combinations  has results that are ready to be viewed.
 The number of columns displayed in the view results dialog can be customized via the table settings dialog, using the "Table Settings" button.
 The user may also freely modify the correspondence table using the "Correspondence Table" button, which will update the results table live.
 If a material name is in the format of XXnnn (e.g.: Rn226, K40) and the material is set as a source material, RASE will automatically look for
@@ -30,14 +30,14 @@ The tables in the "View Results" and "Detailed Results" dialogs can be exported 
 .. _rase-WorkflowStep6a:
 
 .. figure:: _static/rase_WorkflowStep6.png
-    :scale: 35%
+    :scale: 70%
 
     **Main RASE window showing how to access identification results dialogs**
 
 |
 
 .. figure:: _static/rase_WorkflowStep6-2.png
-    :scale: 35%
+    :scale: 70%
 
     **“View Results” and "Detailed Results" tables.**
 
@@ -98,7 +98,7 @@ This plot works for curves where the identification rate is positively correlate
 |
 
 .. figure:: _static/rase_WorkflowStep6-3.png
-    :scale: 33%
+    :scale: 70%
 
     **Plotting interface and S-curve fits**
 
@@ -132,6 +132,6 @@ If the user attempts to create a heat map with the X-axis defined as the "Source
 .. _rase-WorkflowStep6b:
 
 .. figure:: _static/rase_WorkflowStep6-4.png
-    :scale: 80%
+    :scale: 100%
 
     **An example of plotting 3-dimensional data as a heat map.**

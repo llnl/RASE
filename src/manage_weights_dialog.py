@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -49,8 +49,10 @@ NUM_COL = 4
 NAME, TPWF, FPWF, FNWF = range(NUM_COL)
 COLUMNS = [NAME, TPWF, FPWF, FNWF]
 
+# translation_tag = 'mwgt_d'
+
 class ManageWeightsDialog(ui_manage_weights_dialog.Ui_Dialog, QDialog):
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         QDialog.__init__(self)
         self.parent = parent
         self.session = Session()
@@ -76,10 +78,8 @@ class ManageWeightsDialog(ui_manage_weights_dialog.Ui_Dialog, QDialog):
         self.tblWeights.setItemDelegate(Delegate(self.tblWeights, isotopeCol=NAME))
         self.tblWeights.setColumnCount(NUM_COL)
         self.tblWeights.setRowCount(len(materials))
-        self.tblWeights.setHorizontalHeaderLabels(['Material Name',
-                                                      'True Positive\nWeighting Factor',
-                                                      'False Positive\nWeighting Factor',
-                                                      'False Negative\nWeighting Factor'])
+        self.tblWeights.setHorizontalHeaderLabels([self.tr('Material Name'), self.tr('True Positive\nWeighting Factor'),
+                          self.tr('False Positive\nWeighting Factor'), self.tr('False Negative\nWeighting Factor')])
         self.tblWeights.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tblWeights.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         row = 0
@@ -117,7 +117,7 @@ class ManageWeightsDialog(ui_manage_weights_dialog.Ui_Dialog, QDialog):
         """
         Exports to CSV
         """
-        path = QFileDialog.getSaveFileName(self, 'Save File', self.settings.getDataDirectory(), 'CSV (*.csv)')
+        path = QFileDialog.getSaveFileName(self, self.tr('Save File'), self.settings.getDataDirectory(), 'CSV (*.csv)')
         if path[0]:
             with open(path[0], mode='w', newline='') as stream:
                 writer = csv.writer(stream)
@@ -135,7 +135,7 @@ class ManageWeightsDialog(ui_manage_weights_dialog.Ui_Dialog, QDialog):
         """
         Imports from CSV
         """
-        path = QFileDialog.getOpenFileName(self, 'Open File', self.settings.getDataDirectory(), 'CSV(*.csv)')
+        path = QFileDialog.getOpenFileName(self, self.tr('Open File'), self.settings.getDataDirectory(), 'CSV(*.csv)')
         if path[0]:
             # FIXME: This doesn't check in any way that the format of the file is correct
             with open(path[0], mode='r') as stream:
@@ -148,11 +148,8 @@ class ManageWeightsDialog(ui_manage_weights_dialog.Ui_Dialog, QDialog):
                     for column, data in enumerate(rowdata):
                         item = QTableWidgetItem(data)
                         self.tblWeights.setItem(row, column, item)
-            self.tblWeights.setHorizontalHeaderLabels(['Material Name',
-                                                      'True Positive\nWeighting Factor',
-                                                      'False Positive\nWeighting Factor',
-                                                      'False Negative\nWeighting Factor'])
-
+            self.tblWeights.setHorizontalHeaderLabels([self.tr('Material Name'), self.tr('True Positive\nWeighting Factor'),
+                          self.tr('False Positive\nWeighting Factor'), self.tr('False Negative\nWeighting Factor')])
             for col in COLUMNS[TPWF:]:
                 self.tblWeights.setColumnWidth(col, 120)
 
@@ -199,14 +196,14 @@ class ManageWeightsDialog(ui_manage_weights_dialog.Ui_Dialog, QDialog):
                         self.tblWeights.item(row, col).setText('1')
                     float(self.tblWeights.item(row, col).text())
             except:
-                return QMessageBox.critical(self, 'Invalid weight value', 'All specified weight values must be numbers')
+                return QMessageBox.critical(self, self.tr('Invalid weight value'), self.tr('All specified weight values must be numbers'))
 
             if not self.tblWeights.item(row, NAME).text():
-                return QMessageBox.critical(self, 'Unnamed Material', 'Material weights must have a name!')
+                return QMessageBox.critical(self, self.tr('Unnamed Material'), self.tr('Material weights must have a name!'))
             names.append(self.tblWeights.item(row, NAME).text())
 
         if len(names) != len(set(names)):
-            return QMessageBox.critical(self, 'Repeat material', 'Materials must each have unique names!')
+            return QMessageBox.critical(self, self.tr('Repeat material'), self.tr('Materials must each have unique names!'))
 
         for row in range(self.tblWeights.rowCount()):
 

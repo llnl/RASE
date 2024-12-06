@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -38,6 +38,7 @@ This module provides a utility to read/write scenarios to/from XML files
 
 from pathlib import Path
 
+from PySide6.QtCore import QCoreApplication
 import declxml as xml
 import pandas as pd
 import numpy as np
@@ -48,9 +49,11 @@ from src.table_def import Scenario, Session, ScenarioMaterial, Material, \
     ScenarioBackgroundMaterial, Influence, ScenarioGroup
 
 
+# translation_tag = 'scen_io'
+
 class ScenariosIO:
 
-    def __init__(self, group_name="Imported", group_desc=""):
+    def __init__(self, group_name='Imported', group_desc=''):
 
         self.group_name = group_name
         self.group_desc = group_desc
@@ -92,7 +95,7 @@ class ScenariosIO:
                 return value
 
         def trace(state, value):
-            print('Got {} at {}'.format(value, state))
+            print(QCoreApplication.translate('scen_io', 'Got {} at {}').format(value, state))
             print(value.__dict__)
             return value
 
@@ -142,10 +145,10 @@ class ScenariosIO:
         ], alias='influences', hooks=self.influence_hooks, required=False)
 
         self.scenario_processor = xml.dictionary('Scenario', [
-            xml.string("id", required=False),
-            xml.floating_point("acq_time"),
-            xml.integer("replication"),
-            xml.string("comment", required=False),
+            xml.string('id', required=False),
+            xml.floating_point('acq_time'),
+            xml.integer('replication'),
+            xml.string('comment', required=False),
             xml.array(self.sourcematerials_processor),
             xml.array(self.bkgmaterial_processor),
             xml.array(self.influence_processor)
@@ -156,7 +159,7 @@ class ScenariosIO:
         ])
 
     def scenario_export(self, scenarios: list) -> str:
-        s = {"Scenario": scenarios}
+        s = {'Scenario': scenarios}
         return xml.serialize_to_string(self.scenarios_processor,
                                        s, indent='    ')
 
@@ -180,11 +183,8 @@ class ScenariosIO:
         return self.xmlstr_from_df(df)
 
     def xmlstr_from_df(self, df):
-
         root = ET.Element('Scenarios')
-
         for index, row in df.iterrows():
-
             if not np.isnan(row['acq_time']) and not np.isnan(row['replications']):
                 scenario = ET.SubElement(root, 'Scenario')
                 id_field = ET.SubElement(scenario, 'id')
@@ -197,7 +197,6 @@ class ScenariosIO:
                 comment.text = row['comment']
             else:
                 return False
-
             # if source materials are defined
             if not np.isnan(row['s_intensity']):
                 scenarioMaterial = ET.SubElement(scenario, 'ScenarioMaterial')
@@ -208,7 +207,6 @@ class ScenariosIO:
                 fdmode.text = row['s_fd_mode']
                 dose = ET.SubElement(scenarioMaterial, 'dose')
                 dose.text = str(row['s_intensity'])
-
             # if background materials are defined
             if not np.isnan(row['b_intensity']):
                 scenarioBkgMaterial = ET.SubElement(scenario, 'ScenarioBackgroundMaterial')
@@ -219,47 +217,46 @@ class ScenariosIO:
                 fdmode.text = row['s_fd_mode']
                 Bkgdose = ET.SubElement(scenarioBkgMaterial, 'dose')
                 Bkgdose.text = str(row['b_intensity'])
-
         tree = ET.ElementTree(root).getroot()
         return ET.tostring(tree, 'utf-8', method='xml')
 
 
 def main():
     from src.rase_functions import initializeDatabase
-    initializeDatabase(str(Path(Path.home(), "test.sql")))
+    initializeDatabase(str(Path(Path.home(), 'test.sql')))
     session = Session()
 
-    m1 = Material(name="TTT", include_intrinsic=True)
-    m2 = Material(name="NORM")
+    m1 = Material(name='TTT', include_intrinsic=True)
+    m2 = Material(name='NORM')
     s1 = ScenarioMaterial(material=m1, dose=11.2, fd_mode='DOSE')
     s2 = ScenarioMaterial(material=m1, dose=111, fd_mode='FLUX')
     sb = ScenarioBackgroundMaterial(material=m2, dose=1.0, fd_mode='DOSE')
-    i = Influence(name="Temperature")
+    i = Influence(name='Temperature')
     sc1 = Scenario(30, 100, [s1, s2], [], [])
     sc2 = Scenario(40, 200, [s1], [sb], [i])
 
-    sio = ScenariosIO("Test", "My test")
+    sio = ScenariosIO('Test', 'My test')
 
-    print("\n***\nTest export of newly created scenario\n***\n")
+    print(QCoreApplication.translate('scen_io', '\n***\nTest export of newly created scenario\n***\n'))
     xml_str = sio.scenario_export([sc1, sc2])
     print(xml_str)
 
-    print("\n***\nTest importing back the xml just generated\n***\n")
+    print(QCoreApplication.translate('scen_io', '\n***\nTest importing back the xml just generated\n***\n'))
     ss = sio.scenario_import(xml_str)
     for s in ss:
         print(s.__dict__)
 
-    print("\n***\nTest exporting a scenario from the db\n***\n")
+    print(QCoreApplication.translate('scen_io', '\n***\nTest exporting a scenario from the db\n***\n'))
     prev = session.query(Scenario).first()
     print(prev.__dict__)
     xml_str = sio.scenario_export([prev])
     print(xml_str)
 
-    print("\n***\nTest importing a scenario that exists in the db\n***\n")
+    print(QCoreApplication.translate('scen_io', '\n***\nTest importing a scenario that exists in the db\n***\n'))
     ss = sio.scenario_import(xml_str)
     print(ss[0].__dict__)
 
-    print("\n***\nTest importing from a xml string\n***\n")
+    print(QCoreApplication.translate('scen_io', '\n***\nTest importing from a xml string\n***\n'))
     xml_str = """<?xml version="1.0" encoding="utf-8"?>
 <Scenarios>
     <Scenario>

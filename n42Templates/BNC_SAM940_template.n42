@@ -1,0 +1,46 @@
+<RadInstrumentData schemaLocation="http://physics.nist.gov/N42/2011/N42 https://www.nist.gov/document/n42xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://physics.nist.gov/N42/2011/N42" n42DocUUID="520a66b5-a58d-4010-b6dc-3b489e32e62f">
+  <RadInstrumentDataCreatorName>SAM940+</RadInstrumentDataCreatorName>
+  <RadInstrumentInformation id="radIns">
+    <RadInstrumentManufacturerName>Berkeley Nucleonics Corp.</RadInstrumentManufacturerName>
+    <RadInstrumentIdentifier>
+    </RadInstrumentIdentifier>
+    <RadInstrumentModelName>940019</RadInstrumentModelName>
+    <RadInstrumentClassCode>Radionuclide Identifier</RadInstrumentClassCode>
+  </RadInstrumentInformation>
+  <RadDetectorInformation id="Gamma">
+    <RadDetectorCategoryCode>Gamma</RadDetectorCategoryCode>
+    <RadDetectorKindCode>Other</RadDetectorKindCode>
+  </RadDetectorInformation>
+  <RadDetectorInformation id="Neutron">
+    <RadDetectorCategoryCode>Neutron</RadDetectorCategoryCode>
+    <RadDetectorKindCode>Other</RadDetectorKindCode>
+  </RadDetectorInformation>
+  <EnergyCalibration id="EnergyCalibration-1">
+    <CoefficientValues>${detector.ecal0} ${detector.ecal1} ${detector.ecal2} ${detector.ecal3} </CoefficientValues>
+  </EnergyCalibration>
+  <RadMeasurement id="RadMeasurement-1" radMeasurementGroupReferences="RadMeasurementGroup-1">
+    <MeasurementClassCode>Background</MeasurementClassCode>
+    <StartDateTime>2024-03-11T07:45:59.0000000</StartDateTime>
+    <RealTimeDuration>PT${secondary_spectrum.realtime}S</RealTimeDuration>
+    <Spectrum id="RadMeasurement-1-Spectrum-1" radDetectorInformationReference="Gamma" energyCalibrationReference="EnergyCalibration-1">
+      <LiveTimeDuration>PT${secondary_spectrum.livetime}S</LiveTimeDuration>
+      <ChannelData>${secondary_spectrum.get_counts_as_str()}</ChannelData>
+    </Spectrum>
+  </RadMeasurement>
+  <RadMeasurement id="RadMeasurement-2" radMeasurementGroupReferences="RadMeasurementGroup-1">
+    <MeasurementClassCode>Foreground</MeasurementClassCode>
+    <StartDateTime>2024-03-11T12:50:09.0000000</StartDateTime>
+    <RealTimeDuration>PT${scenario.acq_time}S</RealTimeDuration>
+    <Spectrum id="RadMeasurement-2-Spectrum-2" radDetectorInformationReference="Gamma" energyCalibrationReference="EnergyCalibration-1">
+      <LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+      <ChannelData>${sample_counts} </ChannelData>
+    </Spectrum>
+    <GrossCounts id="RadMeasurement-2N" radDetectorInformationReference="Neutron">
+      <LiveTimeDuration>PT${scenario.acq_time}S</LiveTimeDuration>
+      <CountData>0</CountData>
+    </GrossCounts>
+    <DoseRate id="RadMeasurement-2D" radDetectorInformationReference="Gamma">
+      <DoseRateValue units="urem/h">305</DoseRateValue>
+    </DoseRate>
+  </RadMeasurement>
+</RadInstrumentData>

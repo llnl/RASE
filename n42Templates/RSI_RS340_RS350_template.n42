@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<N42InstrumentData>
+  <Measurement>
+    <Spectrum CalibrationIDs="LinEnCal">
+      <StartTime>2015-01-01T00:00:00Z</StartTime>
+      <RealTime>PT${scenario.acq_time}S</RealTime>
+      <LiveTime>PT${scenario.acq_time}S</LiveTime>
+      <SourceType>Item</SourceType>
+      <ChannelData Compression="CountedZeroes">
+        ${compressed_sample_counts}
+      </ChannelData>
+      <RASE_Sensitivity>1</RASE_Sensitivity>
+    </Spectrum>
+  </Measurement>
+  <Calibration Type="Energy" EnergyUnits="keV" ID="LinEnCal" >
+    <Equation Model="Polynomial" Units="keV">
+      <Coefficients>${detector.ecal0} ${detector.ecal1}</Coefficients>
+    </Equation>
+  </Calibration>
+</N42InstrumentData>

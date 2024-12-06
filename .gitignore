@@ -14,3 +14,4 @@ rase.log
 /dynamic_dist/
 /base_spectra_config.yaml
 /tools/config_basebuild.yaml
+/translations/*.qm

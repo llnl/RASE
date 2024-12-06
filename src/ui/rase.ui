@@ -47,7 +47,7 @@
            <item>
             <spacer name="horizontalSpacer_5">
              <property name="orientation">
-              <enum>Qt::Horizontal</enum>
+              <enum>Qt::Orientation::Horizontal</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
@@ -133,13 +133,13 @@
            <item>
             <widget class="QTableWidget" name="tblScenario">
              <property name="editTriggers">
-              <set>QAbstractItemView::NoEditTriggers</set>
+              <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
              </property>
              <property name="selectionMode">
-              <enum>QAbstractItemView::ExtendedSelection</enum>
+              <enum>QAbstractItemView::SelectionMode::ExtendedSelection</enum>
              </property>
              <property name="selectionBehavior">
-              <enum>QAbstractItemView::SelectRows</enum>
+              <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
              </property>
              <attribute name="horizontalHeaderStretchLastSection">
               <bool>true</bool>
@@ -176,7 +176,7 @@
            <item>
             <spacer name="horizontalSpacer_7">
              <property name="orientation">
-              <enum>Qt::Horizontal</enum>
+              <enum>Qt::Orientation::Horizontal</enum>
              </property>
              <property name="sizeHint" stdset="0">
               <size>
@@ -203,7 +203,7 @@
               <string>Instrument/Replay Selection:</string>
              </property>
              <property name="textFormat">
-              <enum>Qt::AutoText</enum>
+              <enum>Qt::TextFormat::AutoText</enum>
              </property>
              <property name="scaledContents">
               <bool>false</bool>
@@ -234,10 +234,10 @@
          <item>
           <widget class="QTableWidget" name="tblDetectorReplay">
            <property name="editTriggers">
-            <set>QAbstractItemView::NoEditTriggers</set>
+            <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
            </property>
            <property name="selectionBehavior">
-            <enum>QAbstractItemView::SelectRows</enum>
+            <enum>QAbstractItemView::SelectionBehavior::SelectRows</enum>
            </property>
            <property name="columnCount">
             <number>0</number>
@@ -285,14 +285,14 @@
          <item>
           <widget class="Line" name="line">
            <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+            <enum>Qt::Orientation::Horizontal</enum>
            </property>
           </widget>
          </item>
          <item>
           <spacer name="verticalSpacer_3">
            <property name="orientation">
-            <enum>Qt::Vertical</enum>
+            <enum>Qt::Orientation::Vertical</enum>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
@@ -370,7 +370,7 @@ Replay Results...</string>
          <item>
           <spacer name="verticalSpacer">
            <property name="orientation">
-            <enum>Qt::Vertical</enum>
+            <enum>Qt::Orientation::Vertical</enum>
            </property>
            <property name="sizeHint" stdset="0">
             <size>
@@ -383,7 +383,7 @@ Replay Results...</string>
          <item>
           <widget class="Line" name="line_2">
            <property name="orientation">
-            <enum>Qt::Horizontal</enum>
+            <enum>Qt::Orientation::Horizontal</enum>
            </property>
           </widget>
          </item>
@@ -444,6 +444,7 @@ Replay Results...</string>
     <addaction name="actionInput_Random_Seed"/>
     <addaction name="actionBase_Spectra_Creation_Tool"/>
     <addaction name="actionBase_Spectra_Creation_Wizard"/>
+    <addaction name="actionShielded_Base_Spectra_Creation"/>
     <addaction name="actionAutomated_Scurve"/>
     <addaction name="actionDynamic_Scenarios_under_development"/>
    </widget>
@@ -555,6 +556,11 @@ Replay Results...</string>
   <action name="actionBase_Spectra_Creation_Wizard">
    <property name="text">
     <string>Base Spectra Creation Wizard</string>
+   </property>
+  </action>
+  <action name="actionShielded_Base_Spectra_Creation">
+   <property name="text">
+    <string>Shielded Base Spectra Creation</string>
    </property>
   </action>
  </widget>

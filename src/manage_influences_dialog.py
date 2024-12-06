@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -50,8 +50,10 @@ LIN_SMEAR, DEGRADE_LIN_SMEAR = range(NUM_COL)
 COLUMNS = [NAME, INFL_0, DEGRAGE_INFL_0, INFL_1, DEGRAGE_INFL_1, INFL_2, DEGRAGE_INFL_2, FIX_SMEAR,
            DEGRADE_FIX_SMEAR, LIN_SMEAR, DEGRADE_LIN_SMEAR]
 
+# translation_tag = 'minf_d'
+
 class ManageInfluencesDialog(ui_manage_influences_dialog.Ui_Dialog, QDialog):
-    def __init__(self, parent = None, modify_flag=False):
+    def __init__(self, parent=None, modify_flag=False):
         QDialog.__init__(self)
         self.parent = parent
         self.modify_flag = modify_flag
@@ -65,9 +67,9 @@ class ManageInfluencesDialog(ui_manage_influences_dialog.Ui_Dialog, QDialog):
         self.btnAddNewInfluence.clicked.connect(self.on_btnNewInfluence_clicked)
 
         if self.modify_flag:
-            self.setWindowTitle('Modify Influences')
+            self.setWindowTitle(self.tr('Modify Influences'))
         else:
-            self.setWindowTitle('Add Influences')
+            self.setWindowTitle(self.tr('Add Influences'))
 
         self.influencesToDelete = []
 
@@ -78,11 +80,12 @@ class ManageInfluencesDialog(ui_manage_influences_dialog.Ui_Dialog, QDialog):
             self.tblInfluences.clear()
         self.tblInfluences.setColumnCount(NUM_COL)
         self.tblInfluences.setRowCount(len(influences))
-        self.tblInfluences.setHorizontalHeaderLabels(['Name', 'Infl_0\n(offset)', 'Drift\n(Infl_0)',
-                                                              'Infl_1\n(linear)', 'Drift\n(Infl_1)',
-                                                              'Infl_2\n(quadratic)', 'Drift\n(Infl_2)',
-                                                              'Fixed Smear\n(Eres, keV)', 'Drift\n(Fixed Smear)',
-                                                              'Linear Smear\n(Eres, %)', 'Drift\n(Linear Smear)'])
+        self.tblInfluences.setHorizontalHeaderLabels([self.tr('Name'), self.tr('Infl_0\n(offset)'),
+                                                      self.tr('Drift\n(Infl_0)'), self.tr('Infl_1\n(linear)'),
+                                                      self.tr('Drift\n(Infl_1)'), self.tr('Infl_2\n(quadratic)'),
+                                                      self.tr('Drift\n(Infl_2)'), self.tr('Fixed Smear\n(Eres, keV)'),
+                                                      self.tr('Drift\n(Fixed Smear)'), self.tr('Linear Smear\n(Eres, %)'),
+                                                      self.tr('Drift\n(Linear Smear)')])
         self.tblInfluences.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tblInfluences.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         row = 0
@@ -132,7 +135,7 @@ class ManageInfluencesDialog(ui_manage_influences_dialog.Ui_Dialog, QDialog):
         """
         Exports to CSV
         """
-        path = QFileDialog.getSaveFileName(self, 'Save File', self.settings.getDataDirectory(), 'CSV (*.csv)')
+        path = QFileDialog.getSaveFileName(self, self.tr('Save File'), self.settings.getDataDirectory(), 'CSV (*.csv)')
         if path[0]:
             with open(path[0], mode='w', newline='') as stream:
                 writer = csv.writer(stream)
@@ -150,7 +153,7 @@ class ManageInfluencesDialog(ui_manage_influences_dialog.Ui_Dialog, QDialog):
         """
         Imports from CSV
         """
-        path = QFileDialog.getOpenFileName(self, 'Open File', self.settings.getDataDirectory(), 'CSV(*.csv)')
+        path = QFileDialog.getOpenFileName(self, self.tr('Open File'), self.settings.getDataDirectory(), 'CSV(*.csv)')
         if path[0]:
             # FIXME: This doesn't check in any way that the format of the file is correct
             with open(path[0], mode='r') as stream:
@@ -163,11 +166,11 @@ class ManageInfluencesDialog(ui_manage_influences_dialog.Ui_Dialog, QDialog):
                     for column, data in enumerate(rowdata):
                         item = QTableWidgetItem(data)
                         self.tblInfluences.setItem(row, column, item)
-            self.tblInfluences.setHorizontalHeaderLabels(['Name', 'Infl_0\n(offset)', 'Drift\n(Infl_0)',
-                                                              'Infl_1\n(linear)', 'Drift\n(Infl_1)',
-                                                              'Infl_2\n(quadratic)', 'Drift\n(Infl_2)',
-                                                              'Fixed Smear\n(Eres, keV)', 'Drift\n(Fixed Smear)',
-                                                              'Linear Smear\n(Eres, %)', 'Drift\n(Linear Smear)'])
+            self.tblInfluences.setHorizontalHeaderLabels([self.tr('Name'), self.tr('Infl_0\n(offset)'),
+                                  self.tr('Drift\n(Infl_0)'), self.tr('Infl_1\n(linear)'), self.tr('Drift\n(Infl_1)'),
+                                  self.tr('Infl_2\n(quadratic)'), self.tr('Drift\n(Infl_2)'),
+                                  self.tr('Fixed Smear\n(Eres, keV)'), self.tr('Drift\n(Fixed Smear)'),
+                                  self.tr('Linear Smear\n(Eres, %)'), self.tr('Drift\n(Linear Smear)')])
 
     def deleteSelectedInfluences(self):
         """
@@ -197,18 +200,20 @@ class ManageInfluencesDialog(ui_manage_influences_dialog.Ui_Dialog, QDialog):
                 for col in COLUMNS[1:]:
                     float(self.tblInfluences.item(row, col).text())
             except:
-                return QMessageBox.critical(self, 'Invalid influence value', 'All specified influence values must be numbers')
+                return QMessageBox.critical(self, self.tr('Invalid influence value'), self.tr('All specified influence '
+                                                                                            'values must be numbers'))
 
             if not self.tblInfluences.item(row, NAME).text():
-                return QMessageBox.critical(self, 'Unnamed influence', 'Influence must have a name!')
+                return QMessageBox.critical(self, self.tr('Unnamed influence'),  self.tr('Influence must have a name!'))
             names.append(self.tblInfluences.item(row, NAME).text())
             if not self.tblInfluences.item(row, INFL_1).text():
                 self.tblInfluences.item(row, INFL_1).setText('1')
             elif float(self.tblInfluences.item(row, INFL_1).text()) <= 0:
-                return QMessageBox.critical(self, 'Linear influence factor error', 'Linear scaling factor must be greater than zero! For no linear scaling, set this value to 1.')
+                return QMessageBox.critical(self, self.tr('Linear influence factor error'), self.tr('Linear scaling '
+                                    'factor must be greater than zero! For no linear scaling, set this value to 1.'))
 
         if len(names) != len(set(names)):
-            return QMessageBox.critical(self, 'Repeat influence', 'Influences must each have unique names!')
+            return QMessageBox.critical(self, self.tr('Repeat influence'), self.tr('Influences must each have unique names!'))
 
         for row in range(self.tblInfluences.rowCount()):
 
@@ -273,10 +278,8 @@ class ManageInfluencesDialog(ui_manage_influences_dialog.Ui_Dialog, QDialog):
             for index in sorted(self.tblInfluences.selectionModel().selectedRows()):
                 row = index.row()
                 col = NAME
-                if index.sibling(row, col).data() not in \
-                        [self.parent.listInfluences.item(itemnum).text() for
-                         itemnum in range(self.parent.listInfluences.count())]:
-                    self.parent.listInfluences.addItem(index.sibling(row, col).data())
+                if index.sibling(row, col).data() not in self.parent.modelINL.influences:
+                    self.parent.modelINL.add_influences(index.sibling(row, col).data())
 
         return QDialog.accept(self)
 

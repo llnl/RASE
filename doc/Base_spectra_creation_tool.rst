@@ -72,12 +72,12 @@ For any of the above fields, the user is advised to make use of the features of 
 |
 
 .. figure:: _static/baseSpecCreationTool.png
-    :scale: 33 %
+    :scale: 70 %
 
     **“Base Spectra Creation Tool” dialog.**
 
 
 .. figure:: _static/baseSpecCreationWizard.png
-    :scale: 25 %
+    :scale: 70 %
 
     **“Base Spectra Creation Wizard" series of dialogs.**

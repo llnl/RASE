@@ -9,7 +9,7 @@ The vast majority of replay tools ingest spectra formatted according to n42.42 A
 The following table provides a list of the basic variables accessible for use within a template file:
 
 +----------------------------------------------------------------+----------------------------------------------------------------------+
-| Variable                                                       | Description                                                          |
+| **Variable**                                                   | **Description**                                                      |
 +================================================================+======================================================================+
 | scenario.acq_time                                              | Acquisition time in seconds for the scenario                         |
 +----------------------------------------------------------------+----------------------------------------------------------------------+

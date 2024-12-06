@@ -15,6 +15,7 @@ The correspondence table can be managed using the dedicated window accessible un
 for manual input of table entries, as well as enables importing and exporting the table in a comma-separated \*.csv
 format. \*.csv files can also be edited in Microsoft Excel program independently from the RASE software.
 
+A default correspondence table is dictated in the fixtures.py file, which can be found on github.com/LLNL/RASE. Future versions of RASE will include this table by default.
 |
 
 .. figure:: _static/CorrTable.png

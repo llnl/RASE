@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -69,6 +69,7 @@ from src.base_spectra_dialog import SharedObject, ReadFileObject
 from src.rase_settings import RaseSettings
 from src.qt_utils import DoubleValidatorInfinity, DoubleValidator
 
+# translation_tag = 'plot'
 
 class BaseSpectraViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
     def __init__(self, parent, base_spectra, detector, selected):
@@ -78,7 +79,7 @@ class BaseSpectraViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
         self.detector = detector
         self.selected = selected
         self.session = Session()
-        self.json_file = os.path.join(get_bundle_dir(), "d3_resources", "spectrum.json")
+        self.json_file = os.path.join(get_bundle_dir(), 'd3_resources', 'spectrum.json')
         self.index = 0
 
         self.browser = WebSpectraView(self)
@@ -94,7 +95,7 @@ class BaseSpectraViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
 
     def plot_spectrum(self):
         baseSpectrum = self.baseSpectra[self.index]
-        with open(self.json_file, "w") as json_file:
+        with open(self.json_file, 'w') as json_file:
             print(baseSpectrum.as_json(), file=json_file)
         self.browser.load(self.browser.local_url)
 
@@ -119,13 +120,13 @@ class SampleSpectraViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
         self.detector = detector
         self.selected = selected
         self.session = Session()
-        self.json_file = os.path.join(get_bundle_dir(), "d3_resources", "spectrum.json")
+        self.json_file = os.path.join(get_bundle_dir(), 'd3_resources', 'spectrum.json')
         self.index = selected
         self.file_list = file_list
 
         if not self.file_list:
             sample_path = get_sample_dir(RaseSettings().getSampleDirectory(), self.detector, self.scenario.id)
-            self.file_list = glob.glob(os.path.join(sample_path, "*.n42"))
+            self.file_list = glob.glob(os.path.join(sample_path, '*.n42'))
             self.file_list.sort(key=natural_keys)
 
         self.browser = WebSpectraView(self)
@@ -143,13 +144,13 @@ class SampleSpectraViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
         v = readSpectrumFile(filepath, sharedObject, status, requireRASESen=False)
         data = ReadFileObject(*v)
 
-        with open(self.json_file, "w") as json_file:
-            json_str = json.dumps([{"title": os.path.basename(filepath),
-                            "livetime": data.livetime,
-                            "realtime": data.realtime,
-                            "xeqn": [data.ecal[0], data.ecal[1], data.ecal[2]],
-                            "y": [float(c) for c in data.counts.split(',')],
-                            "yScaleFactor": 1,
+        with open(self.json_file, 'w') as json_file:
+            json_str = json.dumps([{'title': os.path.basename(filepath),
+                            'livetime': data.livetime,
+                            'realtime': data.realtime,
+                            'xeqn': [data.ecal[0], data.ecal[1], data.ecal[2]],
+                            'y': [float(c) for c in data.counts.split(',')],
+                            'yScaleFactor': 1,
                             }])
             print(json_str, file=json_file)
         self.browser.load(self.browser.local_url)
@@ -174,14 +175,14 @@ class MultiSpecViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
         self.nextMaterialButton.hide()
         self.sample_dirs = sampledirs
         if len(self.sample_dirs) == 1:
-            self.prevMaterialButton.setText('Export Summed Spectrum')
+            self.prevMaterialButton.setText(self.tr('Export Summed Spectrum'))
         else:
             self.prevMaterialButton.hide()
         self.sample_dirs = sampledirs
-        self.json_file = os.path.join(get_bundle_dir(), "d3_resources", "spectrum.json")
+        self.json_file = os.path.join(get_bundle_dir(), 'd3_resources', 'spectrum.json')
         self.sum_specs = []
         for index, sample_path in enumerate(self.sample_dirs):
-            files = glob.glob(os.path.join(sample_path, "*.n42"))
+            files = glob.glob(os.path.join(sample_path, '*.n42'))
             self.sum_specs.append(self.sum_spectra(os.path.basename(sample_path), files, index))
         self.browser = WebSpectraView(self)
         self.plot_spectrum()
@@ -192,8 +193,9 @@ class MultiSpecViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
 
     @Slot(bool)
     def on_prevMaterialButton_clicked(self, checked):
-        path = QFileDialog.getSaveFileName(self, 'Save File', os.path.join(RaseSettings().
-                           getDataDirectory(), os.path.basename(self.sample_dirs[0])+'_summed'),
+        path = QFileDialog.getSaveFileName(self, self.tr('Save File'),
+                                           os.path.join(RaseSettings().getDataDirectory(),
+                                           os.path.basename(self.sample_dirs[0])+'_summed'),
                                            'n42 (*.n42)')
         if path[0]:
             s = self.sum_specs[0]
@@ -240,14 +242,14 @@ class MultiSpecViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
             rt += data.realtime
 
         if index == 0:
-            return {"title": name, "liveTime": lt, "realTime": rt, "xeqn": xeqn,
-                    "y": counts.tolist(), "id": index, 'yScaleFactor': 1}
+            return {'title': name, 'liveTime': lt, 'realTime': rt, 'xeqn': xeqn,
+                    'y': counts.tolist(), 'id': index, 'yScaleFactor': 1}
         else:
-            return {"title": name, "liveTime": lt, "realTime": rt, "xeqn": xeqn,
-                    "y": counts.tolist(), "id": index}
+            return {'title': name, 'liveTime': lt, 'realTime': rt, 'xeqn': xeqn,
+                    'y': counts.tolist(), 'id': index}
 
     def plot_spectrum(self):
-        with open(self.json_file, "w") as json_file:
+        with open(self.json_file, 'w') as json_file:
             json_str = json.dumps(self.sum_specs)
             print(json_str, file=json_file)
         self.browser.reload()
@@ -256,7 +258,7 @@ class MultiSpecViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
 class WebSpectraView(QWebEngineView):
     def __init__(self, parent):
         super(WebSpectraView, self).__init__(parent)
-        file_path = os.path.join(get_bundle_dir(), "d3_resources", "spectrum.html")
+        file_path = os.path.join(get_bundle_dir(), 'd3_resources', 'spectrum.html')
         self.local_url = QUrl.fromLocalFile(file_path)
         self.load(self.local_url)
 
@@ -330,8 +332,8 @@ class ResultPlottingDialog(ui_results_plotting_dialog.Ui_Dialog, QDialog):
         self.palette = iter(sns.color_palette())
         self.params = [None for _ in range(len(self.x))]
         # # seaborn not compatible with lmfit
-        # self.color_array = [['b', "#E5E7E9"], ['r', "#D5DbDb"], ['g', "#CCD1D1"],
-        #                     ['m', "#CACFD2"], ['c', "#AAB7B8"], ['k', "#99A3A4"]]
+        # self.color_array = [['b', '#E5E7E9'], ['r', '#D5DbDb'], ['g', '#CCD1D1'],
+        #                     ['m', '#CACFD2'], ['c', '#AAB7B8'], ['k', '#99A3A4']]
 
         self.fig = Figure()
         self.canvas = FigureCanvas(self.fig)
@@ -357,8 +359,9 @@ class ResultPlottingDialog(ui_results_plotting_dialog.Ui_Dialog, QDialog):
 
         if len(self.x[0]) < 4 and self.y:
             self.groupBox.setEnabled(False)
-            self.groupBox.setToolTip('Cannot plot s-curve with less than four data points.\n'
-                                     'Please choose four or more data points to enable s-curve plotting.')
+            self.groupBox.setToolTip(self.tr('Cannot plot s-curve with '
+                                    'less than four data points.\nPlease choose four or more data '
+                                    'points to enable s-curve plotting.'))
 
         if not self.y:
             self.groupBox.setEnabled(False)
@@ -389,7 +392,7 @@ class ResultPlottingDialog(ui_results_plotting_dialog.Ui_Dialog, QDialog):
                 self.ax.errorbar(x, y, yerr=y_err, xerr=x_err,
                                  color=color, ecolor=color, fmt='o', capsize=3, label=label)
             if len(self.labels) > 1:
-                self.ax.legend(bbox_to_anchor=(1.04, 1), loc="upper left", fontsize='xx-small')
+                self.ax.legend(bbox_to_anchor=(1.04, 1), loc='upper left', fontsize='xx-small')
         else:
             # min_n_entries = min([len(k) for k in self.x])
             # n_bins = 10 if min_n_entries <= 10 else int(np.sqrt(min_n_entries))
@@ -464,8 +467,8 @@ class ResultPlottingDialog(ui_results_plotting_dialog.Ui_Dialog, QDialog):
             # set initial guess for 'a1' and 'a2' parameter to the values at the extremes of the array
             y_left = y[x.index(min(x))]
             y_right = y[x.index(max(x))]
-            params["a1"].set(y_right, min=y_right-0.3, max=y_right+0.3)
-            params["a2"].set(y_left, min=y_left-0.3, max=y_left+0.3)
+            params['a1'].set(y_right, min=y_right-0.3, max=y_right+0.3)
+            params['a2'].set(y_left, min=y_left-0.3, max=y_left+0.3)
             # this one is purely empirical from typical s-curves in RASE work
             params['B'].set(params['M']/10.)
 
@@ -481,33 +484,33 @@ class ResultPlottingDialog(ui_results_plotting_dialog.Ui_Dialog, QDialog):
             # all parameters are fixed, so can't really do fit
             x_dense = np.linspace(min(x), max(x), 150000)
             y_dense = sCurve.boltzmann_lin(x_dense, *[p.value for p in params.values()])
-            line, = self.ax.plot(x_dense, y_dense, '-', color=color, label='S-curve (fixed params)')
+            line, = self.ax.plot(x_dense, y_dense, '-', color=color, label=self.tr('S-curve (fixed params)'))
             self.handles.append(line)
-            self.txtFitResults.append("------------\n" + str(label) + "\n")
-            self.txtFitResults.append('S-curve plotted from fixed parameters.')
+            self.txtFitResults.append('------------\n' + str(label) + '\n')
+            self.txtFitResults.append(self.tr('S-curve plotted from fixed parameters.'))
         else:
             r = sCurve.s_fit(x, y, weights=weights, params=params)
-            self.txtFitResults.append("------------\n" + str(label) + "\n")
+            self.txtFitResults.append('------------\n' + str(label) + '\n')
             self.txtFitResults.append(r.fit_report(show_correl=False))
 
         if r:   # if fit happened
             if not r.success:
-                QMessageBox.information(self, 'Information', 'Fit did not converge. Perhaps not enough points or '
-                                                             "points don\'t follow a Sigmoid curve.")
+                QMessageBox.information(self, self.tr('Information'), self.tr("Fit did not converge. "
+                           "Perhaps not enough points or points don't follow a Sigmoid curve."))
 
             if r.covar is not None:
                 x_dense = np.linspace(min(x), max(x), 150000)
 
                 # plot fit line
                 r_best = r.model.eval(r.params, x=x_dense)
-                line, = self.ax.plot(x_dense, r_best, '-', color=color, label='S-curve fit')
+                line, = self.ax.plot(x_dense, r_best, '-', color=color, label=self.tr('S-curve fit'))
                 self.handles.append(line)
 
                 # plot confidence band
                 delta_y = r.eval_uncertainty(x=x_dense)
                 if self.check_confint.isChecked() and not np.isnan(delta_y).any():
                     line = self.ax.fill_between(x_dense, r_best - delta_y, r_best + delta_y,
-                                                color=color, alpha=0.3, label='68% fit confidence band')
+                                                color=color, alpha=0.3, label=self.tr('68% fit confidence band'))
                     self.handles.append(line)
 
                 # compute and plot id threshold estimate
@@ -519,20 +522,21 @@ class ResultPlottingDialog(ui_results_plotting_dialog.Ui_Dialog, QDialog):
                                                           ufloat(r.params['B'].value, r.params['B'].stderr),
                                                           ufloat(r.params['M'].value, r.params['M'].stderr))
                     if (not isinstance(thres_mark, UFloat)) and np.isnan(thres_mark):
-                        QMessageBox.information(self, 'Information', 'Cannot compute the ID threshold estimate. ')
+                        QMessageBox.information(self, self.tr('Information'),
+                                            self.tr('Cannot compute the ID threshold estimate.'))
                     else:
                         line, = self.ax.plot(thres_mark.nominal_value, id_mark, 'd', color=color, markersize=10,
                                              path_effects=[peff.Stroke(linewidth=2, foreground='black')])
                         if self.titles[0].split(' ')[0] == 'Dose':
-                            id_label = str(id_mark * 100) + '%, Dose =\n' + str(thres_mark) + ' \u00B5Sv/hr'
+                            id_label = str(id_mark * 100) + self.tr('%, Dose =\n{} \u00B5Sv/hr').format(str(thres_mark))
                         elif self.titles[0].split(' ')[0] == 'Flux':
-                            id_label = str(id_mark * 100) + '%, Flux =\n' + str(thres_mark) + ' (\u03B3/(cm\u00B2s))'
+                            id_label = str(id_mark * 100) + self.tr('%, Flux =\n{} (\u03B3/(cm\u00B2s))').format(str(thres_mark))
                         else:
                             id_label = str(id_mark * 100) + '%, ' + self.titles[0].split(' ')[0] + ' = ' + str(thres_mark)
                         line.set_label(id_label)
                         self.handles.append(line)
 
-        self.ax.legend(handles=self.handles, bbox_to_anchor=(1.04, 1), loc="upper left", fontsize='xx-small')
+        self.ax.legend(handles=self.handles, bbox_to_anchor=(1.04, 1), loc='upper left', fontsize='xx-small')
         self.ax.set_title(None)
         self.ax.set_xscale('log')
         self.ax.set_ylim([-0.1, 1.1])
@@ -569,7 +573,7 @@ class FitParamsSettings(ui_fit_params_settings_dialog.Ui_Dialog, QDialog):
             current_layout = QGridLayout(current_page)
             self.pages_layouts.append(current_layout)
 
-            for k, label in enumerate(['Name', 'Fix', 'Initial Guess', 'Min', 'Max']):
+            for k, label in enumerate([self.tr('Name'), self.tr('Fix'), self.tr('Initial Guess'), self.tr('Min'), self.tr('Max')]):
                 current_layout.addWidget(QLabel(label, current_page), 0, k)
             self.stackedWidget.addWidget(current_page)
 

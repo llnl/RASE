@@ -1,4 +1,5 @@
 # -*- mode: python -*-
+import glob
 
 block_cipher = None
 
@@ -19,7 +20,8 @@ a = Analysis(['rase.pyw'],
              binaries=[],
              datas=[('doc/_build/html', 'doc/_build/html'),
                     ('d3_resources', 'd3_resources'),
-                    ('tools', 'tools')],
+                    ('tools', 'tools'),
+                    *((f, f) for f in glob.glob("translations/*.qm"))],
              hiddenimports=['sqlalchemy.ext.baked', 'pandas._libs.tslibs.base'],
              hookspath=[],
              runtime_hooks=[],

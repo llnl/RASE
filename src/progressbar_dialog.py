@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -39,6 +39,7 @@ import time
 from PySide6.QtCore import QThread, Slot, Signal
 from PySide6.QtWidgets import QDialog, QProgressBar, QPushButton, QLabel, QGridLayout
 
+# translation_tag = 'pbar'
 
 class ProgressBar(QDialog):
     """
@@ -53,22 +54,22 @@ class ProgressBar(QDialog):
 
     def __init__(self, parent, dispProg=True):
         super(ProgressBar, self).__init__(parent)
-        self.setWindowTitle('Progress')
+        self.setWindowTitle(self.tr('Progress'))
 
         self.progress = QProgressBar(self)
         self.progress.setGeometry(0, 0, 300, 35)
         self.progress.setFormat("%p%")
         self.progress.setTextVisible(True)
 
-        self.button_stop = QPushButton('Cancel', self)
+        self.button_stop = QPushButton(self.tr('Cancel'), self)
         self.button_stop.clicked.connect(self.abort_worker)
         self.button_stop.move(0, 30)
 
         self.label = QLabel()
-        self.label.setText("Estimating time remaining...")
+        self.label.setText(self.tr('Estimating time remaining...'))
 
         self.title = QLabel()
-        self.title.setText("Working")
+        self.title.setText(self.tr('Working'))
 
         self.layout = QGridLayout()
         self.layout.addWidget(self.title, 0, 0)
@@ -115,7 +116,7 @@ class ProgressBar(QDialog):
         dT = sum(self.deltaT)/len(self.deltaT)
         self.t = time.time()
         time_str = str(int(dT * (self.progress.maximum() - value)) + 1)
-        self.label.setText("Time Remaining: " + time_str + " seconds")
+        self.label.setText(self.tr('Time Remaining: {} seconds').format(time_str))
 
     @Slot(bool)
     def on_worker_done(self, value):

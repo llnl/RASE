@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>832</width>
+    <width>851</width>
     <height>753</height>
    </rect>
   </property>
@@ -14,183 +14,16 @@
    <string>Add Instrument</string>
   </property>
   <layout class="QGridLayout" name="gridLayout_2">
-   <item row="1" column="0" rowspan="2" colspan="2">
-    <widget class="QGroupBox" name="groupBox_5">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="minimumSize">
-      <size>
-       <width>0</width>
-       <height>0</height>
-      </size>
-     </property>
-     <property name="title">
-      <string>Energy Calibration (from base spectra)</string>
-     </property>
-     <layout class="QHBoxLayout" name="horizontalLayout_4">
-      <item>
-       <widget class="QLabel" name="label_2">
-        <property name="text">
-         <string>E=</string>
-        </property>
-        <property name="buddy">
-         <cstring>txtEcal1</cstring>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="txtEcal0">
-        <property name="frame">
-         <bool>false</bool>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="label_3">
-        <property name="text">
-         <string>+</string>
-        </property>
-        <property name="buddy">
-         <cstring>txtEcal2</cstring>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="txtEcal1">
-        <property name="frame">
-         <bool>false</bool>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="label_4">
-        <property name="text">
-         <string>x +</string>
-        </property>
-        <property name="buddy">
-         <cstring>txtEcal3</cstring>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="txtEcal2">
-        <property name="frame">
-         <bool>false</bool>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="label">
-        <property name="text">
-         <string>x^2 +</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLineEdit" name="txtEcal3">
-        <property name="frame">
-         <bool>false</bool>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="QLabel" name="label_14">
-        <property name="text">
-         <string>x^3</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <spacer name="horizontalSpacer_4">
-        <property name="orientation">
-         <enum>Qt::Horizontal</enum>
-        </property>
-        <property name="sizeHint" stdset="0">
-         <size>
-          <width>40</width>
-          <height>20</height>
-         </size>
-        </property>
-       </spacer>
-      </item>
-     </layout>
-    </widget>
-   </item>
-   <item row="3" column="0" colspan="2">
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QPushButton" name="btnExportDetector">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Export Instrument...</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="btnImportDetector">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="text">
-        <string>Import Instrument...</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
-      <widget class="QDialogButtonBox" name="buttonBox">
-       <property name="standardButtons">
-        <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="0" column="1">
+   <item row="0" column="2">
     <layout class="QGridLayout" name="gridLayout_5">
-     <item row="1" column="0" colspan="2">
+     <item row="0" column="1">
+      <widget class="QPushButton" name="btnRemoveBaseSpectra">
+       <property name="text">
+        <string>Remove All Base Spectra</string>
+       </property>
+      </widget>
+     </item>
+     <item row="2" column="0" colspan="2">
       <widget class="QGroupBox" name="groupBox">
        <property name="title">
         <string>Materials (Base Spectra)</string>
@@ -204,7 +37,7 @@
          </widget>
         </item>
         <item>
-         <widget class="QListWidget" name="lstBaseSpectra"/>
+         <widget class="QListView" name="lstBaseSpectra"/>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_5">
@@ -237,7 +70,7 @@
           <item>
            <spacer name="horizontalSpacer_3">
             <property name="orientation">
-             <enum>Qt::Horizontal</enum>
+             <enum>Qt::Orientation::Horizontal</enum>
             </property>
             <property name="sizeHint" stdset="0">
              <size>
@@ -247,12 +80,22 @@
             </property>
            </spacer>
           </item>
+          <item>
+           <widget class="QLabel" name="neutrons_label">
+            <property name="enabled">
+             <bool>true</bool>
+            </property>
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
          </layout>
         </item>
        </layout>
       </widget>
      </item>
-     <item row="2" column="0" colspan="2">
+     <item row="3" column="0" colspan="2">
       <widget class="QGroupBox" name="includeSecondarySpectrumCheckBox">
        <property name="enabled">
         <bool>true</bool>
@@ -377,7 +220,7 @@ Use the secondary spectrum built into the base spectrum as is (not recommended!)
              <string>If checked, the background spectrum provided as secondary to the instrument is resampled at each replication in each scenario</string>
             </property>
             <property name="layoutDirection">
-             <enum>Qt::LeftToRight</enum>
+             <enum>Qt::LayoutDirection::LeftToRight</enum>
             </property>
             <property name="text">
              <string/>
@@ -421,7 +264,7 @@ Use the secondary spectrum built into the base spectrum as is (not recommended!)
            <string>(Do not check if a base spectrum includes intrinsic!)</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
           <property name="indent">
            <number>-1</number>
@@ -455,13 +298,6 @@ Use the secondary spectrum built into the base spectrum as is (not recommended!)
        </layout>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QPushButton" name="btnRemoveBaseSpectra">
-       <property name="text">
-        <string>Remove All Base Spectra</string>
-       </property>
-      </widget>
-     </item>
      <item row="0" column="0">
       <widget class="QPushButton" name="btnAddBaseSpectra">
        <property name="text">
@@ -469,80 +305,31 @@ Use the secondary spectrum built into the base spectrum as is (not recommended!)
        </property>
       </widget>
      </item>
+     <item row="1" column="1">
+      <widget class="QPushButton" name="btnCreateShieldSpec">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Create Shielded Spectra</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
-   <item row="0" column="0">
-    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
+   <item row="0" column="1">
+    <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0,0">
+     <property name="spacing">
+      <number>0</number>
+     </property>
      <item>
       <widget class="QGroupBox" name="groupBox_3">
        <property name="title">
         <string>Details</string>
        </property>
-       <layout class="QGridLayout" name="gridLayout" rowstretch="10,0,0,0,0,0,0,0,0,0,0" columnstretch="0,0,0,0">
+       <layout class="QGridLayout" name="gridLayout" rowstretch="10,0,0,0,0" columnstretch="0,0,0,0">
         <item row="0" column="2" colspan="2">
          <widget class="QLineEdit" name="txtDetector"/>
-        </item>
-        <item row="3" column="2" colspan="2">
-         <widget class="QLineEdit" name="txtClassCode"/>
-        </item>
-        <item row="7" column="2">
-         <widget class="QComboBox" name="cmbReplay"/>
-        </item>
-        <item row="7" column="3">
-         <widget class="QPushButton" name="btnNewReplay">
-          <property name="text">
-           <string>Add new...</string>
-          </property>
-         </widget>
-        </item>
-        <item row="8" column="2" colspan="2">
-         <widget class="QPushButton" name="manageReplays">
-          <property name="text">
-           <string>Manage Replay Tools</string>
-          </property>
-         </widget>
-        </item>
-        <item row="10" column="2" colspan="2">
-         <widget class="QTextEdit" name="txtDetectorDescription">
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>100</height>
-           </size>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="2" colspan="2">
-         <widget class="QLineEdit" name="txtInstrumentId"/>
-        </item>
-        <item row="7" column="0">
-         <widget class="QLabel" name="label_13">
-          <property name="text">
-           <string>Replay Tool:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-          <property name="buddy">
-           <cstring>txtHardwareVersion</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_9">
-          <property name="text">
-           <string>Manufacturer:</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-          <property name="buddy">
-           <cstring>txtManufacturer</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="2" colspan="2">
-         <widget class="QLineEdit" name="txtHardwareVersion"/>
         </item>
         <item row="3" column="0">
          <widget class="QLabel" name="label_11">
@@ -550,7 +337,7 @@ Use the secondary spectrum built into the base spectrum as is (not recommended!)
            <string>Class Code:</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
           <property name="buddy">
            <cstring>txtClassCode</cstring>
@@ -563,7 +350,7 @@ Use the secondary spectrum built into the base spectrum as is (not recommended!)
            <string>Instrument ID:</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
           <property name="buddy">
            <cstring>txtInstrumentId</cstring>
@@ -576,12 +363,21 @@ Use the secondary spectrum built into the base spectrum as is (not recommended!)
            <string>Model Name (required):</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
           <property name="buddy">
            <cstring>txtDetector</cstring>
           </property>
          </widget>
+        </item>
+        <item row="4" column="2" colspan="2">
+         <widget class="QLineEdit" name="txtHardwareVersion"/>
+        </item>
+        <item row="2" column="2" colspan="2">
+         <widget class="QLineEdit" name="txtInstrumentId"/>
+        </item>
+        <item row="3" column="2" colspan="2">
+         <widget class="QLineEdit" name="txtClassCode"/>
         </item>
         <item row="4" column="0">
          <widget class="QLabel" name="label_12">
@@ -589,29 +385,23 @@ Use the secondary spectrum built into the base spectrum as is (not recommended!)
            <string>Hardware Vers:</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
           <property name="buddy">
            <cstring>txtHardwareVersion</cstring>
           </property>
          </widget>
         </item>
-        <item row="10" column="0">
-         <widget class="QLabel" name="label_8">
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>50</height>
-           </size>
-          </property>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_9">
           <property name="text">
-           <string>Instrument Description:</string>
+           <string>Manufacturer:</string>
           </property>
           <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
           </property>
-          <property name="wordWrap">
-           <bool>true</bool>
+          <property name="buddy">
+           <cstring>txtManufacturer</cstring>
           </property>
          </widget>
         </item>
@@ -622,22 +412,71 @@ Use the secondary spectrum built into the base spectrum as is (not recommended!)
       </widget>
      </item>
      <item>
+      <widget class="QGroupBox" name="groupBox_4">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>200</height>
+        </size>
+       </property>
+       <property name="title">
+        <string>Associated Replays</string>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_4">
+        <item>
+         <widget class="QTableView" name="tblViewReplay">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>0</height>
+           </size>
+          </property>
+          <attribute name="horizontalHeaderStretchLastSection">
+           <bool>true</bool>
+          </attribute>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_2">
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QPushButton" name="manageReplays">
+            <property name="text">
+             <string>Manage Replay Tools</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnNewReplay">
+            <property name="text">
+             <string>Add new...</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
       <widget class="QGroupBox" name="groupBox_2">
        <property name="title">
         <string>Influences</string>
        </property>
        <layout class="QGridLayout" name="gridLayout_3">
-        <item row="1" column="0" colspan="2">
-         <widget class="QListWidget" name="listInfluences">
-          <property name="batchSize">
-           <number>100</number>
-          </property>
-         </widget>
-        </item>
         <item row="2" column="0">
          <widget class="QPushButton" name="btnAddInfluences">
           <property name="text">
            <string>Add Influence to Detector</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0" colspan="2">
+         <widget class="QListView" name="listInfluences">
+          <property name="batchSize">
+           <number>100</number>
           </property>
          </widget>
         </item>
@@ -659,6 +498,180 @@ Use the secondary spectrum built into the base spectrum as is (not recommended!)
       </widget>
      </item>
     </layout>
+   </item>
+   <item row="3" column="0" colspan="3">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="btnExportDetector">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="text">
+        <string>Export Instrument...</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btnImportDetector">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="text">
+        <string>Import Instrument...</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QDialogButtonBox" name="buttonBox">
+       <property name="standardButtons">
+        <set>QDialogButtonBox::StandardButton::Cancel|QDialogButtonBox::StandardButton::Ok</set>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0" rowspan="2" colspan="3">
+    <widget class="QGroupBox" name="groupBox_5">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>0</height>
+      </size>
+     </property>
+     <property name="title">
+      <string>Energy Calibration (from base spectra)</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_4">
+      <item>
+       <widget class="QLabel" name="label_2">
+        <property name="text">
+         <string>E=</string>
+        </property>
+        <property name="buddy">
+         <cstring>txtEcal1</cstring>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="txtEcal0">
+        <property name="frame">
+         <bool>false</bool>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_3">
+        <property name="text">
+         <string>+</string>
+        </property>
+        <property name="buddy">
+         <cstring>txtEcal2</cstring>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="txtEcal1">
+        <property name="frame">
+         <bool>false</bool>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_4">
+        <property name="text">
+         <string>x +</string>
+        </property>
+        <property name="buddy">
+         <cstring>txtEcal3</cstring>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="txtEcal2">
+        <property name="frame">
+         <bool>false</bool>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label">
+        <property name="text">
+         <string>x^2 +</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="txtEcal3">
+        <property name="frame">
+         <bool>false</bool>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignmentFlag::AlignCenter</set>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="label_14">
+        <property name="text">
+         <string>x^3</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="horizontalSpacer_4">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>40</width>
+          <height>20</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </widget>
    </item>
   </layout>
  </widget>

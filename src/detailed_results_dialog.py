@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2023 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-858590, LLNL-CODE-829509
+# LLNL-CODE-2001375, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -42,8 +42,8 @@ from PySide6.QtWidgets import QTableWidgetItem, QDialog, QFileDialog, \
 from PySide6.QtCore import QPoint, Qt, Slot
 from PySide6.QtGui import QKeySequence, QAction
 
-from src.table_def import Session
 from src.plotting import SampleSpectraViewerDialog
+from .contexts import SimContext
 from .rase_functions import get_sample_dir, count_files_endwith
 from .ui_generated import ui_detailed_results_dialog
 from src.rase_settings import RaseSettings
@@ -51,15 +51,14 @@ from .utils import natural_keys
 
 
 class DetailedResultsDialog(ui_detailed_results_dialog.Ui_dlgDetailedResults, QDialog):
-    def __init__(self, resultMap, scenario, detector):
+    def __init__(self, resultMap, sim_context: SimContext):
         QDialog.__init__(self)
         self.setupUi(self)
         self.settings = RaseSettings()
-        self.headerLabels = ['File', 'Tp', 'Fn', 'Fp', 'Precision', 'Recall', 'Fscore', 'IDs']
+        self.headerLabels = [self.tr('File'), self.tr('Tp'), self.tr('Fn'), self.tr('Fp'), self.tr('Precision'),
+                             self.tr('Recall'), self.tr('Fscore'), self.tr('IDs')]
         self.NUM_COLS = len(self.headerLabels)
-        self.session = Session()
-        self.scenario = scenario
-        self.detector = detector
+        self.sim_context = sim_context
         self.tblDetailedResults.setContextMenuPolicy(Qt.CustomContextMenu)
         self.tblDetailedResults.setColumnCount(self.NUM_COLS)
         self.tblDetailedResults.setHorizontalHeaderLabels(self.headerLabels)
@@ -83,7 +82,7 @@ class DetailedResultsDialog(ui_detailed_results_dialog.Ui_dlgDetailedResults, QD
         """
         exports to CSV
         """
-        path = QFileDialog.getSaveFileName(self, 'Save File', self.settings.getDataDirectory(), 'CSV (*.csv)')
+        path = QFileDialog.getSaveFileName(self, self.tr('Save File'), self.settings.getDataDirectory(), 'CSV (*.csv)')
         if path[0]:
             with open(path[0], mode='w', newline='') as stream:
                 writer = csv.writer(stream)
@@ -121,7 +120,7 @@ class DetailedResultsDialog(ui_detailed_results_dialog.Ui_dlgDetailedResults, QD
         """
         Handles "Copy" right click selections on the table
         """
-        copy_action = QAction('Copy', self)
+        copy_action = QAction(self.tr('Copy'), self)
         menu = QMenu(self.tblDetailedResults)
         menu.addAction(copy_action)
         action = menu.exec_(self.tblDetailedResults.mapToGlobal(point))
@@ -134,12 +133,12 @@ class DetailedResultsDialog(ui_detailed_results_dialog.Ui_dlgDetailedResults, QD
         Listens for cell double click and launches sample spectra viewer
         """
         # FIXME: Note plotting order is guaranteed only if filenames of results files match sample spectra filenames
-        if count_files_endwith(get_sample_dir(self.settings.getSampleDirectory(), self.detector, self.scenario.id),
-                                 (".n42",)) > row:
-            SampleSpectraViewerDialog(self, self.scenario, self.detector, row).exec_()
+        if count_files_endwith(get_sample_dir(self.settings.getSampleDirectory(), self.sim_context.detector,
+                                              self.sim_context.scenario.id),('.n42',)) > row:
+            SampleSpectraViewerDialog(self, self.sim_context.scenario, self.sim_context.detector, row).exec_()
         else:
-            QMessageBox.information(self, 'Information', 'Unable to display spectra.<br>'
-                                                         'No sampled spectra available in native RASE format')
+            QMessageBox.information(self, self.tr('Information'), self.tr('Unable to display spectra.<br>No '
+                                               'sampled spectra available in native RASE format'))
 
     def closeSelected(self):
         """
