@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -33,6 +33,8 @@
 """
 This module allows user to create replay scenario
 """
+import os
+import yaml
 import re
 from itertools import product
 import numpy as np
@@ -57,8 +59,8 @@ from src.help_dialog import HelpDialog
 from src.neutrons import any_neutrons_in_db
 
 UNITS, MATERIAL, INTENSITY, INTENSITY_NEUTRON = 0, 1, 2, 3
-units_labels = {'DOSE': QCoreApplication.translate('scen_d', 'DOSE (\u00B5Sv/h)'),
-                'FLUX': QCoreApplication.translate('scen_d', 'FLUX (\u03B3/(cm\u00B2s))')}
+units_labels = {'DOSE': QCoreApplication.translate('label', 'DOSE (\u00B5Sv/h)'),
+                'FLUX': QCoreApplication.translate('label', 'FLUX (\u03B3/(cm\u00B2s))')}
 
 
 def RegExpSetValidator(parent=None, auto_s=False) -> QRegularExpressionValidator:
@@ -78,8 +80,11 @@ class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
         self.parent = parent
         self.setupUi(self)
 
+        self.default_shieldthicknessmessage = self.tr('Valid range of shield thicknesses: ')
         self.txtAcqTime.setToolTip(self.tr('Enter comma-separated values OR range as min-max:step OR range followed '
                                            'by comma-separated values'))
+        self.txtShieldThickness.setValidator(RegExpSetValidator(self.txtShieldThickness))
+        self.txtShieldThickness.validator().validationChanged.connect(self.handle_validation_change_shield)
         self.txtAcqTime.setValidator(RegExpSetValidator(self.txtAcqTime))
         self.txtAcqTime.validator().validationChanged.connect(self.handle_validation_change)
 
@@ -94,10 +99,12 @@ class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
         self.tblMaterial.setModel(self.modelMat)
         self.tblBackground.setModel(self.modelBgnd)
         self.lstInfluences.setModel(self.modelInfl)
-        self.model_lineedits = [self.txtAcqTime, self.txtReplication, self.txtComment]
+        self.model_lineedits = [self.txtAcqTime, self.txtReplication, self.txtComment, self.txtShieldThickness]
         self.tblMaterial.verticalHeader().setVisible(False)
         self.tblBackground.verticalHeader().setVisible(False)
         self.settings = RaseSettings()
+        self.shielding_config = self.set_shield_config()
+        self.set_shield_combobox()
         self.model.dataChanged.connect(self.scenarioChanged)  # enables "okay" if valid replication/acq_time
         for m in [self.model, self.modelMat, self.modelBgnd]:
             m.dataChanged.connect(self.updateScenariosList)
@@ -144,9 +151,16 @@ class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
                         self.modelInfl.index(inflidx, 0), QItemSelectionModel.Select)
 
         self.lstInfluences.selectionModel().selectionChanged.connect(self.handle_influence_select)
+
+        self.comboShieldMatSelect.currentIndexChanged.connect(self.update_shield_modelmaterial)
+        self.comboShieldMatSelect.currentIndexChanged.connect(self.update_shield_rangelabel)
+        self.comboShieldMatSelect.currentIndexChanged.connect(lambda x: self.handle_validation_change_shield(
+                        self.txtShieldThickness.validator().validate(self.txtShieldThickness.text(),0)[0]))
+        self.update_shield_rangelabel(0)
         self.txtComment.textChanged.connect(self.scenarioChanged)
         self.txtAcqTime.textChanged.connect(self.scenarioChanged)
         self.txtReplication.textChanged.connect(self.scenarioChanged)
+        self.txtShieldThickness.textChanged.connect(self.scenarioChanged)
 
         self.updateScenariosList()
 
@@ -156,9 +170,58 @@ class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
         if self.modelMat.any_neutrons_in_table() or self.modelBgnd.any_neutrons_in_table():
             self.set_neutrons_visible(True)
 
+    def set_shield_config(self):
+        if not os.path.isfile(self.settings.getShieldingPathConfig()):
+            QMessageBox.warning(self, self.tr('No shielding file'), self.tr(
+                'Shielding .yaml config file set in base spectra shielding configuration dialog does not exist.\n'
+                'You will be unable to apply shielding.'))
+            return None
+        with open(self.settings.getShieldingPathConfig(), mode='r') as file:
+            configs = yaml.safe_load(file)
+        return configs
+
+    def set_shield_combobox(self):
+        matset = set()
+        for channumdict in self.shielding_config.values():
+            if not isinstance(channumdict, dict):
+                continue
+            for detmatdict in channumdict.values():
+                for k, v in detmatdict.items():
+                    if isinstance(v, dict):
+                        matset.add(k)
+        self.comboShieldMatSelect.addItems(sorted(matset))
+        if self.model.shielding_material in matset:
+            self.comboShieldMatSelect.setCurrentText(self.model.shielding_material)
+
+    @Slot(int)
+    def update_shield_rangelabel(self, index):
+        minthick, maxthick = self.find_minmax_thick()
+        self.label_validthickrange.setText(self.default_shieldthicknessmessage + f'{minthick}cm-{maxthick}cm')
+
+    @Slot(int)
+    def update_shield_modelmaterial(self, index):
+        self.model.shielding_material = self.comboShieldMatSelect.currentText()
+
+    def find_minmax_thick(self):
+        def find_all_keys(d, target_key):
+            matches = set()
+            def recurse(obj):
+                if isinstance(obj, dict):
+                    for k, v in obj.items():
+                        if k == target_key:
+                            for key in v.keys():
+                                matches.add(float(key[:-2]))  # TODO: make sure we are dealing with cm or throw an error
+                        recurse(v)
+                elif isinstance(obj, list):
+                    for item in obj:
+                        recurse(item)
+            recurse(d)
+            return matches
+        thicknesses = find_all_keys(self.shielding_config, self.comboShieldMatSelect.currentText())
+        return min(thicknesses), max(thicknesses)
 
     def set_modelmap(self):
-        col_names = ['acq_time', 'replication', 'comment']
+        col_names = ['acq_time', 'replication', 'comment', 'shielding_thickness']
         for w, c in zip(self.model_lineedits, col_names):
             self.mapper.addMapping(w, self.model.column_dict[c])
 
@@ -178,13 +241,15 @@ class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
         linetexts = [lineedit.text() for lineedit in self.model_lineedits]
         # for scenario model (the line edits)
         for linetext, line_edit in zip(linetexts, self.model_lineedits):
+            line_edit.setFocus()
             column = self.model_lineedits.index(line_edit)
             self.model.setData(self.model.index(0, column), linetext, Qt.EditRole)
+        self.update_shield_modelmaterial(0)
         # for the table models
         for table, model in zip([self.tblMaterial, self.tblBackground], [self.modelMat, self.modelBgnd]):
             if table.indexWidget(table.currentIndex()) is not None:
                 model.setData(table.currentIndex(),
-                              table.indexWidget(table.currentIndex()).currentText(), Qt.EditRole)
+                              table.indexWidget(table.currentIndex()).text(), Qt.EditRole)
 
     def make_matDict(self, mats, m_dict):
         for mat in mats:
@@ -205,11 +270,26 @@ class ScenarioDialog(ui_create_scenario_dialog.Ui_ScenarioDialog, QDialog):
             # need to force this, setData isn't called for intermediate states
             self.model.set_attributes({'acq_time': self.txtAcqTime.text(),
                                        'replication': self.txtReplication.text(),
-                                        'comment': self.txtComment.text()})
+                                       'comment': self.txtComment.text(),
+                                       'shielding_material': self.comboShieldMatSelect.currentText(),
+                                       'shielding_thickness': self.txtShieldThickness.text()})
         elif state == QValidator.Acceptable:
             color = 'green'
-        sender = self.sender().parent()
-        sender.setStyleSheet(f'border: 2px solid {color}')
+        if self.sender() is not None:
+            self.sender().parent().setStyleSheet(f'border: 2px solid {color}')
+
+    def handle_validation_change_shield(self, state):
+        self.handle_validation_change(state)
+        try:
+            thicknesses = [float(f) for f in self.txtShieldThickness.text().split(',')]
+            minthick, maxthick = self.find_minmax_thick()
+            if min(thicknesses) < minthick or max(thicknesses) > maxthick:
+                self.label_validthickrange.setStyleSheet('color: red')
+            else:
+                self.label_validthickrange.setStyleSheet('')
+        except:
+            self.label_validthickrange.setStyleSheet('')
+
 
     @Slot()
     def scenarioChanged(self):
@@ -333,16 +413,36 @@ class ScenarioModel(QAbstractItemModel):
         self.setData(self.index(0, 1), value)
 
     @property
+    def replication(self):
+        return self.data(self.index(0, 1))
+    @replication.setter
+    def replication(self, value):
+        self.setData(self.index(0, 1), value)
+
+    @property
     def comment(self):
         return self.data(self.index(0, 2))
     @comment.setter
     def comment(self, value):
         self.setData(self.index(0, 2), value)
 
+    @property
+    def shielding_thickness(self):
+        return self.data(self.index(0, 3))
+    @shielding_thickness.setter
+    def shielding_thickness(self, value):
+        self.setData(self.index(0, 3), value)
+
+    @property
+    def shielding_material(self):
+        return self.data(self.index(0, 4))
+    @shielding_material.setter
+    def shielding_material(self, value):
+        self.setData(self.index(0, 4), value)
+
     def accept(self):
         session = Session()
         integrity_error = False
-        duplicate = False  #TODO: is this vestigial?
         error_message = None
         add_message = None
 
@@ -372,61 +472,62 @@ class ScenarioModel(QAbstractItemModel):
 
         # cartesian product to break out scenarios from scenario group
         for acqTime in self.getSet(self.acq_time):
-            if integrity_error or duplicate:
-                break
-            mm = product(*materials_doses[0])
-            bb = product(*materials_doses[1])
-            for mat_dose_arr, bckg_mat_dose_arr in product(mm, bb):
-                scenMaterials = [ScenarioMaterial(
-                    material=m, dose=float(d), fd_mode=u, neutron_dose=n) for u, m, d, n in mat_dose_arr]
-                bcgkScenMaterials = [ScenarioBackgroundMaterial(
-                    material=m, dose=float(d), fd_mode=u, neutron_dose=n) for u, m, d, n in bckg_mat_dose_arr]
-                scen_groups = []
-                try:
-                    for groupname in self.groups:
-                        scen_groups.append(
-                            session.query(ScenarioGroup).filter_by(name=groupname).first())
-                    if not scen_groups:
-                        scen_groups.append(session.query(ScenarioGroup).filter_by(name='default_group').first())
-                    # if just changing groups, add to new group without creating a new scenario
-                    # creating duplicate scenarios cause no conflicts with database anymore.
-                    # They simply overwrite the old scenario by doing an "OR" operation with
-                    # the scenario groups
-                    scen_hash = Scenario.scenario_hash(float(acqTime), scenMaterials,
-                                       bcgkScenMaterials, self.modelInfluences.selected_influences)
-                    scen_exists = session.query(Scenario).filter_by(id=scen_hash).first()
-                    add_groups = False
-                    if scen_exists:
-                        for group in scen_groups:
-                            if group not in scen_exists.scenario_groups:
-                                add_groups = True
-                                break
-                        all_groups = set(g.name for g in scen_exists.scenario_groups + scen_groups)
-                        if add_groups:
-                            self.add_groups_to_scen(scen_exists, all_groups)
-                            add_message = self.tr('At least one '
-                                                   'defined scenario is already in the database; '
-                                                   'adding scenario to additional groups.')
-                    else:
-                        session.add(Scenario(float(acqTime), self.replication, scenMaterials,
-                                 bcgkScenMaterials, list(self.modelInfluences.selected_influences),
-                                 scen_groups, self.comment))
-                except AttributeError:
-                    error_message = self.rollback_database(materials_doses, True)
-                except (IntegrityError, FlushError):
-                    error_message = self.rollback_database(materials_doses)
-                    integrity_error = True
+            for shield_thickness in self.getSet(self.shielding_thickness):
+                if not shield_thickness:
+                    self.shielding_material = ''
+                if integrity_error:
                     break
+                mm = product(*materials_doses[0])
+                bb = product(*materials_doses[1])
+                for mat_dose_arr, bckg_mat_dose_arr in product(mm, bb):
+                    scenMaterials = [ScenarioMaterial(
+                        material=m, dose=float(d), fd_mode=u, neutron_dose=n) for u, m, d, n in mat_dose_arr]
+                    bcgkScenMaterials = [ScenarioBackgroundMaterial(
+                        material=m, dose=float(d), fd_mode=u, neutron_dose=n) for u, m, d, n in bckg_mat_dose_arr]
+                    scen_groups = []
+                    try:
+                        for groupname in self.groups:
+                            scen_groups.append(
+                                session.query(ScenarioGroup).filter_by(name=groupname).first())
+                        if not scen_groups:
+                            scen_groups.append(session.query(ScenarioGroup).filter_by(name='default_group').first())
+                        # if just changing groups, add to new group without creating a new scenario
+                        # creating duplicate scenarios cause no conflicts with database anymore.
+                        # They simply overwrite the old scenario by doing an "OR" operation with
+                        # the scenario groups
+                        scen_hash = Scenario.scenario_hash(float(acqTime), scenMaterials,
+                                           bcgkScenMaterials, self.modelInfluences.selected_influences,
+                                           self.shielding_material, shield_thickness)
+                        scen_exists = session.query(Scenario).filter_by(id=scen_hash).first()
+                        add_groups = False
+                        if scen_exists:
+                            for group in scen_groups:
+                                if group not in scen_exists.scenario_groups:
+                                    add_groups = True
+                                    break
+                            all_groups = set(g.name for g in scen_exists.scenario_groups + scen_groups)
+                            if add_groups:
+                                self.add_groups_to_scen(scen_exists, all_groups)
+                                add_message = self.tr('At least one '
+                                                       'defined scenario is already in the database; '
+                                                       'adding scenario to additional groups.')
+                        else:
+                            session.add(Scenario(float(acqTime), self.replication, scenMaterials,
+                                     bcgkScenMaterials, list(self.modelInfluences.selected_influences),
+                                     scen_groups, self.shielding_material, shield_thickness, self.comment))
+                    except AttributeError:
+                        error_message = self.rollback_database(materials_doses, True)
+                    except (IntegrityError, FlushError):
+                        error_message = self.rollback_database(materials_doses)
+                        integrity_error = True
+                        break
         # if inputting a single scenario that already exists
         if not integrity_error:
-            if duplicate:
+            try:
+                session.commit()
+                return error_message, add_message
+            except (IntegrityError, FlushError):
                 error_message = self.rollback_database(materials_doses)
-            else:
-                try:
-                    session.commit()
-                    return error_message, add_message
-                except (IntegrityError, FlushError):
-                    error_message = self.rollback_database(materials_doses)
         return error_message, add_message
 
     def rollback_database(self, material_doses, attrib_error=False):
@@ -550,7 +651,7 @@ class ScenarioModel(QAbstractItemModel):
         @return:
         """
         for key, value in attributes.items():
-            self._data[key][0] = str(value)
+            self._data.loc[key,0] = str(value)
 
     def index(self, row, column, parent=QModelIndex()):
         if not parent.isValid() and row == 0:
@@ -566,7 +667,7 @@ class ScenarioModel(QAbstractItemModel):
         return QModelIndex()  # Flat structure, no parent
 
     def set_column_dict(self):
-        col_list = ['acq_time', 'replication', 'comment']
+        col_list = ['acq_time', 'replication', 'comment', 'shielding_thickness', 'shielding_material']
         return dict(zip(col_list, range(len(col_list))))
 
     def set_scenario_defaults(self):
@@ -574,32 +675,51 @@ class ScenarioModel(QAbstractItemModel):
         acqtime = '30'
         repl = '100'
         comment = ''
+        shielding_material = None
+        shielding_thickness = ''
         if self.duplicate_ids and isinstance(self.duplicate_ids, list):
             repl_list = []
             acqtime_list = []
             comment_list = []
+            shield_thick_list = []
             for duplicate_id in self.duplicate_ids:
                 scen = session.query(Scenario).filter_by(id=duplicate_id).first()
                 if scen:
+                    if scen.shielding_material is not None and shielding_material is None:
+                        shielding_material = scen.shielding_material
+                    if scen.shielding_material == shielding_material:
+                        shield_thick_list.append(str(scen.shielding_thickness or ''))
+                    else:
+                        continue
                     repl_list.append(scen.replication)
                     if str(scen.acq_time) not in acqtime_list:
                         acqtime_list.append(str(scen.acq_time))
                     if str(scen.comment) not in comment_list and str(scen.comment) != '':
                         comment_list.append(str(scen.comment))
+                    # only grab the first shielding material in the list
+                    # because there can only be one shield per scen
+
                 repl = str(max(repl_list))
                 acqtime = ','.join(acqtime_list) if len(acqtime_list) > 1 else acqtime_list[0]
                 if len(comment_list) == 0:
                     comment_list = ['']
                 comment = ', '.join(comment_list) if len(comment_list) > 1 else comment_list[0]
+                if shield_thick_list:
+                    shielding_thickness = ','.join(shield_thick_list) if len(shield_thick_list) > 1 else shield_thick_list[0]
+
         elif self.id and type(self.id) == str:
             scen = session.query(Scenario).filter_by(id=self.id).first()
             if scen:
                 repl = scen.replication
                 acqtime = scen.acq_time
                 comment = scen.comment
+                shielding_material = scen.shielding_material
+                shielding_thickness = str(scen.shielding_thickness or '')
         self._data.acq_time = acqtime
         self._data.replication = repl
         self._data.comment = str(comment)
+        self._data.shielding_material = shielding_material or 'Aluminum'
+        self._data.shielding_thickness = shielding_thickness
         self.update_scenario()
 
     def update_scenario(self):
@@ -671,11 +791,12 @@ class SourceTableModel(QAbstractTableModel):
                         duplications[scenmat.material_name][scenmat.fd_mode].append((str(scenmat.dose), str(scenmat.neutron_dose)))
         for material, matdict in duplications.items():
             for units, doses in matdict.items():
+                dose_set = sorted(set(doses))
                 row = (self._data == '').all(axis=1).idxmax()
                 self.setData(self.index(row, UNITS), units)
                 self.setData(self.index(row, MATERIAL), material)
-                self.setData(self.index(row, INTENSITY), ','.join(d[0] for d in doses))
-                self.setData(self.index(row, INTENSITY_NEUTRON), ','.join(d[1] for d in doses))
+                self.setData(self.index(row, INTENSITY), ','.join(d[0] for d in dose_set))
+                self.setData(self.index(row, INTENSITY_NEUTRON), ','.join(d[1] for d in dose_set))
 
     def setDataFromTable(self, data):
         """
@@ -856,7 +977,8 @@ class SourceTableModel(QAbstractTableModel):
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount(), self.columnCount() - 1))
 
     def any_neutrons_in_table(self):
-        return not self._data.iloc[:,INTENSITY_NEUTRON].isin(['0.0','']).all()
+        return sum([sum(float(q) for q in k.split(',') if q!='') for k in self._data.iloc[:, INTENSITY_NEUTRON]])
+
 
 class BgndTableModel(SourceTableModel):
     def __init__(self, data=None, id=None, duplicate_ids=None, *args, **kwargs):
@@ -1111,7 +1233,7 @@ class MaterialDoseDelegate(QItemDelegate):
         return comboEdit
 
 
-class ScenarioRange(ui_scenario_range_dialog.Ui_RangeDefinition, QDialog):
+class ScenarioRange(ui_scenario_range_dialog.Ui_ScenarioRangeDefinitionDialog, QDialog):
     def __init__(self, parent):
         QDialog.__init__(self, parent)
         self.points = []
@@ -1226,7 +1348,7 @@ class ScenarioRange(ui_scenario_range_dialog.Ui_RangeDefinition, QDialog):
 if __name__ == '__main__':
     from PySide6.QtWidgets import QApplication
     from src.rase import Rase
-    from src.rase_functions import delete_scenario
+    from src.rase_functions import delete_scenarios
     from src.rase_settings import RaseSettings
     import sys
 
@@ -1241,7 +1363,7 @@ if __name__ == '__main__':
     session = Session()
     scen = session.query(Scenario).filter_by(comment='TestComment').first()
     assert scen is not None
-    delete_scenario([scen.id], settings.getSampleDirectory())
+    delete_scenarios([scen.id], settings.getSampleDirectory())
     scen = session.query(Scenario).filter_by(comment='TestComment').first()
     assert scen is None
 

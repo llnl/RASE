@@ -30,7 +30,17 @@
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.mathjax']
+extensions = ['sphinx.ext.mathjax',
+              "sphinxcontrib.bibtex",
+              "sphinx.ext.todo",
+              ]
+
+bibtex_bibfiles = ["refs.bib"]
+
+# Optional: set a default style
+bibtex_default_style = "unsrt"   # "alpha" or "unsrt", "plain", "authoryear", etc.
+# Optional: per-reference formatting
+bibtex_reference_style = "label"  # or "author_year", etc.
 
 # numfig:
 # numfig_number_figures = True
@@ -50,7 +60,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'RASE'
-copyright = '2018-2024, Lawrence Livermore National Laboratory'
+copyright = '2018-2026, Lawrence Livermore National Laboratory'
 author = 'LLNL'
 
 # The version info for the project you're documenting, acts as replacement for

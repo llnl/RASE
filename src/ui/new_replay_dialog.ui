@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>717</width>
-    <height>559</height>
+    <height>585</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -154,7 +154,7 @@
              <string>Enter the command line options here. INPUTDIR and OUTPUTDIR tags are automatically converted by RASE to the proper folder paths</string>
             </property>
             <property name="text">
-             <string>INPUTDIR OUTPUTDIR</string>
+             <string notr="true">INPUTDIR OUTPUTDIR</string>
             </property>
             <property name="placeholderText">
              <string/>
@@ -209,7 +209,7 @@
              <string>Suffix of the filename expected by the replay tool (e.g. &quot;_U.n42&quot;).</string>
             </property>
             <property name="text">
-             <string>.n42</string>
+             <string notr="true">.n42</string>
             </property>
            </widget>
           </item>
@@ -261,7 +261,7 @@
              <string>Enter the command line options here. INPUTDIR and OUTPUTDIR tags are automatically converted by RASE to the proper folder paths</string>
             </property>
             <property name="text">
-             <string>INPUTDIR OUTPUTDIR </string>
+             <string notr="true">INPUTDIR OUTPUTDIR </string>
             </property>
            </widget>
           </item>
@@ -322,10 +322,10 @@
           </size>
          </property>
          <property name="text">
-          <string>https://full-spectrum.sandia.gov/</string>
+          <string notr="true">https://full-spectrum.sandia.gov/</string>
          </property>
          <property name="cursorPosition">
-          <number>0</number>
+          <number>33</number>
          </property>
         </widget>
        </item>

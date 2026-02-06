@@ -3,6 +3,53 @@ import scipy.interpolate
 import scipy.ndimage
 
 
+def rebin(counts, oldEnergies, newEcal):
+    """
+    Rebins a list ouf counts to a new energy calibration.
+
+    :param counts:      numpy array ouf counts indexed by channel
+    :param oldEnergies: numpy array of energies indexed by channel
+    :param newEcal:     list of new energy polynomial coefficents to rebin to: [E3 E2 E1 E0]
+    :return:            numpy array of rebinned counts
+    """
+    newEnergies = np.polyval(np.flip(newEcal), np.arange(len(counts)+1))
+    newCounts   = np.zeros(len(counts))
+
+    # move old energies index to first value greater than the first value in newEnergies
+    oe = 0 # will always lead ne in energy boundary value
+    while oe < len(oldEnergies) and oldEnergies[oe] <= newEnergies[0]: oe += 1
+    ne0 = 0
+    while newEnergies[ne0] <= oldEnergies[oe]:
+        ne0 += 1
+
+    # loop through and distribute old counts into new bins
+    for ne in range(ne0, len(newCounts)):
+        if oe == len(oldEnergies): break  # have already distributed all old counts
+
+        # if no old energy boundaries within this new bin, new bin is fraction of old bin
+        if oldEnergies[oe] > newEnergies[ne + 1]:
+            newCounts[ne] = counts[oe - 1] * (newEnergies[ne + 1] - newEnergies[ne]) \
+                            / (oldEnergies[oe] - oldEnergies[oe - 1])
+
+        # else there are old energy boundaries in this new bin: add each portion of old bins
+        else:
+            # Step 1: add first partial(or full) old bin
+            # TODO: This will crash if (oldEnergies[oe] - oldEnergies[oe-1]) < 0; might be necessary to handle this?
+            newCounts[ne] = counts[oe-1] * (oldEnergies[oe] - newEnergies[ne]) \
+                            / (oldEnergies[oe] - oldEnergies[oe-1])
+            oe += 1
+
+            # Step 2: add middle full old bins
+            while oe < len(oldEnergies) and oldEnergies[oe] <= newEnergies[ne+1]:
+                newCounts[ne] += counts[oe-1]
+                oe += 1
+            if oe == len(oldEnergies): break
+
+            # Step 3: add last partial old bin
+            newCounts[ne] += counts[oe-1] * (newEnergies[ne+1] - oldEnergies[oe-1]) \
+                             / (oldEnergies[oe] - oldEnergies[oe-1])
+    return newCounts
+
 
 def integral_rebin(a, old_range, newdim, new_range, highnoise=0, sample_highnoise=False):
     a_integral = np.concatenate(([0.,],np.cumsum(a)))
@@ -126,9 +173,6 @@ def congrid(a, newdims, method='linear', centre=False, minusone=False):
         newa = scipy.ndimage.map_coordinates(a, newcoords)
         return newa
     else:
-        print('''
-        Congrid error: Unrecognized interpolation type.
-        Currently only 'neighbour', 'nearest\,'linear',
-        and 'spline' are supported.
-        ''')
+        print('Congrid error: Unrecognized interpolation type. Currently only "neighbour", "nearest", "linear", '
+              'and "spline" are supported.')
         return None

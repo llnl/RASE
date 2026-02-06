@@ -446,6 +446,9 @@ Replay Results...</string>
     <addaction name="actionBase_Spectra_Creation_Wizard"/>
     <addaction name="actionShielded_Base_Spectra_Creation"/>
     <addaction name="actionAutomated_Scurve"/>
+    <addaction name="actionTemplate_Converter"/>
+    <addaction name="actionRemove_Isotope_ID_Results_from_Files"/>
+    <addaction name="actionResync_File_View"/>
     <addaction name="actionDynamic_Scenarios_under_development"/>
    </widget>
    <addaction name="menuFile"/>
@@ -561,6 +564,26 @@ Replay Results...</string>
   <action name="actionShielded_Base_Spectra_Creation">
    <property name="text">
     <string>Shielded Base Spectra Creation</string>
+   </property>
+  </action>
+  <action name="actionTemplate_Converter">
+   <property name="text">
+    <string>Spectrum Template Converter</string>
+   </property>
+  </action>
+  <action name="actionRemove_Isotope_ID_Results">
+   <property name="text">
+    <string>Remove Isotope ID Results from File</string>
+   </property>
+  </action>
+  <action name="actionRemove_Isotope_ID_Results_from_Files">
+   <property name="text">
+    <string>Remove Isotope ID Results from Files</string>
+   </property>
+  </action>
+  <action name="actionResync_File_View">
+   <property name="text">
+    <string>Resync Data Files View</string>
    </property>
   </action>
  </widget>

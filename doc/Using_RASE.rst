@@ -1,8 +1,7 @@
 .. _using_rase:
 
-***********************
-Using the RASE Software
-***********************
+Using the RASE software
+=======================
 
 .. toctree::
    :maxdepth: 2

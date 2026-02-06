@@ -5,8 +5,8 @@ shield_configs: shielding_library/FinalShieldingConfigs
   PVT_1.5x14x70:
     ecals: [ 0, 6, 0, 0 ]
     null_inv: Null_0_6_0_bins512_responsed512_0.05_inverted.npz
-    PVT_1.5x14x70: PVT_1.5x14x70_bestresolution_0_6_0_bins512_responsed512_specs.csv
-    PVT_1.5x14x70_inv: PVT_1.5x14x70_bestresolution_0_6_0_bins512_responsed512_0.05_inverted.csv
+    PVT_1.5x14x70: PVT_1.5x14x70_bestresolution_0_6_0_bins512_responsed512_specs.npz
+    PVT_1.5x14x70_inv: PVT_1.5x14x70_bestresolution_0_6_0_bins512_responsed512_0.05_inverted.npz
     Polyethylene:
       0.12cm: Null_0_6_0_bins512_responsed512_0.12cmPoly_specs.npz
       0.26cm: Null_0_6_0_bins512_responsed512_0.26cmPoly_specs.npz

@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -34,17 +34,17 @@
 This module allows user to input seed for Random Number Generation to ensure reproducible
 validation results
 """
+import os, yaml
 
 from PySide6.QtCore import Slot, QRegularExpression, QSize, Qt, QCoreApplication
-from PySide6.QtWidgets import QDialog, QDialogButtonBox, QTableView, QSizePolicy, QVBoxLayout
+from PySide6.QtWidgets import QDialog, QDialogButtonBox, QTableView, QSizePolicy, QVBoxLayout, QMessageBox
 from PySide6.QtGui import QRegularExpressionValidator
 
+from src.qt_utils import Translatable
 from src.rase_settings import RaseSettings
 from src.ui_generated import ui_auto_scurve
 from src.table_def import Session, Detector
-from src.scenario_dialog import BgndTableModel, UNITS, MATERIAL, INTENSITY, MaterialDoseDelegate
-
-# translation_tag = 'auto_sd'
+from src.scenario_dialog import BgndTableModel, UNITS, MATERIAL, INTENSITY, INTENSITY_NEUTRON, MaterialDoseDelegate, units_labels
 
 
 class AutomatedSCurve(ui_auto_scurve.Ui_AutoSCurveDialog, QDialog):
@@ -53,6 +53,7 @@ class AutomatedSCurve(ui_auto_scurve.Ui_AutoSCurveDialog, QDialog):
         self.Rase = parent
         self.settings = RaseSettings()
         self.setupUi(self)
+        self.label_bgndrequired.hide()
         self.setWindowTitle(self.tr('Automated S-Curve Generation'))
         self.session = Session()
         self.model = SCurveModel(model)
@@ -77,13 +78,18 @@ class AutomatedSCurve(ui_auto_scurve.Ui_AutoSCurveDialog, QDialog):
                                 r'((((\d+\.\d*)|(\d*\.\d+))|(\d+))((((,\d*\.\d+)|(,\d+\.\d*))|(,\d+))*)(,|,\.)?)')))
         self.line_lowerbound.setValidator(QRegularExpressionValidator(QRegularExpression(r'((\d*\.\d*)|(\d*))')))
         self.line_upperbound.setValidator(QRegularExpressionValidator(QRegularExpression(r'((\d*\.\d*)|(\d*))')))
+        self.line_sourceintensity.setValidator(QRegularExpressionValidator(QRegularExpression(r'((\d*\.\d*)|(\d*))')))
+        self.line_shieldthick.setValidator(QRegularExpressionValidator(QRegularExpression(r'((\d*\.\d*)|(\d*))')))
 
         # connections
         self.combo_inst.currentTextChanged.connect(self.updateMaterials)
         self.combo_inst.currentTextChanged.connect(self.updateSelection)
         self.combo_inst.currentTextChanged.connect(self.setReplayItems)
+        self.combo_inst.currentTextChanged.connect(self.updateBgndWarning)
         self.combo_replay.currentTextChanged.connect(self.updateSelection)
-        self.combo_mat.currentTextChanged[str].connect(lambda mat: self.updateUnits(mat, self.combo_matdose))
+        self.combo_scurvetype.currentTextChanged.connect(self.updateTypeSettings)
+        self.combo_sourcemat.currentTextChanged[str].connect(lambda mat: self.updateUnits(mat, self.combo_matdose))
+        self.combo_shieldmat.currentTextChanged.connect(self.enableThickness)
         self.btn_bgnd.clicked.connect(self.defineBackground)
 
         # Confirm enables
@@ -117,9 +123,9 @@ class AutomatedSCurve(ui_auto_scurve.Ui_AutoSCurveDialog, QDialog):
         if self.model.instrument != '' and self.model.instrument in [self.combo_inst.itemText(i)
                                                          for i in range(self.combo_inst.count())]:
             self.combo_inst.setCurrentText(self.model.instrument)
-        if self.model.source != '' and self.model.source in [self.combo_mat.itemText(i) for i
-                                                                 in range(self.combo_mat.count())]:
-            self.combo_mat.setCurrentText(self.model.source)
+        if self.model.source != '' and self.model.source in [self.combo_sourcemat.itemText(i) for i
+                                                                 in range(self.combo_sourcemat.count())]:
+            self.combo_sourcemat.setCurrentText(self.model.source)
         if self.model.source_fd != '' and self.model.source_fd in [self.combo_matdose.itemText(
                 i).split()[0] for i in range(1, self.combo_matdose.count())]:
             if self.model.source_fd == 'FLUX':
@@ -171,31 +177,63 @@ class AutomatedSCurve(ui_auto_scurve.Ui_AutoSCurveDialog, QDialog):
                    self.combo_replay.addItem(replay.name, replay)
 
     @Slot(str)
+    def updateBgndWarning(self, detName):
+        """Updates a warning indicating that the chosen detector explicitly requires a background"""
+        #TODO 250728: actually check to make sure background is set before allowing user to click okay
+        self.label_bgndrequired.hide()
+        detector = self.session.query(Detector).filter_by(name=detName).first()
+        if detector.includeSecondarySpectrum and detector.secondary_type == 1:
+            self.label_bgndrequired.show()
+
+    @Slot(str)
     def updateMaterials(self, detName):
         """
         Updates the possible material selection based on the selected instrument.
         Also identify the name of the replay associated with the chosen detector
         and set it for S-curve processing
         """
-        self.combo_mat.clear()
-        self.combo_mat.addItem('')
+        self.combo_sourcemat.clear()
+        self.combo_sourcemat.addItem('')
 
         if not detName.strip():
-            self.combo_mat.setCurrentIndex(0)
-            self.combo_mat.setEnabled(False)
+            self.combo_sourcemat.setCurrentIndex(0)
+            self.combo_sourcemat.setEnabled(False)
             self.btn_bgnd.setEnabled(False)
         else:
-            self.combo_mat.setEnabled(True)
+            self.combo_sourcemat.setEnabled(True)
             self.btn_bgnd.setEnabled(True)
             det = self.combo_inst.currentData()
             for baseSpectrum in sorted(det.base_spectra, key=lambda x: x.material.name):
-                self.combo_mat.addItem(baseSpectrum.material.name)
+                self.combo_sourcemat.addItem(baseSpectrum.material.name)
+            if det.shielding_drf:
+                self.set_combo_shieldmat(det)
+            det_materials = [m.material_name for m in det.base_spectra]
+            model_data_mats = self.bgnd_model.model_data.iloc[:,:2]
+            for index in range(model_data_mats.shape[0]):
+                info = tuple(model_data_mats.iloc[index])
+                if info[1] == '':
+                    continue
+                if info[1] not in det_materials:
+                    # TODO 250728: check to make sure correct flux/dose units are present
+                    for i in range(self.bgnd_model.columnCount()):
+                        self.bgnd_model.setData(self.bgnd_model.index(index, i), '')
 
     @Slot(str)
     def updateSelection(self, text):
         self.detector = self.combo_inst.currentData()
         self.replay = self.combo_replay.currentData()
         self.bgnd_model.detector_selection = self.detector.name
+
+    def set_combo_shieldmat(self, det):
+        self.combo_shieldmat.clear()
+        self.combo_shieldmat.addItem('None')
+        if not os.path.isfile(self.settings.getShieldingPathConfig()):
+            QMessageBox.warning(self, self.tr('Cannot find shielding configuration file'),
+                                self.tr('Make sure you have a shielding file set.'))
+        with open(self.settings.getShieldingPathConfig(), mode='r') as file:
+            config = yaml.safe_load(file)
+        self.combo_shieldmat.addItems(list(k for k in config[det.chan_count][det.shielding_drf].keys() if
+                          type(config[det.chan_count][det.shielding_drf][k]) == dict))
 
     def updateUnits(self, matName, combobox):
         """
@@ -219,6 +257,55 @@ class AutomatedSCurve(ui_auto_scurve.Ui_AutoSCurveDialog, QDialog):
                         if combobox.count() == 2:       # dose is default
                             combobox.setCurrentIndex(1)
 
+    def updateTypeSettings(self):
+        """
+        Sets the various things in the auto S-curve window based on the the S-curve type selection
+        :return:
+        """
+        # index = 0: vary source flux/dose mode
+        # index = 1: vary shield thickness mode
+        # source intensity mode
+        if self.combo_scurvetype.currentIndex() == 0:
+            self.line_shieldthick.clear()
+            self.line_shieldthick.setText('0')
+            self.line_sourceintensity.clear()
+            self.line_sourceintensity.setText('Varying')
+            self.model.default_values['min_guess'] = 0.00000001
+            self.model.default_values['max_guess'] = 0.001
+            self.setDefaultMin()
+            self.setDefaultMax()
+            self.check_invert.setChecked(False)
+        # shield thickness mode
+        else:
+            self.line_sourceintensity.setText('0.1')
+            self.line_shieldthick.clear()
+            self.line_shieldthick.setText('Varying')
+            self.model.default_values['min_guess'] = 0.1
+            self.model.default_values['max_guess'] = 1.0
+            self.setDefaultMin()
+            self.setDefaultMax()
+            self.check_invert.setChecked(True)
+            # self.combo_shieldmat.setCurrentText('None')
+        self.label_sourceintensity.setEnabled(self.combo_scurvetype.currentIndex() != 0) # can manually set in shield mode
+        self.line_sourceintensity.setEnabled(self.combo_scurvetype.currentIndex() != 0)
+        self.label_shieldthick.setEnabled(self.combo_scurvetype.currentIndex() == 0) # can manually set in intensity mode
+        self.line_shieldthick.setEnabled(self.combo_scurvetype.currentIndex() == 0)
+        self.enableThickness()
+
+    def enableThickness(self):
+        #TODO: make sure the line edit activates appropriately
+        if self.combo_shieldmat.currentText() == 'None' or self.combo_shieldmat.currentText() == '':
+            if self.line_shieldthick.text() != 'Varying':
+                self.line_shieldthick.clear()
+            self.label_shieldthick.setEnabled(False)
+            self.line_shieldthick.setEnabled(False)
+        else:
+            if self.combo_scurvetype.currentIndex() == 1:
+                self.label_shieldthick.setEnabled(False)
+                self.line_shieldthick.setEnabled(False)
+            else:
+                self.label_shieldthick.setEnabled(True)
+                self.line_shieldthick.setEnabled(True)
 
     @Slot(str)
     def enableOk(self, intensity):
@@ -371,6 +458,15 @@ class AutomatedSCurve(ui_auto_scurve.Ui_AutoSCurveDialog, QDialog):
                                                     selected_detname=self.bgnd_model.detector_selection,
                                                     auto_s=True,
                                                     tables=[self.bgnd_model]))
+
+        visible = False
+        detector = self.session.query(Detector).filter_by(name=self.combo_inst.currentText()).first()
+        for spectrum in detector.base_spectra:
+            if spectrum.neutrons > 0:
+                visible = True
+                break
+        tblBackground.setColumnHidden(INTENSITY_NEUTRON, not visible)
+
         # button box
         buttonBox = QDialogButtonBox(dialog)
         buttonBox.setObjectName(u'buttonBox')
@@ -384,7 +480,7 @@ class AutomatedSCurve(ui_auto_scurve.Ui_AutoSCurveDialog, QDialog):
         dialog.resize(430, 250)
         dialog.setWindowTitle(self.tr('Set static background for {}.').format(self.bgnd_model.detector_selection))
 
-        return dialog.exec_()
+        return dialog.exec()
 
     @Slot()
     def accept(self):
@@ -394,13 +490,19 @@ class AutomatedSCurve(ui_auto_scurve.Ui_AutoSCurveDialog, QDialog):
             addpoints = []
         self.model.instrument = self.detector.name
         self.model.replay = self.replay.name
-        self.model.source = self.combo_mat.currentText()
+        self.model.curve_type = self.combo_scurvetype.currentIndex()
+        self.model.results_type = self.combo_resulttype.currentText()
+        self.model.invert_curve = self.check_invert.isChecked()
+        self.model.source = self.combo_sourcemat.currentText()
         self.model.source_fd = self.combo_matdose.currentText().split()[0]
+        self.model.source_intensity = float(self.line_sourceintensity.text()) if (self.line_sourceintensity.text() and
+                                                          self.line_sourceintensity.text() != 'Varying') else None
+        self.model.shield_material = self.combo_shieldmat.currentText() if self.combo_shieldmat.currentText() != 'None' else ''
+        self.model.shield_thickness = float(self.line_shieldthick.text()) if (self.line_shieldthick.text() and
+                                                          self.line_shieldthick.text() != 'Varying') else 0
         self.model.background = [list(row) for row in self.bgnd_model.model_data.to_numpy() if not '' in row[:3]]
         self.model.dwell_time = float(self.line_dwell.text())
-        self.model.results_type = self.combo_resulttype.currentText()
         self.model.input_reps = int(self.line_rep.text())
-        self.model.invert_curve = self.check_invert.isChecked()
 
         self.model.rise_points = int(self.line_edge.text())
         self.model.end_points = int(self.line_ends.text())
@@ -419,17 +521,21 @@ class AutomatedSCurve(ui_auto_scurve.Ui_AutoSCurveDialog, QDialog):
         return QDialog.accept(self)
 
 
-class SCurveModel:
+class SCurveModel(Translatable):
     def __init__(self, model=None):
         self.default_values = {'instrument': None,
                                'replay': None,
+                               'curve_type': 0,
+                               'results_type': 'PID',
+                               'invert_curve': False,
                                'source': None,
                                'source_fd': None,
+                               'source_intensity': None,
+                               'shield_material': '',
+                               'shield_thickness': 0,
                                'background': [],
                                'dwell_time': 30,
                                'input_reps': 100,
-                               'results_type': 'PID',
-                               'invert_curve': False,
                                'rise_points': 5,
                                'end_points': 3,
                                'min_guess': 0.00000001,
@@ -437,7 +543,7 @@ class SCurveModel:
                                'repetitions': 10,
                                'add_points': '',
                                'cleanup': False,
-                               'custom_name': QCoreApplication.translate('auto_sd', '[Default]'),
+                               'custom_name': self.tr('[Default]'),
                                'num_points': 6,
                                'lower_bound': 0.1,
                                'upper_bound': 0.9
@@ -452,13 +558,17 @@ class SCurveModel:
     def accept(self):
         input_d = {'instrument': self.instrument,
                     'replay': self.replay,
+                    'curve_type': self.curve_type,
+                    'results_type': self.results_type,
+                    'invert_curve': self.invert_curve,
                     'source': self.source,
                     'source_fd': self.source_fd,
+                    'source_intensity': self.source_intensity,
+                    'shield_material': self.shield_material,
+                    'shield_thickness': self.shield_thickness,
                     'background': self.background,
                     'dwell_time': self.dwell_time,
-                    'results_type': self.results_type,
                     'input_reps': self.input_reps,
-                    'invert_curve': self.invert_curve
                     }
         input_a = {'rise_points': self.rise_points,
                    'min_guess': self.min_guess,

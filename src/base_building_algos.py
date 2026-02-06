@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -30,13 +30,15 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ###############################################################################
+import itertools
 
 from PySide6.QtCore import QCoreApplication
-from typing import Union
+from typing import Union, Self
 from lxml import etree
 from src import rase_functions as Rf
 from src import spectrum_file_reading as reading
-from src.rase_functions import get_ET_from_file, rebin
+from src.rase_functions import get_ET_from_file, compress_counts
+from src.rebin import rebin
 from src.utils import indent
 import numpy
 import re
@@ -45,6 +47,9 @@ from glob import glob
 from mako.template import Template
 from src.table_def import SecondarySpectrum
 from src.spectrum_file_reading import readSpectrumFile, BaseSpectraFormatException
+from types import SimpleNamespace
+import numpy as np
+from dataclasses import dataclass
 
 # translation_tag = 'bba'
 
@@ -122,6 +127,65 @@ pcf_config = {
             'subtraction_spectrum_xpath': './RadMeasurement/Spectrum',
         }
 }
+
+
+@dataclass
+class rawValues:  #TODO: add neutron sensitivity
+    counts: np.ndarray
+    realtime: float
+    livetime: float
+    ecal: tuple[4]
+    secondaries: dict
+    additional: str
+    RASE_sens: str
+    FLUX_sens: str
+    uSievertsph: float
+    fluxValue: float
+
+    def __add__(self, other: Self):
+
+        realtime = self.realtime+other.realtime
+        livetime = self.livetime+other.livetime
+        ecal=self.ecal
+        if not np.all(other.ecal == ecal):
+            counts = self.counts + rebin_from_cal(other.counts, other.ecal, ecal)
+        else:
+            counts = self.counts + other.counts
+        secondaries = self.secondaries
+        additional = self.additional
+        weighted_uSievertsph = (self.uSievertsph*self.livetime + other.uSievertsph*other.livetime) / livetime if self.uSievertsph and other.uSievertsph else None
+        weighted_Flux = (self.fluxValue*self.livetime + other.fluxValue*other.livetime) / livetime if self.fluxValue and other.fluxValue else None
+        RASE_sens, FLUX_sens = sensitivity_text(counts, livetime, weighted_uSievertsph, weighted_Flux)
+
+        output = rawValues(counts= counts,realtime=realtime, livetime=livetime, ecal=ecal, secondaries=secondaries ,
+                           additional=additional , RASE_sens=RASE_sens, FLUX_sens=FLUX_sens,
+                           uSievertsph=weighted_uSievertsph, fluxValue=weighted_Flux)
+
+        return output
+
+    def background_subtract(self, other):
+        if (other.ecal != self.ecal).any():
+            counts_other = rebin_from_cal(other.counts, other.ecal, self.ecal)
+        else:
+            counts_other = other.counts
+        counts = subtract_spectra(counts_m=self.counts, livetime_m=self.livetime, counts_b=counts_other, livetime_b=other.livetime)
+
+        output = rawValues(counts=counts, realtime=self.realtime, livetime=self.livetime, ecal=self.ecal, secondaries=self.secondaries,
+                           additional=self.additional, RASE_sens=self.RASE_sens, FLUX_sens=self.FLUX_sens,
+                           uSievertsph=self.uSievertsph, fluxValue=self.fluxValue)
+        return output
+
+def rawvalues_from_basespec(spectrum):
+    return rawValues(counts=spectrum.counts, realtime = spectrum.realtime,
+                     livetime=spectrum.livetime, ecal=(spectrum.ecal0, spectrum.ecal1, spectrum.ecal2, spectrum.ecal3),
+                     secondaries=dict(), additional='', RASE_sens=spectrum.rase_sensitivity,
+                     FLUX_sens=spectrum.flux_sensitivity, uSievertsph=1 if spectrum.rase_sensitivity else 0,
+                     fluxValue=1 if spectrum.flux_sensitivity else 0)
+
+def rebin_from_cal(counts, old_cal, new_cal):
+    old_energies = numpy.polyval(numpy.flip(old_cal), numpy.arange(len(counts) + 1))
+    return rebin(counts, old_energies, new_cal)
+
 
 
 def uncompressCountedZeroes(counts):
@@ -231,6 +295,7 @@ def sensitivity_text(counts, livetime, uSievertsph=None, fluxValue=None, ):
     @return:
     """
     # TODO: Make so that if the user puts nothing in dose or flux an error gets thrown
+    # TODO: refactor to separate out text formatting and value extraction
     RASE_sensitivity = ''
     FLUX_sensitivity = ''
     if uSievertsph:
@@ -245,62 +310,70 @@ def sensitivity_text(counts, livetime, uSievertsph=None, fluxValue=None, ):
         FLUX_sensitivity = f'<FLUX_Sensitivity>{Rsens}</FLUX_Sensitivity>'
     return RASE_sensitivity, FLUX_sensitivity
 
+def get_ET_values(ET, measureXPath, realtimeXPath, livetimeXPath,
+                  calibration, additionals=[], secondaries_dict=None,
+                  uSievertsph=None, fluxValue=None, transform=None, ndetectors=1):
 
-def build_base_ET(ET, measureXPath, realtimeXPath, livetimeXPath,
-                  subtraction_ET, subtractionXpath, additionals=[], secondaries_dict=None,
-                  uSievertsph=None, fluxValue=None, transform=None, ndetectors=1, additional_meas=None,
-                  additional_liv=None, ecal_baselines=None, master_ecal=None):
+    specElements = ET.xpath(measureXPath)
 
-    measpaths = [measureXPath] + additional_meas if type(additional_meas) == list else [measureXPath]
-    livpaths = [livetimeXPath] + additional_liv if type(additional_liv) == list else [livetimeXPath]
-    subpaths = [subtractionXpath]
+    assert len(specElements), f'Found nothing at the measurement_spectrum_xpath: {measureXPath}'
 
-    sumcounts_arr = []
-    sumlivetimes_arr = []
+    livetimes = ET.xpath(livetimeXPath)
 
-    for mpath, lpath in zip(measpaths, livpaths):
-        specElements = ET.xpath(mpath)
-        livetimes = ET.xpath(lpath)
-        countslist = []
-        for specElement, livetimeElement in zip(specElements, livetimes):
-            counts = get_counts(specElement)
-            if transform:
-                counts = transform(counts)
-            countslist.append(counts)
+    #do calibration first, so we can sum spectra later if needed
+    try:
+        if '@id="FromSpectrum"' in calibration:
+            ecals = []
+            for spectrum in specElements:
+                ecaltag = spectrum.attrib['energyCalibrationReference']
+                this_cal_xpath = calibration.replace("FromSpectrum", ecaltag)
+                this_cal_els = ET.xpath(this_cal_xpath)
+                assert len(this_cal_els)==1, f'Zero or more than one calibration found using @id="FromSpectrum" mode, found { len(this_cal_els)}'
+                ecals.append(this_cal_els[0].text)
+        else: #most typical case
+            ecals = [el.text for el in ET.xpath(calibration)]
 
-        sumcounts_arr.append(numpy.array([0 if c < 0 else c for c in sum(countslist)]))
-        sumlivetimes_arr.append(sum([Rf.ConvertDurationToSeconds(livetime.text) for livetime in livetimes]) / ndetectors)
+        ecalsvals = [[ float(coeff) for coeff in ecal.split()] for ecal in ecals]
+        ecals = np.zeros((len(ecalsvals),4))
+        for a,l in zip(ecals,ecalsvals):
+            a[:len(l)] += l
+    except (TypeError, etree.XPathError):
+        try:
+            calibration = [float(coeff) for coeff in calibration.split()]
+        except AttributeError:
+            pass
+        ecals = np.zeros(1, 4)
+        ecals[:len(calibration)]+= calibration
 
-    livetime_sum_s = sum(sumlivetimes_arr)
-    sumcounts = numpy.zeros(len(sumcounts_arr[0]))
-    template_ecal = ' '.join([str(k) for k in master_ecal[0]])
+    except (IndexError):
+        raise ValueError("Calibration XPath does not resolve to any element in input XML. "
+                         "Please check base building config file and compare to the input XML.")
 
-    for counts, ecals in zip(sumcounts_arr, ecal_baselines):
-        old_ecal = ecals
-        old_ecal = old_ecal + [0.] * (4 - len(old_ecal))
-        old_energies = numpy.polyval(numpy.flip(old_ecal), numpy.arange(len(sumcounts) + 1))
-        sumcounts += rebin(counts, old_energies,  master_ecal[0])
+    assert len(ecals) in [1, len(specElements)], f'Found {len(ecals)} calibrations, different than {len(specElements)} spectra. Check config file'
 
-    if subtraction_ET:
-        specElement_b = subtraction_ET.xpath(subpaths[0])[0]
-        specElement_b_counts = get_counts(specElement_b)
-        livetime_bg = get_livetime(specElement_b)
-        sumcounts = subtract_spectra(sumcounts, livetime_sum_s, specElement_b_counts, livetime_bg)
+    sumcounts = 0
 
-    sumcounts = numpy.array([0 if c < 0 else c for c in sumcounts])
+    for specElement, ecal in zip(specElements, itertools.cycle(ecals)):
+        #itertools.cycle(ecals) handles case where there's just one ecal, repeating that one value for all specs
+        counts = get_counts(specElement)
+        if transform:
+            counts = transform(counts)
+        if not np.all(ecal == ecals[0]): #all checks all 4 coeffs
+            counts = rebin_from_cal(counts, ecal, ecals[0])
+        sumcounts = counts + sumcounts # sums everything up, works OK on first iteration
 
-    if all(sumcounts.astype(float) == sumcounts.astype(int)):
-        # TODO: Make a switch to decide whether int or float
-        countstxt = ' '.join(f'{round(count)}' for count in sumcounts)
-    else:
-        countstxt = ' '.join(f'{count:.4f}' for count in sumcounts)
+    livetime_sum = sum([Rf.ConvertDurationToSeconds(livetime.text) for livetime in livetimes]) / ndetectors
+
+    # if subtraction_ET:
+    #     specElement_b = subtraction_ET.xpath(subtractionXpath)[0]
+    #     specElement_b_counts = get_counts(specElement_b)
+    #     livetime_bg = get_livetime(specElement_b)
+    #     sumcounts = subtract_spectra(sumcounts, livetime_sum_s, specElement_b_counts, livetime_bg)
 
     realtimes = ET.xpath(realtimeXPath)  # assumes realtime is a property of the radmeasurement
     realtime_sum_s = sum([Rf.ConvertDurationToSeconds(realtime.text) for realtime in realtimes])  # usually there's only one realtime
-    realtime_sum_txt = Rf.ConvertSecondsToIsoDuration(realtime_sum_s)
-    livetime_sum_txt = Rf.ConvertSecondsToIsoDuration(livetime_sum_s)
 
-    RASE_sensitivity, FLUX_sensitivity = sensitivity_text(sumcounts, livetime_sum_s, uSievertsph, fluxValue)
+    RASE_sensitivity, FLUX_sensitivity = sensitivity_text(sumcounts, livetime_sum, uSievertsph, fluxValue)
 
     additional = ''
     if additionals:
@@ -329,10 +402,58 @@ def build_base_ET(ET, measureXPath, realtimeXPath, livetimeXPath,
     pattern = r' radDetectorInformationReference="[^"]+"'
     additional = re.sub(pattern, '', additional)
 
-    makotemplate = Template(text=base_template, input_encoding='utf-8')
+    output=rawValues(counts=sumcounts, realtime=realtime_sum_s, livetime=livetime_sum,ecal=ecals[0],
+                           secondaries=secondaries, additional=additional, RASE_sens=RASE_sensitivity,
+                     FLUX_sens=FLUX_sensitivity,uSievertsph=uSievertsph, fluxValue=fluxValue)
+    return output
+
+def counts_decimal_format(counts):
+    if all(counts.astype(float) == counts.astype(int)):
+        # TODO: Make a switch to decide whether int or float
+        countstxt = ' '.join(f'{round(count)}' for count in counts)
+    else:
+        countstxt = ' '.join(f'{count:.4f}' for count in counts)
+    return countstxt
+
+def build_base_ET(rawValues: rawValues, device_template=None):
+    counts = rawValues.counts.clip(min=0)
+    countstxt = counts_decimal_format(counts)
+
+    realtime_sum_txt = Rf.ConvertSecondsToIsoDuration(rawValues.realtime)
+    livetime_sum_txt = Rf.ConvertSecondsToIsoDuration(rawValues.livetime)
+    template_ecal = ' '.join([str(k) for k in rawValues.ecal])
+    secondaries = rawValues.secondaries
+    additional = rawValues.additional
+    RASE_sensitivity=rawValues.RASE_sens
+    FLUX_sensitivity=rawValues.FLUX_sens
+
+    makotemplate = Template(text=base_template, input_encoding='utf-8', strict_undefined=True)
     output = makotemplate.render(spectrum=countstxt, realtime=realtime_sum_txt, livetime=livetime_sum_txt,
                                  ecal=template_ecal, secondaries=secondaries,
                                  additional=additional, RASE_sens=RASE_sensitivity, FLUX_sens=FLUX_sensitivity)
+
+    if device_template:  # used for sending base spectra to another format
+
+        # make these accessible to the device template. Probably some compromise here.
+        template_data = {}
+        # can't use livetime_sum_txt because it has PT and S in it, which is replicated in templates
+        template_data['scenario'] = SimpleNamespace(acq_time=str(rawValues.livetime))
+        template_data['detector'] = detector = SimpleNamespace(secondary_spectra=secondaries, ecal0=rawValues.ecal[0],
+                                                               ecal1=rawValues.ecal[1], ecal2=rawValues.ecal[2],
+                                                               ecal3=rawValues.ecal[3], chan_count=len(counts))
+        template_data['sample_counts'] = countstxt
+        template_data['compressed_sample_counts'] = ' '.join(f'{round(count)}' for count in compress_counts(rawValues.counts))
+        template_data['sample_counts_array'] = counts
+        template_data['bin_edges'] = ' '.join(str(v) for v in np.polyval(
+            [detector.ecal3, detector.ecal2, detector.ecal1, detector.ecal0], np.arange(detector.chan_count + 1)))
+        template_data['secondaries']= rawValues.secondaries
+        indexval = 0
+        if (rawValues.secondaries and type(rawValues.secondaries) == type(dict()) and
+                'background' in [k.lower() for k in rawValues.secondaries.keys()]):
+            indexval = [k.lower() for k in rawValues.secondaries.keys()].index('background')
+        template_data['secondary_spectrum'] = list(rawValues.secondaries.values())[indexval] if rawValues.secondaries else None #first secondary or none
+        output = device_template.render(**template_data)
+
     return output
 
 
@@ -392,7 +513,7 @@ def write_base_text(text, outputfolder, outputfilename):
         f.write(text)
 
 
-def do_all(inputfile, config: dict, outputfolder, manufacturer, model, source, subtraction,
+def do_all(inputfile, config: dict, outputfolder, manufacturer, model, source, subtraction, subtraction_config=None,
            uSievertsph=None, fluxValue=None, description=None, transform=None):
     """
     Grab the spectrum info from the raw file, format it to base spectrum form, then write it.
@@ -410,112 +531,68 @@ def do_all(inputfile, config: dict, outputfolder, manufacturer, model, source, s
     @return:
     """
     ET = get_ET_from_file(inputfile)
+    values = get_ET_values(ET=ET, measureXPath=config['measurement_spectrum_xpath'],
+                           realtimeXPath=config['realtime_xpath'], livetimeXPath=config['livetime_xpath'],
+                           calibration=config['calibration'],
+                           additionals=config.get('additionals'), secondaries_dict=config.get('secondaries'),
+                           uSievertsph=uSievertsph, fluxValue=fluxValue, transform=transform)
     try:
         subtraction_ET = get_ET_from_file(subtraction)
     except TypeError:
         subtraction_ET = subtraction
+    if subtraction_ET:
+        if subtraction_config is None: subtraction_config = config
+        subtract_values = get_ET_values(ET=subtraction_ET,
+                                        measureXPath=subtraction_config['subtraction_spectrum_xpath'],
+                                        realtimeXPath=subtraction_config['realtime_xpath'],
+                                        livetimeXPath=subtraction_config['livetime_xpath'],
+                                        calibration=subtraction_config['calibration'],
+                                        additionals=None, secondaries_dict=None,
+                                        uSievertsph=None, fluxValue=None, transform=transform)
+        values = values.background_subtract(subtract_values)
 
-    output = build_base_ET(ET=ET, measureXPath=config['measurement_spectrum_xpath'],
-                           realtimeXPath=config['realtime_xpath'], livetimeXPath=config['livetime_xpath'],
-                           subtraction_ET=subtraction_ET, subtractionXpath=config.get('subtraction_spectrum_xpath'),
-                           additionals=config.get('additionals'), secondaries_dict=config.get('secondaries'),
-                           uSievertsph=uSievertsph, fluxValue=fluxValue, transform=transform,
-                           ndetectors=int(config.get('ndetectors')), additional_meas=config['additional_meas'],
-                           additional_liv=config['additional_liv']
-                           )
+    output = build_base_ET(rawValues=values)
     outputfilename = base_output_filename(manufacturer, model, source, description)
     write_base_text(output, outputfolder, outputfilename)
 
 
 
-def add_bases(ET:etree.ElementTree, ET2: Union[etree.ElementTree,None], measureXPath=None, rtpath=None, calpath=None,
-              additional_meas=None, additional_cal=None, ecal_baselines=None):
-    """
-    Sum up, spectrum by spectrum, for each detector (if multiple detectors in an instrument), across all
-    spectrum files in a folder
-    """
-    measpaths = [measureXPath] + additional_meas if type(additional_meas) == list else [measureXPath]
-    calpaths = [calpath] + additional_cal if type(additional_cal) == list else [calpath]
-    ecals_arr = []
-    for i, cal in enumerate(calpaths):
-        try:
-            if '@id="FromSpectrum"' in cal:
-                ecalrefmeas = ET.xpath(measpaths[i])
-                if len(ecalrefmeas) > 1:
-                    ecalrefmeas = ecalrefmeas[0]
-                ecaltag = ecalrefmeas.attrib['energyCalibrationReference']
-                calpaths[i] = calpaths[i].replace("FromSpectrum", ecaltag)
-                cal = calpaths[i]
-            ecals = ET.xpath(cal)[0].text
-        except (TypeError, etree.XPathError):
-            ecals = cal
-        except (AttributeError):
-            ecals = str(ET.xpath(cal))
-        except (IndexError):
-            raise ValueError("Calibration XPath does not resolve to any element in input XML. "
-                             "Please check base building config file and compare to the input XML.")
-        ecalvals = [float(e) for e in ecals.split()]
-        ecalvals += [0.] * (4 - len(ecalvals))
-        ecals_arr.append(ecalvals)
-    if ecal_baselines is None:
-        ecal_baselines = ecals_arr
-
-    if ET2: #if ET2 is None, just return ET
-        old_energies = []
-        for mpath, ecal in zip(measpaths, ecals_arr):  # just do this once
-            m = ET.xpath(mpath)[0]
-            old_energies.append(numpy.polyval(numpy.flip(ecal), numpy.arange(len(get_counts(m)) + 1)))
-        for mpath, old_e, ecal_baseline in zip(measpaths, old_energies, ecal_baselines):
-            for spec1, spec2 in zip(ET.xpath(mpath), ET2.xpath(mpath)):
-                # recalibrate and add spectra
-                counts1 = rebin(get_counts(spec1), old_e, ecal_baseline)   # to be rebinned to baseline
-                counts2 = get_counts(spec2)  # this is the summed spectrum, already rebinned to baseline as necessary
-                sum_counts = counts1 + counts2
-                # add livetimes
-                sum_livetime = get_livetime(spec1) + get_livetime(spec2) # we assume the livetime configuration is the same in the summed and to-be-summed specs
-                insert_counts(spec1, sum_counts)
-                reading.requiredElement(['LiveTime', 'LiveTimeDuration'], spec1).text = f'PT{sum_livetime}S' #set livetime in units of seconds only.
-        #add realtimes
-        for rt1, rt2 in zip(ET.xpath(rtpath), ET2.xpath(rtpath)):
-            sum_rt = Rf.ConvertDurationToSeconds(rt1.text)+Rf.ConvertDurationToSeconds(rt2.text)
-            rt1.text = f'PT{sum_rt}S'
-        indent(ET.getroot())
-
-    return ET, ecal_baselines
-
-
-def do_list(inputfiles, config:dict, outputfolder, manufacturer, model, source, subtraction,
+def do_list(inputfiles, config:dict, outputfolder, manufacturer, model, source, subtraction, subtraction_config=None,
            uSievertsph=None, fluxValue=None, description=None, transform=None, master_ecal=None):
-    comboET = None
-    ecal_baselines = None
+
+    values = [get_ET_values(ET=get_ET_from_file(inputfile), measureXPath=config['measurement_spectrum_xpath'],
+                           realtimeXPath=config['realtime_xpath'], livetimeXPath=config['livetime_xpath'],
+                            calibration=config['calibration'],
+                           additionals=config.get('additionals'), secondaries_dict=config.get('secondaries'),
+                           uSievertsph=uSievertsph, fluxValue=fluxValue, transform=transform)
+              for inputfile in inputfiles]
+
     try:
         subtraction_ET = get_ET_from_file(subtraction)
     except TypeError:
         subtraction_ET = subtraction
-    for inputfile in inputfiles:
-        ET_orig = get_ET_from_file(inputfile)
-        comboET, ecal_baselines = add_bases(ET_orig, comboET, measureXPath=config['measurement_spectrum_xpath'],
-                                   rtpath=config['realtime_xpath'], calpath=config['calibration'],
-                                   additional_meas=config['additional_meas'], additional_cal=config['additional_cal'],
-                                   ecal_baselines=ecal_baselines)
-        if master_ecal is None:
-            master_ecal = ecal_baselines
+
+    sum_values = sum(values[1:], start=values[0]) #funny construciton because you can't use default start=0.
+
+    if subtraction_ET:
+        if subtraction_config is None: subtraction_config = config
+        subtract_values = get_ET_values(ET=subtraction_ET, measureXPath=subtraction_config['subtraction_spectrum_xpath'],
+                                        realtimeXPath=subtraction_config['realtime_xpath'], livetimeXPath=subtraction_config['livetime_xpath'],
+                                        calibration=subtraction_config['calibration'],
+                                        additionals=None, secondaries_dict=None,
+                                        uSievertsph=None, fluxValue=None, transform=transform)
+        sum_values = sum_values.background_subtract(subtract_values)
+
     outputfilename = base_output_filename(manufacturer, model, source, description)
-    outET = build_base_ET(ET=comboET, measureXPath=config['measurement_spectrum_xpath'], realtimeXPath=config['realtime_xpath'],
-                          livetimeXPath=config['livetime_xpath'], subtraction_ET=subtraction_ET,
-                          subtractionXpath=config.get('subtraction_spectrum_xpath'), additionals=config.get('additionals'),
-                          secondaries_dict=config.get('secondaries'), uSievertsph=uSievertsph, fluxValue=fluxValue,
-                          transform=transform, ndetectors=int(config.get('ndetectors')),
-                          additional_meas=config['additional_meas'],  additional_liv=config['additional_liv'],
-                          ecal_baselines=ecal_baselines, master_ecal=master_ecal)
+    outET = build_base_ET(rawValues=sum_values)
     write_base_ET(etree.ElementTree(etree.fromstring(bytes(outET, encoding='utf-8'))), outputfolder, outputfilename)
     return master_ecal
 
 
-def do_glob(inputfileglob, config: dict, outputfolder, manufacturer, model, source, subtraction,
+def do_glob(inputfileglob, config: dict, outputfolder, manufacturer, model, source, subtraction, subtraction_config=None,
            uSievertsph=None, fluxValue=None, description=None, transform=None, master_ecal=None):
     inputfiles = glob(inputfileglob)
-    master_ecal = do_list(inputfiles, config, outputfolder, manufacturer, model, source, subtraction,
+    master_ecal = do_list(inputfiles, config, outputfolder, manufacturer, model, source, subtraction,subtraction_config,
            uSievertsph, fluxValue, description, transform, master_ecal)
     return master_ecal
 

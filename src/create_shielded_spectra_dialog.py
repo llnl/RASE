@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -36,12 +36,13 @@ This module handles shielded spectra creation
 import logging
 import os, sys
 import yaml
-from PySide6.QtCore import Qt, Slot, QAbstractItemModel, QAbstractListModel, QModelIndex, QCoreApplication
+from PySide6.QtCore import Qt, Slot, QAbstractItemModel, QAbstractListModel, QModelIndex
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtWidgets import QDialog, QFileDialog, QDataWidgetMapper
 
-from src.qt_utils import BaseSpectraListModel
-from src.rase_functions import rebin, get_or_create_material
+from src.qt_utils import BaseSpectraListModel, Translatable
+from src.rase_functions import get_or_create_material
+from src.rebin import rebin
 from src.rase_settings import RaseSettings
 from src.table_def import BaseSpectrum, Detector, Session
 
@@ -49,10 +50,9 @@ from src.ui_generated import ui_create_shielded_spectra_dialog
 import pandas as pd
 import numpy as np
 
-# translation_tag = 'shd_d'
 
-class CreateShieldedSpectraDialog(ui_create_shielded_spectra_dialog.Ui_Dialog, QDialog):
-    def __init__(self, parent, detectorName=None):
+class CreateShieldedSpectraDialog(ui_create_shielded_spectra_dialog.Ui_CreateShieldedBaseSpectraDialog, QDialog):
+    def __init__(self, parent, detectorName=None,shield_drf=None):
         QDialog.__init__(self, parent)
         self.parent = parent
         self.setupUi(self)
@@ -85,6 +85,8 @@ class CreateShieldedSpectraDialog(ui_create_shielded_spectra_dialog.Ui_Dialog, Q
 
         self.model.dataChanged.connect(self.model.set_thickness)
         self.modelOut.layoutChanged.connect(lambda: self.cmbDetectors.setEnabled(self.modelOut.rowCount() == 0))
+        self.modelOut.layoutChanged.connect(lambda: self.cmbDrf.setEnabled(self.modelOut.rowCount() == 0))
+        self.modelOut.layoutChanged.connect(lambda: self.btnExport.setEnabled(self.modelOut.rowCount() > 0))
         self.modelOut.layoutChanged.connect(lambda: self.lstOutSpecs.clearSelection())
 
         self.mapper_lineedit = QDataWidgetMapper()
@@ -96,6 +98,9 @@ class CreateShieldedSpectraDialog(ui_create_shielded_spectra_dialog.Ui_Dialog, Q
         self.set_modelmap(self.mapper_comboedit, self.model_comboboxes, self.model.col_names_combobox)
         self.mapper_comboedit.toFirst()
 
+        if shield_drf is not None and shield_drf in self.model.drfs:
+            self.cmbDrf.setCurrentText(shield_drf)
+
         self.model.update_shielded_spectra()
 
     def set_modelmap(self, mapper, viewvals, modelvals):
@@ -103,9 +108,9 @@ class CreateShieldedSpectraDialog(ui_create_shielded_spectra_dialog.Ui_Dialog, Q
             mapper.addMapping(w, self.model.column_dict[c].column())
 
     def assign_listviews(self):
-        self.lstBaseSpectra.mousePressEvent = self.custom_mousePressEvent.__get__(self.lstBaseSpectra)
-        self.lstThickness.mousePressEvent = self.custom_mousePressEvent.__get__(self.lstThickness)
-        self.lstOutSpecs.mousePressEvent = self.custom_mousePressEvent.__get__(self.lstOutSpecs)
+        func = type(self).custom_mousePressEvent
+        for widget in (self.lstBaseSpectra, self.lstThickness, self.lstOutSpecs):
+            widget.mousePressEvent = func.__get__(widget, type(widget))
 
     def add_detectors(self):
         session = Session()
@@ -159,6 +164,27 @@ class CreateShieldedSpectraDialog(ui_create_shielded_spectra_dialog.Ui_Dialog, Q
         """
         keys = [self.modelOut.data(k) for k in self.lstOutSpecs.selectedIndexes()]
         self.model.remove_spectra(keys)
+
+    @Slot(bool)
+    def on_btnExport_clicked(self, checked):
+        """
+        Opens a window where the user selects an output folder for exporting
+        """
+        dialog = QFileDialog(self, self.tr("Choose Export Directory"))
+        dialog.setFileMode(QFileDialog.Directory)
+        dialog.setOption(QFileDialog.ShowDirsOnly, True)  # Only show directories
+        dialog.setLabelText(QFileDialog.Accept, self.tr("Export"))  # Change "Open" to "Export"
+        dialog.setLabelText(QFileDialog.LookIn, self.tr("Export Directory"))
+
+        if sys.platform.startswith('win'):
+            dialog.setOption(QFileDialog.DontUseNativeDialog, True)
+
+        dialog.setDirectory(self.model.settings.getLastDirectory())
+
+        if dialog.exec():
+            export_dir = dialog.selectedFiles()[0]  # Check only one directory will be here
+            _, shielded_specs = self.model.process_shielding()
+            self.model.export_spectra(shielded_specs, export_dir, self.cmbDetectors.currentText())
 
     def custom_mousePressEvent(self, event: QMouseEvent):
         """
@@ -318,18 +344,50 @@ class ShieldingModel(QAbstractItemModel):
     def update_shielded_spectra(self):
         self.dataChanged.emit(self.index(0, 0), self.index(0, self.columnCount() - 1))
 
+    def process_shielding(self):
+        outlist = self.modelOut.model_data
+        # TODO: account for how the ecals are actually accessed here. They're supposed to be pulled from the sub-detector field
+        det_name = self.model_data['detector'][0]
+        ch_num = self.model_data['ch_num'][0]
+        drf = self.model_data['drf'][0]
+        try:
+            shieldmod = ShieldingModule(det_name=det_name, ch_num=ch_num, ecals=self.config[ch_num][drf]['ecals'],
+                            inst_rootpath=self.config['inst_configs'], shield_rootpath=self.config['shield_configs'])
+        except KeyError:
+            return None, None
+        shielded_specs = shieldmod.apply_shielding(outlist)
+        return shieldmod, shielded_specs
+
+    def export_spectra(self, spectra, outdir, detector_name):
+        """
+        Export to the chosen directory
+        :param spectra:
+        :param outdir:
+        :param detector_name:
+        :return:
+        """
+        from src.base_building_algos import build_base_ET, write_base_ET, rawvalues_from_basespec
+        from lxml import etree
+        session = Session()
+        detector = session.query(Detector).filter_by(name=detector_name).first()
+
+        for spectrum in spectra:
+            values = rawvalues_from_basespec(spectrum)
+            if detector.secondary_spectra:
+                d = dict()
+                for spec in detector.secondary_spectra:
+                    d[spec.classcode] = spec
+                values.secondaries = d
+            outET = build_base_ET(rawValues=values)
+            write_base_ET(etree.ElementTree(etree.fromstring(bytes(outET, encoding='utf-8'))), outdir, spectrum.filename)
+
     def accept(self):
         """
         Make the shielded base spectra, attach to detector
         """
-        outlist = self.modelOut.model_data
-        # TODO: account for how the ecals are actually accessed here. They're supposed to be pulled from the sub-detector field
-        det_name = self._data['detector'][0]
-        ch_num = self._data['ch_num'][0]
-        drf = self._data['drf'][0]
-        shieldmod = ShieldingModule(det_name=det_name, ch_num=ch_num, ecals=self.config[ch_num][drf]['ecals'],
-                            inst_rootpath=self.config['inst_configs'], shield_rootpath=self.config['shield_configs'])
-        shieldmod.apply_shielding(outlist)
+        shieldmod, shielded_specs = self.process_shielding()
+        if shieldmod is not None and shielded_specs is not None:
+            shieldmod.add_to_detector(shielded_specs)
 
 
 class ShieldThicknessListModel(QAbstractListModel):
@@ -366,7 +424,6 @@ class ShieldThicknessListModel(QAbstractListModel):
     def data(self, index, role):
         if role == Qt.DisplayRole:
             return list(self._data.keys())[index.row()]
-
 
     def update_thicknesses(self):
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount() - 1, 0))
@@ -424,21 +481,23 @@ class OutSpecsListModel(QAbstractListModel):
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount() - 1, 0))
 
 
-class ShieldingModule:
-    def __init__(self, det_name: str, ch_num: int = 1024, ecals: tuple = (0, 3, 0, 0), inst_rootpath: str = '.',
-                 shield_rootpath: str = '.'):
+class ShieldingModule(Translatable):
+    def __init__(self, det_name: str, ch_num: int = 1024, ecals: tuple = (0, 3, 0, 0),
+                 inst_rootpath: str = '.', shield_rootpath: str = '.'):
         """
-        @param det_name: str, name of the instrument we are creating spectra for
-        @param ch_num: int, channel number of the detector we are working with
-        @param ecals: tuple, ecal0, 1, 2, and 3 for detector <det_name>
-        @param inst_rootpath: str, path to the root directory containing all the instrument drf matrices
-        @param shield_rootpath: str, path to the root directory containing all the null and null shield matrices
+        :param det_name: str, name of the instrument we are creating spectra for
+        :param ch_num: int, channel number of the detector we are working with
+        :param ecals: tuple, ecal0, 1, 2, and 3 for the DRF of detector <det_name> (uses same ecal as null)
+        :param inst_rootpath: str, path to the root directory containing all the instrument drf matrices
+        :param shield_rootpath: str, path to the root directory containing all the null and null shield matrices
+        :return:
         """
         self.det_name = det_name
         self.ch_num = ch_num
         self.ecals = ecals
         self.inst_rootpath = inst_rootpath
         self.shield_rootpath = shield_rootpath
+        self.settings = RaseSettings()
 
     def load_matrix(self, filepath):
         """
@@ -457,24 +516,24 @@ class ShieldingModule:
             drfinv = self.load_matrix(path_drfinv)
             drf = self.load_matrix(path_drf)
         except FileNotFoundError as e:
-            raise FileNotFoundError(QCoreApplication.translate('shield', 'Could not find the path to one of '
+            raise FileNotFoundError(self.tr('Could not find the path to one of '
                                            'the shield matrix files. Try modifying your yaml. Error: {}').format(e))
         try:
             assert tuple(reversed(nullinv.shape)) == nullshield.shape
         except ValueError as e:
-            raise ValueError(QCoreApplication.translate('shield', 'Null matrices shapes are incompatible: '
+            raise ValueError(self.tr('Null matrices shapes are incompatible: '
                                              'inverse null shape = {}, null shield shape = {}. Error: {}').format(
                                             nullinv.shape, nullshield.shape, e))
         try:
             assert tuple(reversed(drfinv.shape)) == drf.shape
         except ValueError as e:
-            raise ValueError(QCoreApplication.translate('shield', 'Drf matrices shapes are incompatible: '
+            raise ValueError(self.tr('Drf matrices shapes are incompatible: '
                                                      'inverse drf shape = {}, drf shape = {}. Error: {}').format(
                                                     drfinv.shape, drf.shape, e))
         try:
             assert drfinv.shape[0] == nullinv.shape[0]
         except ValueError as e:
-            raise ValueError(QCoreApplication.translate('shield', 'Drf and null matrix shapesare incompatible: '
+            raise ValueError(self.tr('Drf and null matrix shapesare incompatible: '
                                              'inverse drf shape = {}, inverse null shape = {}.  Error: {}').format(
                                         drfinv.shape, nullinv.shape, e))
         return [nullinv, nullshield], [drfinv, drf]
@@ -488,15 +547,76 @@ class ShieldingModule:
             y = np.matmul(mat, y)
         return y
 
+    def interpolate_response(self, thickness: float, matrices: dict, inv: str):
+        """
+        Takes a thickness value and a dictionary of matrices to interpolate between:
+        :param thickness: float, thickness we want to interpolate to in units of [cm]
+        :param matrices: dict with 2 entries of the form {thickness: shielding_matrix}
+            - thickness is a float and is in units of [cm]
+            - shielding_matrix is a path to the null numpy matrix associated with that thickness
+                for the material we are looking at
+            If the entry we are looking at is beyond the thickness value we have simulated, we will
+            simply take the closest two thicknesses and extrapolate
+        :param inv: path to the null_inv matrix
+        :return:
+        """
+        if len(matrices) < 2:
+            raise Exception(self.tr('Must supply two matrices'))
+
+        from scipy.linalg import expm, logm
+
+        new_matrices = {}
+        inv_mat = self.load_matrix(inv)
+        # make sure the LLD for both shield matrices are the same
+        max_lld = 0
+        for t, p in matrices.items():
+            new_matrices[t] = self.get_T(inv_mat, self.load_matrix(p))
+            for i in range(new_matrices[t].shape[1]):
+                if sum(new_matrices[t][:,i]) != 0:
+                    if i > max_lld:
+                        max_lld = i
+                    break
+        for m in new_matrices.values():
+            m[:,:max_lld] = 0
+
+        l_0 = min(new_matrices.keys())
+        l_1 = max(new_matrices.keys())
+
+        # if requested shielding is thinner than the thinnest pre-simulated shielding matrix
+        if thickness < l_0:
+            # Calculate blend function to weight the closest pick point higher in a smooth fashion s
+            f = thickness / l_0
+            l_1 = l_0
+            l_0 = 0
+            new_matrices[l_0] = np.identity(inv_mat.shape[0])
+            A = (1 - f) * new_matrices[l_0] + f * expm(logm(new_matrices[l_1]) * (thickness / l_1))
+            return A.real
+        # if requested shielding is thicker than the thickest pre-simulated shielding matrix
+        if thickness > l_1:
+            extrapolated_value = new_matrices[l_1].copy()
+            new_matrices[l_0] = new_matrices[l_1].copy()
+            l_0 = l_1
+            while thickness > l_1:  # continue to apply shield layers
+                l_1 += l_0
+                extrapolated_value = self.iterative_matmul([extrapolated_value, new_matrices[l_0]])
+            new_matrices[l_1] = extrapolated_value.copy()
+        # Calculate blend function to weight the closest pick point higher in a smooth fashion
+        f = (np.log(thickness) - np.log(l_0)) / (np.log(l_1) - np.log(l_0))
+        if new_matrices[l_0].max() == 0 or new_matrices[l_1].max() == 0:
+            return np.zeros(new_matrices[l_0].shape)
+        A = expm( (1 - f) * (thickness / l_0) * logm(new_matrices[l_0]) +
+                   f * (thickness / l_1) * logm(new_matrices[l_1]) )
+        return A.real  # imaginary components are several orders of magnitude below real
+
     def get_T(self, nullinv, nullshield):
         """
         Generates the T matrix, which serves to transform the source flux through shielding
         """
         return np.matmul(nullshield.T, nullinv.T).T
 
-    def rebin_spec(self, spec=None):
+    def rebin_spec_todrf(self, spec=None):
         """
-        Take the original spectrum and rebin it to be compatible with the null and drf calibration
+        Take the original spectrum and rebin it to be compatible with the null and drf calibration (self.ecal)
         """
         counts = [float(k) for k in spec.baseCounts.split(',')]
         orig_calib_coeffs = [spec.ecal0, spec.ecal1, spec.ecal2, spec.ecal3]
@@ -504,7 +624,7 @@ class ShieldingModule:
         newspec = np.array(rebin(counts, oldenergies, self.ecals))
         return newspec
 
-    def reverse_rebin_spec(self, counts=None, goal_ecal=(0, 3, 0, 0)):
+    def rebin_spec_tomeasured(self, counts=None, goal_ecal=(0, 3, 0, 0)):
         """
         Take the shielded spectrum and rebin it back into the original detector's calibration coefficients
         """
@@ -512,41 +632,24 @@ class ShieldingModule:
         newspec = np.array(rebin(counts, oldenergies, goal_ecal))
         return newspec
 
-    def add_to_database(self, shielded_counts, orig_spec, outname, export_path=None):
+    def build_base_spectrum(self,  shielded_counts, orig_spec, outname=''):
         """
         Add the base spectra to the database
         """
         session = Session()
-        if session.query(BaseSpectrum).filter_by(detector_name=self.det_name,
-                                                 material_name=outname.split(': ')[-1]).first():
-            return None
-        if export_path is not None:
-            if not os.path.isdir(export_path):
-                os.mkdir(export_path)
-            # TODO: export file to template
-        if orig_spec.rase_sensitivity is not None:
-            new_rase_sensitivity = orig_spec.rase_sensitivity * sum(shielded_counts) / sum(orig_spec.counts)
-        if orig_spec.flux_sensitivity is not None:
-            new_flux_sensitivity = orig_spec.flux_sensitivity * sum(shielded_counts) / sum(orig_spec.counts)
-        shielded_mat = get_or_create_material(session, outname.split(': ')[-1] + '*')
-        baseSpectrum = BaseSpectrum(material=shielded_mat, filename='None',
-                                    realtime=orig_spec.realtime, livetime=orig_spec.livetime,
-                                    rase_sensitivity=new_rase_sensitivity, flux_sensitivity=new_flux_sensitivity,
-                                    baseCounts=','.join(f'{k:.3f}' if k > 0 else '0' for k in shielded_counts),
-                                    ecal=orig_spec.ecal, spectrum_type=orig_spec.spectrum_type)
-        session.add(baseSpectrum)
-        session.commit()
-        return baseSpectrum
-
-    def add_to_detector(self, new_spectra):
-        """
-        Attach the shielded spectra to the detector
-        """
-        session = Session()
-        detector = session.query(Detector).filter_by(name=self.det_name).first()
-        for new_spec in new_spectra:
-            detector.base_spectra.append(new_spec)
-        session.commit()
+        new_rase_sensitivity = orig_spec.rase_sensitivity * sum(shielded_counts) / sum(orig_spec.counts) if (
+                orig_spec.rase_sensitivity is not None) else None
+        new_flux_sensitivity = orig_spec.flux_sensitivity * sum(shielded_counts) / sum(orig_spec.counts) if (
+                orig_spec.flux_sensitivity is not None) else None
+        if outname:
+            shielded_mat = get_or_create_material(session, outname.split(': ')[-1] + '*')
+        else:
+            shielded_mat = orig_spec.material
+        base_spectrum = BaseSpectrum(orig_spec, filename=f'{outname}.n42',
+                                     material=shielded_mat, material_name=shielded_mat.name,
+                                     rase_sensitivity=new_rase_sensitivity, flux_sensitivity=new_flux_sensitivity,
+                                     baseCounts=','.join(f'{k:.3f}' if k > 0 else '0' for k in shielded_counts))
+        return base_spectrum
 
     def apply_shielding(self, outspecs):
         """
@@ -559,21 +662,121 @@ class ShieldingModule:
         detector_name: the selected instrument for which the shielded spectra are being created
         """
         new_spectra = []
-
-
         #TODO: get pathing right
         for outname, (spec, path_nullinv, path_nullshield, path_drfinv, path_drf) in outspecs.items():
             null_responses, drf_responses = self.load_responses(os.path.join(self.shield_rootpath, str(self.ch_num),
                                  path_nullinv), os.path.join(self.shield_rootpath, str(self.ch_num), path_nullshield),
                                                     os.path.join(self.inst_rootpath, str(self.ch_num), path_drfinv),
                                                     os.path.join(self.inst_rootpath, str(self.ch_num), path_drf))
-            T = self.get_T(*null_responses)
-            rebinned_counts = self.rebin_spec(spec)
-            shielded_counts = self.iterative_matmul([drf_responses[1], T, drf_responses[0], rebinned_counts])
-            outcounts = self.reverse_rebin_spec(shielded_counts, (spec.ecal0, spec.ecal1,
-                                                                spec.ecal2, spec.ecal3))
-            shielded_spectrum = self.add_to_database(outcounts, spec, outname)
-            if shielded_spectrum is not None:
-                new_spectra.append(shielded_spectrum)
-        self.add_to_detector(new_spectra)
+            outcounts = self.process_matrices(null_responses, drf_responses, spec)
+            new_spectra.append(self.build_base_spectrum(outcounts, spec, outname))
+        return new_spectra
 
+    def remove_artifacts_zeroing_peakfind(self, spectrum_A, spectrum_B, window_length=11, polyorder=3, rel_thresh=0.0):
+        """Conservative peak finding code that removes artifacts introduced at high energies by the shield algorithm"""
+        from scipy.signal import savgol_filter, find_peaks
+        # Smooth spectrum A
+        # TODO: answer question "does this work for HPGes?"
+        smoothed_A = savgol_filter(spectrum_A, window_length=window_length, polyorder=polyorder)
+
+        # Find peaks in spectrum A
+        min_prominence = max(10, 0.001 * np.max(smoothed_A))
+        peaks, _ = find_peaks(smoothed_A, prominence=min_prominence)
+        peak_heights = smoothed_A[peaks]
+        threshold = rel_thresh * np.max(smoothed_A)
+        significant_peaks = peaks[peak_heights > threshold]
+        if len(significant_peaks) == 0:
+            significant_peaks = peaks  # fallback: use all found peaks
+
+        # Select highest-energy peak
+        highest_energy_peak = significant_peaks[-1]  # peaks are in ascending channel order
+
+        # Estimate peak width (fit a Gaussian to a window around the peak)
+        peak_max = spectrum_A[highest_energy_peak]
+        threshold = max(3, 0.01 * peak_max)
+        cutoff_channel = highest_energy_peak
+        for i in range(highest_energy_peak + 1, len(spectrum_A)):
+            if spectrum_A[i] < threshold:
+                cutoff_channel = i
+                break
+        cutoff_channel = min(cutoff_channel, len(spectrum_B) - 1)
+
+        # Zero out spectrum B above cutoff
+        cleaned_B = spectrum_B.copy()
+        cleaned_B[cutoff_channel + 1:] = 0
+
+        return cleaned_B, cutoff_channel
+
+    def remove_artifacts_group_subtraction(self, shielded_counts, self_transform, mismatch):
+        new_shielded = shielded_counts.copy()
+        divisions = 25
+        start_point = 2  # seems to give good results
+        old_bound = int(len(shielded_counts) * start_point / divisions)
+        for plen in range(start_point, divisions):
+            new_bound = int(len(shielded_counts) * plen / divisions)
+            ratio = self.min_ratio(shielded_counts, self_transform, old_bound, new_bound)
+            new_shielded[old_bound:new_bound] = shielded_counts[old_bound:new_bound] - mismatch[
+                                                                                       old_bound:new_bound] * ratio
+            old_bound = new_bound
+        ratio = self.min_ratio(shielded_counts, self_transform, old_bound, len(shielded_counts))
+        new_shielded[old_bound:] = shielded_counts[old_bound:] - mismatch[old_bound:] * ratio
+        return new_shielded
+
+    def process_matrices(self, null_responses, drf_responses, spec):
+        """
+        Reusable code for doing shielding application on a single spectrum
+        :param null_responses:
+        :param drf_responses:
+        :param spec:
+        :return:
+        """
+        T = self.get_T(*null_responses)
+        return self.get_outcounts(T, drf_responses, spec)
+
+    def min_ratio(self, shielded_counts, self_transform, old_bound, new_bound):
+        """Utility function to help suppress oscillations"""
+        if sum(self_transform[old_bound:new_bound]) == 0:
+            return 1
+        ratio = sum(shielded_counts[old_bound:new_bound]) / sum(self_transform[old_bound:new_bound])
+        if abs(ratio) < 1:
+            return ratio
+        return 1
+
+    def get_outcounts(self, T, drf_responses, spec):
+        rebinned_counts = self.rebin_spec_todrf(spec)
+        self_transform = self.iterative_matmul([drf_responses[1], drf_responses[0], rebinned_counts])
+        mismatch = self_transform - rebinned_counts
+        shielded_counts = self.iterative_matmul([drf_responses[1], T, drf_responses[0], rebinned_counts])
+        # suppress oscillations using user-selected algorithm
+        osc_reduction_algo = self.settings.getOscillationReductionAlgo()
+        if osc_reduction_algo == 0:
+            return self.rebin_spec_tomeasured(shielded_counts, (spec.ecal0, spec.ecal1,
+                                                                     spec.ecal2, spec.ecal3))
+        elif osc_reduction_algo == 1:
+            shielded_counts = self.remove_artifacts_group_subtraction(shielded_counts, self_transform, mismatch)
+            outcounts = self.rebin_spec_tomeasured(shielded_counts, (spec.ecal0, spec.ecal1,
+                                                                     spec.ecal2, spec.ecal3))
+        else:
+            rebinned_shielded = self.rebin_spec_tomeasured(shielded_counts, (spec.ecal0, spec.ecal1,
+                                                                     spec.ecal2, spec.ecal3))
+            outcounts, cutoff = self.remove_artifacts_zeroing_peakfind(rebinned_counts, rebinned_shielded)
+        return outcounts
+
+    def add_to_database(self, baseSpectrum):
+        session = Session()
+        base_spectrum = session.query(BaseSpectrum).filter_by(detector_name=self.det_name,
+                                                              material_name=baseSpectrum.material_name).first()
+        if base_spectrum is None:
+            session.add(baseSpectrum)
+            session.commit()
+
+    def add_to_detector(self, new_spectra):
+        """
+        Attach the shielded spectra to the detector
+        """
+        session = Session()
+        detector = session.query(Detector).filter_by(name=self.det_name).first()
+        for new_spec in new_spectra:
+            self.add_to_database(new_spec)
+            detector.base_spectra.append(new_spec)
+        session.commit()

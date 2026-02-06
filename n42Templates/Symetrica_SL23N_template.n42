@@ -126,7 +126,7 @@
 		<StartDateTime>2021-12-02T23:52:06.949+00:00</StartDateTime>
 		<RealTimeDuration>PT${scenario.acq_time}S</RealTimeDuration>
 		<Spectrum id="Analysis0BGGamma" radDetectorInformationReference="DetectorInfoGamma" energyCalibrationReference="ECalGamma-SG_60017-01341" FWHMCalibrationReference="RCalGamma-SG_60017-01341">
-			<LiveTimeDuration>PT${secondary_spectrum.realtime}S</LiveTimeDuration>
+			<LiveTimeDuration>PT${secondary_spectrum.livetime}S</LiveTimeDuration>
 			<ChannelData compressionCode="CountedZeroes"> ${secondary_spectrum.get_compressed_counts_as_str()} </ChannelData>
 		</Spectrum>
 		<Spectrum id="Analysis0Gamma" radDetectorInformationReference="DetectorInfoGamma" energyCalibrationReference="ECalGamma-SG_60017-01341" FWHMCalibrationReference="RCalGamma-SG_60017-01341">

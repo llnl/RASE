@@ -16,19 +16,11 @@ Generic N42 2012: &generic
     - ./RadMeasurement[MeasurementClassCode="IntrinsicActivity"]
 
 BTI X5600:
-  measurement_spectrum_xpath: ./RadMeasurement[contains(@id,"Foreground") and @radMeasurementGroupReferences="RadMeasurementGroup-1"]/Spectrum[contains(@id, "GammaForeground") and contains(@radDetectorInformationReference, "SL1")]
-  additional_meas:
-    - ./RadMeasurement[contains(@id,"Foreground") and @radMeasurementGroupReferences="RadMeasurementGroup-1"]/Spectrum[contains(@id, "GammaForeground") and contains(@radDetectorInformationReference, "SR1")]
-  subtraction_spectrum_xpath: ./RadMeasurement[contains(@id,"Foreground") and @radMeasurementGroupReferences="RadMeasurementGroup-1"]/Spectrum[contains(@id, "GammaForeground") and contains(@radDetectorInformationReference, "SL1")]
-  additional_sub:
-    - ./RadMeasurement[contains(@id,"Foreground") and @radMeasurementGroupReferences="RadMeasurementGroup-1"]/Spectrum[contains(@id, "GammaForeground") and contains(@radDetectorInformationReference, "SR1")]
+  measurement_spectrum_xpath: ./RadMeasurement[contains(@id,"Foreground") and @radMeasurementGroupReferences="RadMeasurementGroup-1"]/Spectrum[contains(@id, "GammaForeground")]
+  subtraction_spectrum_xpath: ./RadMeasurement[contains(@id,"Foreground") and @radMeasurementGroupReferences="RadMeasurementGroup-1"]/Spectrum[contains(@id, "GammaForeground")]
   realtime_xpath: ./DerivedData[@id="DerivedForeground0"]/RealTimeDuration
   livetime_xpath: ./RadMeasurement[contains(@id,"Foreground") and @radMeasurementGroupReferences="RadMeasurementGroup-1"]/Spectrum[contains(@id, "GammaForeground") and contains(@radDetectorInformationReference, "SL1")]/LiveTimeDuration
-  additional_liv:
-    - ./RadMeasurement[contains(@id,"Foreground") and @radMeasurementGroupReferences="RadMeasurementGroup-1"]/Spectrum[contains(@id, "GammaForeground") and contains(@radDetectorInformationReference, "SR1")]/LiveTimeDuration
-  calibration: ./EnergyCalibration[@id="FromSpectrum"]/CoefficientValues
-  additional_cal:
-    - ./EnergyCalibration[@id="FromSpectrum"]/CoefficientValues
+  calibration: ./EnergyCalibration[@id="FromSpectrum"]/CoefficientValues  # The key '@id="FromSpectrum"' is special, picked up by RASE and interpreted as "pull each energy calibration from the associated spectrum"
   ndetectors: 2  # this scales the live time ONLY. Base spectra is sum of all detectors, scale sample spectra in templates as necessary.
 
 CAEN DiscoverRAD: &target
@@ -86,27 +78,11 @@ PHDS:
   calibration: ./EnergyCalibration[contains(@id,"EnergyCalibration")]/CoefficientValues
 
 PoliPack:
-  measurement_spectrum_xpath: ./RadMeasurement/Spectrum[@id="ForegroundSpectrum-1"]
-  additional_meas:
-    - ./RadMeasurement/Spectrum[@id="ForegroundSpectrum-2"]
-    - ./RadMeasurement/Spectrum[@id="ForegroundSpectrum-3"]
-    - ./RadMeasurement/Spectrum[@id="ForegroundSpectrum-4"]
-  subtraction_spectrum_xpath: ./RadMeasurement/Spectrum[@id="ForegroundSpectrum-1"]
-  additional_sub:
-    - ./RadMeasurement/Spectrum[@id="ForegroundSpectrum-2"]
-    - ./RadMeasurement/Spectrum[@id="ForegroundSpectrum-3"]
-    - ./RadMeasurement/Spectrum[@id="ForegroundSpectrum-4"]
+  measurement_spectrum_xpath: ./RadMeasurement/Spectrum[contains(@id, "ForegroundSpectrum")]
+  subtraction_spectrum_xpath: ./RadMeasurement/Spectrum[contains(@id, "ForegroundSpectrum")]
   realtime_xpath: ./RadMeasurement/RealTimeDuration
-  livetime_xpath: ./RadMeasurement/Spectrum[@id="ForegroundSpectrum-1"]/LiveTimeDuration
-  additional_liv:
-    - ./RadMeasurement/Spectrum[@id="ForegroundSpectrum-2"]/LiveTimeDuration
-    - ./RadMeasurement/Spectrum[@id="ForegroundSpectrum-3"]/LiveTimeDuration
-    - ./RadMeasurement/Spectrum[@id="ForegroundSpectrum-4"]/LiveTimeDuration
-  calibration: ./EnergyCalibration[@id="EnergyCal-1"]/CoefficientValues
-  additional_cal:
-    - ./EnergyCalibration[@id="EnergyCal-2"]/CoefficientValues
-    - ./EnergyCalibration[@id="EnergyCal-3"]/CoefficientValues
-    - ./EnergyCalibration[@id="EnergyCal-4"]/CoefficientValues
+  livetime_xpath: ./RadMeasurement/Spectrum[contains(@id, "ForegroundSpectrum")]/LiveTimeDuration
+  calibration: ./EnergyCalibration[contains(@id, "EnergyCal")]/CoefficientValues # expects these in same order as the matching foregrounds
   ndetectors: 4  # this scales the live time ONLY. Base spectra is sum of all detectors, scale sample spectra in templates as necessary.
 
 Radseeker:
@@ -115,6 +91,20 @@ Radseeker:
 
 RapiScan:
   <<: *target
+
+rase_dummy:
+  measurement_spectrum_xpath: ./Measurement/Spectrum[@ID="item"]
+  subtraction_spectrum_xpath: ./Measurement/Spectrum[@ID="item"]
+  realtime_xpath: ./Measurement/Spectrum[@ID="item"]/RealTime
+  livetime_xpath: ./Measurement/Spectrum[@ID="item"]/LiveTime
+  calibration: ./Measurement/Spectrum[@ID="item"]/Calibration/Equation/Coefficients
+  secondaries:
+    Background:
+      spectrum: ./Measurement/Spectrum[@ID="bkg-g"]
+      realtime: ./Measurement/Spectrum[@ID="bkg-g"]/RealTime
+      livetime: ./Measurement/Spectrum[@ID="bkg-g"]/LiveTime
+      calibration: ./Measurement/Spectrum[@ID="bkg-g"]/Calibration/Equation/Coefficients
+      classcode: Background
 
 RSI:
   measurement_spectrum_xpath: ./RadMeasurement/Spectrum[(@id="Spectrum-M-1-VD3") and (@energyCalibrationReference="LinEnCal")]

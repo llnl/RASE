@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -71,72 +71,127 @@ from src.qt_utils import DoubleValidatorInfinity, DoubleValidator
 
 # translation_tag = 'plot'
 
-class BaseSpectraViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
-    def __init__(self, parent, base_spectra, detector, selected):
-        QDialog.__init__(self, parent)
+class SpectraViewerDialog(ui_view_spectra_dialog.Ui_ViewSpectraDialog, QDialog):
+    """
+    Base class for all dialogs that show spectra data in a web-based interactive viewer.
+
+    Inherited classes may need to set self.entries and override self.update_spectrum()
+    
+    Hide the dialog on close instead of destroying it.
+    Keeping the dialog alive prevents tearing down the internal
+    QWebEngineView which is fragile inside nested exec() loops.
+    """
+    def __init__(self, parent=None, entries=1):
+        """
+        Initialize the spectra viewer dialog.
+
+        Args:
+            parent: Parent widget.
+            entries: Number of spectra entries available for navigation.
+        """
+        super().__init__(parent)
         self.setupUi(self)
-        self.baseSpectra = base_spectra
-        self.detector = detector
-        self.selected = selected
-        self.session = Session()
+
+        # Keep the widget alive on close to avoid tearing down the
+        # embedded QWebEngineView. The dialog will be hidden instead of
+        # destroyed so it can be reused.
+        self.setAttribute(Qt.WA_DeleteOnClose, False)
+        self.buttonBox.accepted.connect(self._on_close)
+
         self.json_file = os.path.join(get_bundle_dir(), 'd3_resources', 'spectrum.json')
-        self.index = 0
+        self.local_url = QUrl.fromLocalFile(os.path.join(get_bundle_dir(), 'd3_resources', 'spectrum.html'))
+        self.browser = QWebEngineView(self)
+        self.browser.load(self.local_url)
 
-        self.browser = WebSpectraView(self)
-
-        for i, baseSpectrum in enumerate(self.baseSpectra):
-            if baseSpectrum.material.name == self.selected:
-                self.index = i
-                self.plot_spectrum()
-
-        self.plot_layout = QVBoxLayout(self.widget)
-        self.plot_layout.addWidget(self.browser)
+        plot_layout = QVBoxLayout(self.widget)
+        plot_layout.addWidget(self.browser)
         self.widget.setFocus()
 
-    def plot_spectrum(self):
-        baseSpectrum = self.baseSpectra[self.index]
-        with open(self.json_file, 'w') as json_file:
-            print(baseSpectrum.as_json(), file=json_file)
-        self.browser.load(self.browser.local_url)
+        self.entries = entries
+        self.index = 0
+
+    def _on_close(self):
+        """Hide the dialog and mark it as accepted.
+
+        This is used as a handler for the dialog `accepted` action so
+        code that awaits `exec()` sees an accepted result while the
+        dialog instance remains reusable.
+        """
+        self.hide()
+        self.done(QDialog.Accepted)
+
+    def closeEvent(self, event):
+        """Override close to hide instead of destroying the dialog.
+
+        Prevents teardown of the QWebEngineView so the dialog can be
+        reopened quickly without reinitializing the expensive web view.
+        """
+        event.ignore()
+        self.hide()
+        self.done(QDialog.Accepted)
+
+    def update_spectrum(self):
+        """Reload the viewer page.
+
+        Subclasses should write the JSON expected by the web viewer to
+        `self.json_file` before calling this to update the display.
+        """
+        self.browser.load(self.local_url)
 
     @Slot(bool)
     def on_prevMaterialButton_clicked(self, checked):
         if self.index > 0:
             self.index = self.index - 1
-            self.plot_spectrum()
+            self.update_spectrum()
 
     @Slot(bool)
     def on_nextMaterialButton_clicked(self, checked):
-        if self.index < len(self.baseSpectra)-1:
+        if self.index < self.entries - 1:
             self.index = self.index + 1
-            self.plot_spectrum()
+            self.update_spectrum()
 
 
-class SampleSpectraViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
-    def __init__(self, parent, scenario, detector, selected, file_list=None):
-        QDialog.__init__(self, parent)
-        self.setupUi(self)
+class BaseSpectraViewerDialog(SpectraViewerDialog):
+    def __init__(self, parent, base_spectra, detector, selected):
+        super().__init__(parent)
+        self.baseSpectra = base_spectra
+        self.detector = detector
+
+        self.entries = len(self.baseSpectra)
+
+        self.set_selected(selected)
+
+    def set_selected(self, selected):
+        for i, baseSpectrum in enumerate(self.baseSpectra):
+            if baseSpectrum.material.name == selected:
+                self.index = i
+                self.update_spectrum()
+
+    def update_spectrum(self):
+        baseSpectrum = self.baseSpectra[self.index]
+        with open(self.json_file, 'w') as json_file:
+            json_file.write(baseSpectrum.as_json())
+        self.browser.load(self.local_url)
+
+
+class SampleSpectraViewerDialog(SpectraViewerDialog):
+    def __init__(self, parent, scenario, detector, selected, file_list:list | None = None):
+        super().__init__(parent)
         self.scenario = scenario
         self.detector = detector
         self.selected = selected
-        self.session = Session()
-        self.json_file = os.path.join(get_bundle_dir(), 'd3_resources', 'spectrum.json')
         self.index = selected
-        self.file_list = file_list
+        self.file_list = file_list or self._get_sample_dir_files()
+        self.update_spectrum()
 
-        if not self.file_list:
-            sample_path = get_sample_dir(RaseSettings().getSampleDirectory(), self.detector, self.scenario.id)
-            self.file_list = glob.glob(os.path.join(sample_path, '*.n42'))
-            self.file_list.sort(key=natural_keys)
+    def _get_sample_dir_files(self):
+        sample_path = get_sample_dir(RaseSettings().getSampleDirectory(), self.detector, self.scenario.id)
+        file_list = glob.glob(os.path.join(sample_path, '*.n42'))
+        file_list.sort(key=natural_keys)
+        self.entries = len(file_list)
+        return file_list
 
-        self.browser = WebSpectraView(self)
-        self.plot_spectrum()
-
-        self.plot_layout = QVBoxLayout(self.widget)
-        self.plot_layout.addWidget(self.browser)
-        self.widget.setFocus()
-
-    def plot_spectrum(self):
+    def update_spectrum(self):
         filepath = self.file_list[self.index]
         status = []
         sharedObject = SharedObject(True)
@@ -145,57 +200,36 @@ class SampleSpectraViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
         data = ReadFileObject(*v)
 
         with open(self.json_file, 'w') as json_file:
-            json_str = json.dumps([{'title': os.path.basename(filepath),
+            json.dump([{'title': os.path.basename(filepath),
                             'livetime': data.livetime,
                             'realtime': data.realtime,
                             'xeqn': [data.ecal[0], data.ecal[1], data.ecal[2]],
                             'y': [float(c) for c in data.counts.split(',')],
                             'yScaleFactor': 1,
-                            }])
-            print(json_str, file=json_file)
-        self.browser.load(self.browser.local_url)
-
-    @Slot(bool)
-    def on_prevMaterialButton_clicked(self, checked):
-        if self.index >= 0:
-            self.index = self.index - 1
-            self.plot_spectrum()
-
-    @Slot(bool)
-    def on_nextMaterialButton_clicked(self, checked):
-        if self.index < len(self.file_list)-1:
-            self.index = self.index + 1
-            self.plot_spectrum()
+                            }], json_file)
+        self.browser.load(self.local_url)
 
 
-class MultiSpecViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
-    def __init__(self, parent, sampledirs):
-        QDialog.__init__(self, parent)
-        self.setupUi(self)
+class MultiSpecViewerDialog(SpectraViewerDialog):
+    def __init__(self, parent, dirs_labels: list[tuple[str, str]]):
+        super().__init__(parent)
         self.nextMaterialButton.hide()
-        self.sample_dirs = sampledirs
-        if len(self.sample_dirs) == 1:
+        self.dirs_labels = dirs_labels
+        if len(self.dirs_labels) == 1:
             self.prevMaterialButton.setText(self.tr('Export Summed Spectrum'))
         else:
             self.prevMaterialButton.hide()
-        self.sample_dirs = sampledirs
-        self.json_file = os.path.join(get_bundle_dir(), 'd3_resources', 'spectrum.json')
         self.sum_specs = []
-        for index, sample_path in enumerate(self.sample_dirs):
+        for index, (sample_path, label) in enumerate(self.dirs_labels):
             files = glob.glob(os.path.join(sample_path, '*.n42'))
-            self.sum_specs.append(self.sum_spectra(os.path.basename(sample_path), files, index))
-        self.browser = WebSpectraView(self)
-        self.plot_spectrum()
-
-        self.plot_layout = QVBoxLayout(self.widget)
-        self.plot_layout.addWidget(self.browser)
-        self.widget.setFocus()
+            self.sum_specs.append(self.sum_spectra(label, files, index))
+        self.update_spectrum()
 
     @Slot(bool)
     def on_prevMaterialButton_clicked(self, checked):
         path = QFileDialog.getSaveFileName(self, self.tr('Save File'),
                                            os.path.join(RaseSettings().getDataDirectory(),
-                                           os.path.basename(self.sample_dirs[0])+'_summed'),
+                                           os.path.basename(self.dirs_labels[0][0])+'_summed'),
                                            'n42 (*.n42)')
         if path[0]:
             s = self.sum_specs[0]
@@ -232,6 +266,9 @@ class MultiSpecViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
             status = []
             sharedObject = SharedObject(True)
             v = readSpectrumFile(file, sharedObject, status, requireRASESen=False)
+            if v is None:
+                print(status)
+                continue
             data = ReadFileObject(*v)
             if len(counts) == 0:
                 counts = np.array([float(c) for c in data.counts.split(',')])
@@ -248,22 +285,13 @@ class MultiSpecViewerDialog(ui_view_spectra_dialog.Ui_Dialog, QDialog):
             return {'title': name, 'liveTime': lt, 'realTime': rt, 'xeqn': xeqn,
                     'y': counts.tolist(), 'id': index}
 
-    def plot_spectrum(self):
+    def update_spectrum(self):
         with open(self.json_file, 'w') as json_file:
-            json_str = json.dumps(self.sum_specs)
-            print(json_str, file=json_file)
-        self.browser.reload()
+            json.dump(self.sum_specs, json_file)
+        self.browser.load(self.local_url)
 
 
-class WebSpectraView(QWebEngineView):
-    def __init__(self, parent):
-        super(WebSpectraView, self).__init__(parent)
-        file_path = os.path.join(get_bundle_dir(), 'd3_resources', 'spectrum.html')
-        self.local_url = QUrl.fromLocalFile(file_path)
-        self.load(self.local_url)
-
-
-class Result3DPlottingDialog(ui_results_plotting_dialog_3d.Ui_Dialog, QDialog):
+class Result3DPlottingDialog(ui_results_plotting_dialog_3d.Ui_ResultsPlotting3DDialog, QDialog):
 
     def __init__(self, parent, df, titles):
         QDialog.__init__(self)
@@ -316,7 +344,7 @@ class Result3DPlottingDialog(ui_results_plotting_dialog_3d.Ui_Dialog, QDialog):
         self.widget.setFocus()
 
 
-class ResultPlottingDialog(ui_results_plotting_dialog.Ui_Dialog, QDialog):
+class ResultPlottingDialog(ui_results_plotting_dialog.Ui_ResultsPlottingDialog, QDialog):
 
     def __init__(self, parent, x, y, titles, labels, replications, x_err=None, y_err=None):
         QDialog.__init__(self)
@@ -548,7 +576,7 @@ class ResultPlottingDialog(ui_results_plotting_dialog.Ui_Dialog, QDialog):
         return r.params if (r and r.success) else None
 
 
-class FitParamsSettings(ui_fit_params_settings_dialog.Ui_Dialog, QDialog):
+class FitParamsSettings(ui_fit_params_settings_dialog.Ui_FitParamsSettingsDialog, QDialog):
     """Simple Dialog to customize the initial values and ranges of the s-curve fit parameters
 
     :param parent: the parent dialog, from which the current parameters are imported

@@ -1,12 +1,12 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by L. Bently-Tammero, J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky,
 #            V. Mozin, S. Sangiorgio.
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -47,7 +47,7 @@ from pathlib import Path
 import re
 from PySide6.QtCore import QCoreApplication
 
-# translation_tag = 'pcf_t'
+from src.qt_utils import Translatable
 
 
 class Spectrum(object):
@@ -223,7 +223,7 @@ def get_channel_data_string(array_in):
                      for val in array_in])
 
 
-class PCFtoN42Writer:
+class PCFtoN42Writer(Translatable):
     """
     Class to write RASE-compliant n42 output from PCF files
     """
@@ -231,7 +231,7 @@ class PCFtoN42Writer:
     def __init__(self, pcf_file_in):
         self.pcf_file_in = Path(pcf_file_in)
         self.pcf = readpcf(pcf_file_in)
-        print(QCoreApplication.translate('pcf_t', 'Successfully read {} spectra').format(len(self.pcf)))
+        print(self.tr('Successfully read {} spectra').format(len(self.pcf)))
 
     def _add_data_to_n42(self, spec_in):
         """returns n42 XML
@@ -249,7 +249,7 @@ class PCFtoN42Writer:
     def _add_spec_to_measurement(self, spec_in, measurement):
         spectrum = ET.SubElement(measurement, 'Spectrum')
 
-        real_time = ET.SubElement(spectrum, 'RealTimeDuration')
+        real_time = ET.SubElement(measurement, 'RealTimeDuration')
         live_time = ET.SubElement(spectrum, 'LiveTimeDuration')
         real_time.text = f"PT{spec_in.real_time}S"
         live_time.text = f"PT{spec_in.live_time}S"

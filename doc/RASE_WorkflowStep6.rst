@@ -1,137 +1,199 @@
-.. _workflowStep6:
+.. _workflowstep6:
 
-*************************************************************
-RASE Workflow Step 6: Replay Tool Results Analysis
-*************************************************************
+####################################################
+ RASE workflow step 6: Replay tool results analysis
+####################################################
 
-View Results
-============
+**************
+ View results
+**************
 
-The “View Results” button will display the table with a summary of the replay tool results for the selected instrument
-and scenario combination. If multiple scenario/instrument/replay combinations are selected, the results button will remain clickable so long as
-at least one of the selected instrument/scenario/replay combinations  has results that are ready to be viewed.
-The number of columns displayed in the view results dialog can be customized via the table settings dialog, using the "Table Settings" button.
-The user may also freely modify the correspondence table using the "Correspondence Table" button, which will update the results table live.
-If a material name is in the format of XXnnn (e.g.: Rn226, K40) and the material is set as a source material, RASE will automatically look for
-"XX-nnn" as well as "XXnnn" when calculating the results (so if Cs137 was defined as a material, RASE would consider an identification of
-Cs-137 and Cs137 as "correct IDs"). This is not done when a material of this format is defined in the background (so Cs137 and Cs-137 are
-considered as two separate identifications). For background materials, the equivalence must be enforced manually and on an isotope-by-isotope
-basis in the correspondence table.
+Click the "View Results" button to open a summary table of the replay tool results for the
+selected instrument and scenario combination. If you select multiple scenario/instrument/replay
+combinations, the Results button remains enabled as long as at least one selected combination has
+results ready to view. Customize the number of columns shown in the View Results dialog via the
+table settings dialog using the :guilabel:`Table Settings` button. You may also edit the correspondence table
+with the :guilabel:`Correspondence Table` button; changes update the results table live. If a material name uses the
+format XXnnn (for example, Rn226, K40) and the material is defined as a source, RASE will match
+both "XX-nnn" and "XXnnn" when computing results (for example, if Cs137 is defined, RASE treats
+Cs-137 and Cs137 as equivalent "correct IDs"). RASE does not apply this equivalence for materials
+defined as background entries (so Cs137 and Cs-137 count as distinct identifications). For
+background materials, enforce equivalence manually and on an isotope-by-isotope basis in the
+correspondence table.
 
-**Detailed identification results** for each individual spectrum can be reviewed by double clicking on the row of interest in the "View Results" table. Detailed identification results are useful to identify spectra that provided unexpected results or to determine how to adjust the correspondence table comprehensions to better match the objectives of a specific study.
-Use Ctrl+C or right-click to copy the ID results and use the exact entries to modify the correspondence table comprehensions.
+**Detailed identification results** for each individual spectrum open by double-clicking the row of
+interest in the :guilabel:`View Results` table. Use detailed results to find spectra that produced unexpected
+outputs or to decide how to adjust correspondence table comprehensions for a specific study. Use
+:kbd:`Ctrl+C` or right-click to copy ID results, then paste the exact entries to update the
+correspondence table comprehensions.
 
-For each scenario, RASE also computes the **frequency of identification results** from all the generated samples. This analysis can be accessed by right-clicking an entry in the "View Results" table and selecting the "Show Identification Results Frequency" menu.
+For each scenario, RASE also computes the **frequency of identification results** across all generated
+samples. Access this analysis by right-clicking an entry in the :guilabel:`View Results` table and selecting
+the :menuselection:`Show Identification Results Frequency` menu.
 
-The tables in the "View Results" and "Detailed Results" dialogs can be exported as a \*.csv file and processed in Excel for plotting and extended analysis. The RASE-generated sampled spectra and replay tool outputs can be reviewed manually using programs like PeakEasy and Interspec.
+The tables in the :guilabel:`View Results` and :guilabel:`Detailed Results` dialogs can be exported as a :file:`*.csv` file and
+opened in Excel for plotting and further analysis. You can also review RASE-generated sampled
+spectra and replay-tool outputs manually with programs like PeakEasy and Interspec.
 
 |
 
-.. _rase-WorkflowStep6a:
+.. _rase-workflowstep6a:
 
 .. figure:: _static/rase_WorkflowStep6.png
-    :scale: 70%
+   :scale: 33 %
 
-    **Main RASE window showing how to access identification results dialogs**
+   **Main RASE window showing how to access identification results dialogs**
 
 |
 
 .. figure:: _static/rase_WorkflowStep6-2.png
-    :scale: 70%
+   :scale: 33 %
 
-    **“View Results” and "Detailed Results" tables.**
+   **"View Results" and "Detailed Results" tables.**
 
 |
 
-RASE uses both an unweighted and weighted F-Score methodology based on the geometric mean of precision and recall to evaluate the identification
-performance of an algorithm. For more details on the F-Score see [AIP]_.
+RASE evaluates identification performance using both unweighted and weighted F-score methods based
+on the geometric mean of precision and recall. For more details on the F-score see :cite:`AIP`.
 
-Confidence intervals in RASE are are determined using the Wilson Score approach. Wilson Score intervals are biased
-towards 0.5, and are asymmetric, but have been shown to have a more accurate performance than "exact" methods such as
-Clopper-Pearson, which tend to be overly conservative (see Newcombe, 1998).
+RASE computes confidence intervals using the Wilson score method. Wilson score intervals are
+asymmetric and biased towards 0.5, but they typically provide more accurate intervals than "exact"
+methods such as Clopper-Pearson, which are often overly conservative (see Newcombe, 1998).
 
-Each term in the view results table is calculated independently for each sample spectrum, and then averaged across
-all replications for a given scenario. The information in the columns are defined as follows:
+Each term in the View Results table is calculated independently for every sample spectrum, then
+averaged across all replications for a scenario. The column definitions are:
 
 .. math::
+
    Prob_{\text{ID}} = \begin{cases}
                         1, & \text{if all isotopes are correctly identified}\\
                         0, & \text{otherwise}
                       \end{cases}
+
 .. math::
-   {\text{CIs (for both } Prob_{\text{ID}} \text{ and } C\&C)} = {\text{Upper and lower confidence interval bounds for a given } \alpha}
+
+   {\text{CIs (for both } Prob_{\text{ID}} \text{ and } C\&C)} = {\text{Upper and lower confidence interval
+   bounds for a given } \alpha}
+
 .. math::
-   {\text{True Positives}} = \frac{\text{# of true positives}}{\text{total # of sources in scenario}}
+
+   {\text{True Positives}} = \frac{\text{number of true positives}}{\text{total number of sources in
+   scenario}}
+
 .. math::
-   {\text{False Positives}} = {\text{Number of identified isotopes that were not defined in the scenario sources}}
+
+   {\text{False Positives}} = {\text{Number of identified isotopes that were not defined in the scenario
+   sources}}
+
 .. math::
-   {\text{False Negatives}} = {\text{Number of isotopes defined in the scenario sources that were not identified}}
+
+   {\text{False Negatives}} = {\text{Number of isotopes defined in the scenario sources that were not
+   identified}}
+
 .. math::
+
    C\&C {\text{ (Complete \& Correct)}} = \begin{cases}
                                         1, & \text{if all sources are correctly ID'd with no false positives}\\
                                         0, & \text{otherwise}
                                         \end{cases}
+
 .. math::
-   Precision = \frac{\text{# of true positives}}{\text{(# of true positives) + (# of false positives)}}
+
+   Precision = \frac{\text{number of true positives}}{\text{(number of true positives) + (number of false
+   positives)}}
+
 .. math::
-   Recall = \frac{\text{# of true positives}}{\text{(# of true positives) + (# of false negatives)}}
+
+   Recall = \frac{\text{number of true positives}}{\text{(number of true positives) + (number of false
+   negatives)}}
+
 .. math::
+
    F_{\text{Score}} = \frac{2 \times \text{Precision} \times \text{Recall}}{\text{Precision + Recall}}
 
+**********
+ Plotting
+**********
 
-Plotting
-========
-
-RASE includes 1D, 2D, and 3D built-in plotting capabilities. Using the drop-down selection boxes in the bottom left of the "View Results" window, the user may select any of the possible results columns to form plots from. Selecting an option exclusively for the x axis will result in a histogram plot for the chosen results column. Selecting options for both the x and y axes will create a 2D plot. Selecting an option from the z axis drop-down menu will produce a heat map of that column as a function of the results from the x and y columns. If the user chooses source/background dose/flux as one of the axes, they will be prompted to choose one of the source/background isotopes to plot. The "Category" option allows the user to further break up results into several relevant groups. For example, the user may choose "Detector" as a category for plotting pID vs Source Dose; if there are results for more than one detector in the results table, the results for these two detectors will be plotted in different colors on the same plot. Clicking "View Plot" will bring up a plotting dialog displaying the selected data.
+RASE provides built-in one-, two-, and three-dimensional plotting. In the bottom-left of the
+:guilabel:`View Results` window, choose result columns from the drop-down boxes to build plots. Selecting only
+an x-axis variable produces a histogram of that column. Selecting both x and y variables creates a
+2D plot. Choosing a z variable produces a heat map showing that column as a function of the x and
+y columns. If you pick source/background dose or flux as an axis, RASE prompts you to choose which
+source/background isotope to plot. The :guilabel:`Category` option lets you split results into categories.
+For example, choose :guilabel:`Detector` as a category to plot pID vs Source Dose; if the results table
+contains multiple detectors, each detector plots in a different color. Click :guilabel:`View Plot` to open
+the plotting dialog and display the selected data.
 
 S-curves
---------
+========
 
-The plotting capabilities are particularly specialized for S-curve fitting. In the plotting dialog the user may select which dataset to fit curves to (if categories are defined), and set a percent for ID threshold estimation. Pressing "Plot S-Curve" will fit a sigmoid trendline, if possible. The fit is done using a Boltzmann Sigmoid function defined as:
+The plotting dialog supports S-curve fitting. Choose the dataset (or category) to fit and set the
+ID-threshold percent for estimation. Press :guilabel:`Plot S-Curve` to fit a sigmoid trendline, when possible.
+The fit uses a Boltzmann Sigmoid function:
 
 .. math::
+
    y_{Fit} = a_2 + \frac{a_1 - a_2}{1 + e^{-(x-M)/B}}
 
-
-This plot works for curves where the identification rate is positively correlated with source intensity as well as negatively correlated. If the fit is successful, the S-curve is plotted with a 1-sigma confidence interval surrounding the line and a point is marked on the plot where the trendline crosses an ID threshold (default is 80%, but can be varied by the user). The x-value of this crossing point is noted in the legend. These graphical features can be toggled on or off. Detailed fit results are displayed in the text box to the left. While the fitting algorithm is sufficiently robust, it may be necessary to manually adjust the fit parameters to help convergence. The fit parameters for each curve are accessible through the "Edit S-Curve Fit Parameters" button.   Various properties of the plot, including title and axes scale/labels, can be modified by the user. The plot can be exported in the user's favorite image file format.
+The fit works for curves where identification rate increases or decreases with source intensity. If
+the fit succeeds, RASE plots the S-curve with a 1-sigma confidence band and marks the point where the
+trendline crosses the ID threshold (the default is 80%, adjustable by the user). The x-value of that
+crossing appears in the legend. Toggle these graphical features on or off. Detailed fit results
+appear in the text box to the left. Although the fitting algorithm is robust, you may need to adjust
+fit parameters manually to aid convergence. Access fit parameters for each curve via the
+:guilabel:`Edit S-Curve Fit Parameters` button. You can edit plot properties such as title, axis labels, and scales, and export
+the plot to your preferred image format.
 
 |
 
 .. figure:: _static/rase_WorkflowStep6-3.png
-    :scale: 70%
+   :scale: 33 %
 
-    **Plotting interface and S-curve fits**
+   **Plotting interface and S-curve fits**
 
 |
 
-3D Plotting - Heat Maps
------------------------
+3D plotting - heat maps
+=======================
 
-Heat maps are only possible to create where exactly one result exists at each intersection point of a grid of permutations created by the x and y variables: for example, if the user were to define all permutations with source A at dose rates 0.1, 0.2, and 0.3 :math:`{\mu}`\ Sv/hr and source B at dose rates 0.4, 0.5, and 0.6 :math:`{\mu}`\ Sv/hr (so 9 total scenarios), it would be possible to create a continuous heat map of results. However, if the user were to include an additional scenario in these results where source A = 0.1 :math:`{\mu}`\ Sv/hr, source B = 0.4 :math:`{\mu}`\ Sv/hr, and source C = 0.7 :math:`{\mu}`\ Sv/hr (so 10 total scenarios), the heat map would fail to generate because there is already results for a scenario where source A = 0.1 :math:`{\mu}`\ Sv/hr and source B = 0.4 :math:`{\mu}`\ Sv/hr. If instead the user did not define, for some reason, the scenario where source A = 0.2 :math:`{\mu}`\ Sv/hr and source B = 0.3 :math:`{\mu}`\ Sv/hr (so 8 scenarios total), the heat map would have a large section undefined due to this result missing from the grid.
+Heat maps require exactly one result at each grid intersection defined by the x and y variables.
+For example, if you define permutations with source A at dose rates 0.1, 0.2, and 0.3 :math:`{\mu}`\ Sv/hr
+and source B at 0.4, 0.5, and 0.6 :math:`{\mu}`\ Sv/hr (nine scenarios), you can create a continuous
+heat map. If you add a scenario with source A = 0.1 :math:`{\mu}`\ Sv/hr, source B = 0.4 :math:`{\mu}`\ Sv/hr,
+and source C = 0.7 :math:`{\mu}`\ Sv/hr (ten scenarios), the heat map fails because a duplicate grid
+intersection already exists for source A = 0.1 :math:`{\mu}`\ Sv/hr and source B = 0.4 :math:`{\mu}`\ Sv/hr.
+If instead you omit, for example, the scenario with source A = 0.2 :math:`{\mu}`\ Sv/hr and source B = 0.3
+:math:`{\mu}`\ Sv/hr (eight scenarios total), the heat map will have an undefined region where that
+grid point is missing.
 
-To add convenience for the user, a "Ignore isotopes with zero contribution" checkbox also exists. This is applicable specifically if the user is planning to look at the results of several possible permutations in quick succession. For example, the user has created three permutation sets of 9 scenarios each:
+To simplify exploration, enable the :guilabel:`Ignore isotopes with zero contribution` checkbox when you plan to examine several
+permutation sets in succession. For example, suppose you create three permutation sets of nine
+scenarios each:
 
-    - Set 1:
+   -  Set 1:
 
-        - source A at dose rates 0.1, 0.2, and 0.3 :math:`{\mu}`\ Sv/hr
-        - source B at dose rates 0.4, 0.5, and 0.6 :math:`{\mu}`\ Sv/hr
+         -  source A at dose rates 0.1, 0.2, and 0.3 :math:`{\mu}`\ Sv/hr
+         -  source B at dose rates 0.4, 0.5, and 0.6 :math:`{\mu}`\ Sv/hr
 
-    - Set 2:
+   -  Set 2:
 
-        - source A at dose rates 0.1, 0.2, and 0.3 :math:`{\mu}`\ Sv/hr
-        - source C at dose rates 0.7, 0.8, and 0.9 :math:`{\mu}`\ Sv/hr
+         -  source A at dose rates 0.1, 0.2, and 0.3 :math:`{\mu}`\ Sv/hr
+         -  source C at dose rates 0.7, 0.8, and 0.9 :math:`{\mu}`\ Sv/hr
 
-    - Set 3:
+   -  Set 3:
 
-        - source A at dose rates 0.1, 0.2, and 0.3 :math:`{\mu}`\ Sv/hr
-        - source D at dose rates 1.0, 1.1, and 1.2 :math:`{\mu}`\ Sv/hr
+         -  source A at dose rates 0.1, 0.2, and 0.3 :math:`{\mu}`\ Sv/hr
+         -  source D at dose rates 1.0, 1.1, and 1.2 :math:`{\mu}`\ Sv/hr
 
+If you attempt to create a heat map with the x axis as the :guilabel:`Source Dose` of source A and the y axis
+as the :guilabel:`Source Dose` of source B, the map fails because RASE implicitly assumes sources C and D also
+exist in those scenarios with dose rate 0. Check the :guilabel:`Ignore isotopes with zero contribution` checkbox to ignore those implicit
+zero-dose sources when creating the heat map. This lets you quickly examine all three sets.
 
-If the user attempts to create a heat map with the X-axis defined as the "Source Dose" of source A and the Y-axis as the "Source Dose" of source B, the map will fail to generate because RASE has implicitly assumed that source C and source D also exist in those scenarios with a dose rate of 0. By checking the "Ignore isotopes with zero contribution" checkbox, these instances are ignored when creating the heat map. This lets the user quickly examine all three sets of scenarios.
-
-.. _rase-WorkflowStep6b:
+.. _rase-workflowstep6b:
 
 .. figure:: _static/rase_WorkflowStep6-4.png
-    :scale: 100%
+   :scale: 100%
 
-    **An example of plotting 3-dimensional data as a heat map.**
+   **An example of plotting three-dimensional data as a heat map.**

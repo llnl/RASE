@@ -1,17 +1,39 @@
 .. _rase_gadras_integration:
 
-***************************
-RASE and GADRAS Integration
-***************************
+#############################
+ RASE and GADRAS integration
+#############################
 
-With the release of GADRAS version 19.3.3, users have been granted access to a python version of the API. This makes it possible to call various GADRAS capabilities directly from custom python scripts. One such capability is generating spectra for an instrument described by a detector response function (DRF), which can be used to supplement a RASE workflow in various ways. For example, a user may want to compare several instruments but lack the base spectra for one of the detectors they are interested in, or they may have data for an instrument but may be missing base spectra for one or two sources they are interested in. GADRAS can be used to simulate the response for that detector, and RASE can convert the resulting pcfs into base spectra. 
+GADRAS version 19.3.3 provides a Python API,
+allowing you to call GADRAS capabilities directly from custom Python scripts.
+One useful capability is generating spectra for an instrument described by a detector response
+function (DRF), which you can use to supplement a RASE workflow in several ways. For example, you
+may want to compare several instruments but lack the base spectra for one of the detectors you are
+interested in, or you may have data for an instrument but be missing base spectra for one or
+two sources you need. GADRAS can simulate the response for that detector,
+and RASE can convert the resulting pcfs into base spectra.
 
-One of the most obvious use cases is the desire to replicate the base spectra set of an existing detector with another detector which is simulated in GADRAS in order to compare the two. To support this, the :code:`gadras_clone_detector.py` script is included with the distribution of RASE in the `tools` folder. Though the user must modify or write their own python script to implement the functionality, said implementation is fairly straightforward. The script contains one function, :code:`clone_detector_yaml()`, which takes as arguments:
+One common use case is replicating the base spectra set of an existing
+detector with another detector simulated in GADRAS to compare the two. To support
+this, the ``gadras_clone_detector.py`` script is included with the distribution of RASE in the
+`tools` folder. Though you must modify or write your own Python script to use it, the
+implementation is straightforward. The script contains one function,
+``clone_detector_yaml()``, which takes as arguments:
 
-	* an RASE detector :code:`.yaml` file (exported from an existing RASE session)
-	* the path to the drf for the instrument the user wants to model
-	* the path to the local GADRAS installation. 
+   -  an RASE detector ``.yaml`` file (exported from an existing RASE session)
+   -  the path to the DRF for the instrument you want to model
+   -  the path to the local GADRAS installation
 
-The function will sift through the RASE detector :code:`.yaml` file, identify all source names, and simulate all those sources for the user-specified DRF. The output detector responses will automatically be converted into base spectra .n42 files, which the user can then load into RASE to define an detector. The script will only be able to simulate source names it can understand: for example, the script will not work if the detector :code:`.yaml` file has a source by the name of "MyPocketCs137," and will simply skip over the source (unless the user specifies a :code:`force=True` argument, in which case the code will crash if it encounters a source name it does not recognize.). Because the script is only looking for source names, and no other information about the sources, the user is freely able to modify the source names in the :code:`.yaml` file to generate any number of desired sources.
+The function reads the RASE detector ``.yaml`` file, identifies all source names, and
+simulate those sources for the DRF you specified. The output detector responses will
+automatically be converted into base spectra .n42 files, which you can then load into RASE to
+define a detector. The script can only simulate source names it recognizes; for
+example, the script will not work if the detector ``.yaml`` file has a source by the name of
+"MyPocketCs137," and will simply skip over the source (unless you specify a ``force=True``
+argument, in which case the code will crash if it encounters a source name it does not recognize).
+Because the script only looks for source names and no other source information, you
+are free to modify the source names in the ``.yaml`` file to generate any number of
+desired sources.
 
-The spectra are simulated with an assumed standoff of 100 cm. All base spectra are all yielded in units of dose only. 
+The spectra are simulated with an assumed standoff of 100 cm. All base spectra are yielded in
+units of dose only.

@@ -1,47 +1,74 @@
-.. _workflowStep4:
+.. _workflowstep4:
 
-**********************************************
-RASE Workflow Step 4: Generate Sampled Spectra
-**********************************************
+################################################
+ RASE workflow step 4: Generate sampled spectra
+################################################
 
+Confirm the desired instruments and scenarios are present and correctly specified in the
+appropriate tables. To modify or delete an entry in the "Scenarios" or "Instruments" table,
+double-click the row or use the context menu.
 
-Confirm that the desired instruments and scenarios are present and properly specified in the appropriate tables. If necessary, entries in the “Scenarios” and “Instruments” tables can be modified or deleted by the user by double-clicking on the corresponding row or using the context menu.
+At this point, generate sampled spectra by executing these steps:
 
-At this point, RASE can be used to generate sampled spectra. To do this, execute the following steps:
+#. Select one or more entries in the "Instruments" table
+#. Select one or more entries in the "Scenarios" table
+#. Choose one of two routes to proceed through the workflow execution:
 
-#.  Highlight one or more entries in the “Instruments” table
+   #. Press the "Gen Sampled Spectra" button that becomes available to generate the sampled
+      spectra.
 
-#.  Highlight one or more entries in the “Scenarios” table
+   #. Press the "Run Scenario" button that becomes available to sequentially execute the
+      entire workflow (generate sample spectra, run replay, and run translator) for all selected
+      scenarios and instruments without further input. This option only becomes available if all
+      selected instruments have command line-based replay tools.
 
-#.  At this point, there are two possible routes to proceed through the workflow execution:
+   The rest of this guide assumes you selected option (a) and will execute the steps manually.
+   The workflow ends in the same place whether you use option (a) or option (b).
 
-  a. Press the “Gen Sampled Spectra” button that becomes available in order to generate the sampled spectra.
+If a selected instrument has no base spectra for materials present in the scenario, the "Gen
+Sampled Spectra" and "Run Scenario" buttons remain unavailable. The missing materials for the
+instrument will be highlighted red in the "Scenarios" table.
 
-  b. Press the "Run Scenario" button that becomes available in order to sequentially execute the entire workflow (generate sample spectra, run replay, and run translator) for all selected scenarios and instruments without additional input from the user. This option only becomes available if all of the selected instruments have command line-based replay tools.
+To view generated sample spectra, select a detector and a scenario, right-click the scenario to
+open the context menu, and choose the appropriate option. "View Sample Spectra" shows individual
+spectra; "View Summed Sample Spectra" shows all replications summed together.
 
-  The rest of this guide will work under the assumption that the option (a) was selected, and the steps of the workflow are to be executed manually. However, it should be noted that the workflow will end in the same place, regardless of if the workflow is executed manually (option a) or using the "Run Scenario" button (option b).
+Open the directory containing the sampled spectra by pressing the "Sample Spectra Dir" button. If
+an n42 template file was specified in the replay tool settings associated with the current
+instrument, a second directory will also be present that contains the sampled spectra formatted
+for injection into the specified replay tool.
 
-If a selected instrument does not have base spectra for materials present in the scenario, the “Gen Sampled Spectra” and "Run Scenario" buttons remain unavailable. The missing materials for the instrument will be highlighted red in the “Scenarios” table.
+Access the directory containing data for a specific scenario from the context menu in the
+"Scenarios" table. An instrument must be selected for this option to become available.
 
-Users may visualize generated sample spectra by selecting a detector and scenario and right clicking the scenario to bring up the context menu. "View Sample Spectra" displays individual spectra, while "View Summed Sample Spectra" displays all the replications summed together. 
+******************************************************************
+ Advanced actions: Importing sample spectra and experimental data
+******************************************************************
 
-The directory containing the resulting sampled spectra can be accessed by pressing the “Sample Spectra Dir” button. If an n42 template file was specified in the replay tool settings associated with the current instrument, then a second directory will also be present containing the sampled spectra in the format ready for injection in the specified replay tool.
+Enable advanced actions by checking the "Enable advanced actions" checkbox. Two buttons appear
+next to the "Generate Spectra" and "Run Replay Tool" buttons: "Import Spectra" and
+"Import Replay Results".
 
-The directory containing data associated with the specific scenario can be accessed using the context menu in the "Scenarios" table. An instrument must be selected in order for this option to become available.
+To import experimental spectra for comparison with simulated data, select a detector and a
+scenario, then click "Import Spectra". In the directory dialog, navigate to the folder that
+contains the spectra and click "Okay". RASE imports the spectra and treats them the same as
+spectra generated within RASE. You can import experimental spectra for one detector and simulate
+spectra for another to compare replay results. RASE does not mark scenarios or detectors that
+have imported spectra; keep track of these yourself. You do not need a separate instrument for
+experimental spectra: imported and sampled spectra may coexist under a single instrument.
 
-
-Advanced actions: Importing sample spectra and experimental data
-================================================================
-
-If the user clicks the "Enable advanced actions" checkbox, two buttons will appear alongside the "Generate Spectra" and "Run Replay Tool": the "Import Spectra" and "Import Replay Results" buttons. Importing spectra allows the user to import experimental data into the RASE workflow for direct comparison to simulated data. To do this, simply select a detector and a scenario and press the "Import Spectra" button. This will bring up a directory dialog; navigate to the directory that contains the set of spectra to be imported into RASE and press "Okay". These spectra will be imported into RASE and from that point forward is treated identically to sample spectra created within RASE. By importing experimental spectra into a scenario for one detector and simulating the spectra using another detector, the user may easily compare replay results on experimental data with simulated results created via sampling from base spectra. RASE does not mark scenarios or detectors to identify them as having imported spectra associated with them, so it is left to the user to keep track of which scenarios/detectors have experimentally imported spectra. It is not necessary to define a separate instrument exclusively for experimental spectra: imported spectra and sampled spectra may co-exist associated with a single instrument. 
-
-Note that there are no checks in place that prevent the user from importing spectra that are incorrect. It falls to the user to verify that the live times, dwell times, dose rates, etc, are the same as those defined in the scenario setup. It also falls to the user to verify that the spectra imported for a detector/scenario combination is compatible with the replay tool in the same manner as spectra generated in RASE should be. RASE does not check to verify that the number of spectra imported is in agreement with the number of replications defined by the user, but provided that the number of replications defined for a scenario is greater than the number of spectra imported for that scenario the RASE workflow should operate normally and correctly.
+RASE does not verify the correctness of imported spectra. You must confirm that live times,
+dwell times, dose rates, etc., match the scenario setup. Also confirm that the imported spectra
+are compatible with the replay tool in the same manner as spectra generated in RASE. RASE does
+not check that the number of imported spectra equals the number of replications defined for a
+scenario, but if the number of replications exceeds the number of imported spectra the workflow
+should operate normally and correctly.
 
 |
 
-.. _rase-WorkflowStep4:
+.. _rase-workflowstep4:
 
 .. figure:: _static/rase_WorkflowStep4.png
-    :scale: 70%
+   :scale: 33 %
 
-    **Populated main RASE window showing how to generate sample spectra.**
+   **Populated main RASE window showing how to generate sample spectra.**

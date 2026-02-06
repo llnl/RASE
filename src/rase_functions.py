@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -40,6 +40,8 @@ import logging
 import os
 import re
 import shutil
+import bisect
+
 from dataclasses import dataclass
 
 from lxml import etree
@@ -49,16 +51,31 @@ import numpy as np
 from mako import exceptions
 from sqlalchemy.engine import create_engine, Engine
 from sqlalchemy import event
+from typing import List, Optional
 
 from PySide6.QtCore import QCoreApplication
+from src.rase_settings import APPLICATION_PATH, RASE_VERSION
+from src.rebin import rebin
 from src.scenarios_io import ScenariosIO
-from src.table_def import BaseSpectrum, SecondarySpectrum, Detector, Scenario, \
+from src.table_def import BaseSpectrum, Detector, Scenario, \
     SampleSpectraSeed, Session, Base, ScenarioMaterial, ScenarioBackgroundMaterial, Material, \
     Replay, ScenarioGroup
 from src.utils import compress_counts, indent
 
 # translation_tag = 'funcs'
+# configure the logger
 
+# TODO: Remember to update the version number at each release!
+logFile = os.path.join(APPLICATION_PATH, "rase.log")
+FORMAT = '%(asctime)-15s RASE' + RASE_VERSION + ' %(levelname)s %(message)s'
+logging.basicConfig(filename=logFile, level=logging.DEBUG, format=FORMAT)
+# Add a console handler to also print to screen
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)  # Set the logging level for the console
+console_handler.setFormatter(logging.Formatter(FORMAT))  # Use the same format
+
+# Add the console handler to the root logger
+logging.getLogger().addHandler(console_handler)
 # Key variables used in several places
 secondary_type = {'base_spec': 0, 'scenario': 1, 'file': 2, 'None': None}
 
@@ -401,123 +418,6 @@ def getSeconds(text):
         seconds += float(text)
     return seconds
 
-
-def rebin(counts, oldEnergies, newEcal):
-    """
-    Rebins a list ouf counts to a new energy calibration.
-
-    :param counts:      numpy array ouf counts indexed by channel
-    :param oldEnergies: numpy array of energies indexed by channel
-    :param newEcal:     list of new energy polynomial coefficents to rebin to: [E3 E2 E1 E0]
-    :return:            numpy array of rebinned counts
-    """
-    newEnergies = np.polyval(np.flip(newEcal), np.arange(len(counts)+1))
-    newCounts   = np.zeros(len(counts))
-
-    # move old energies index to first value greater than the first value in newEnergies
-    oe = 0 # will always lead ne in energy boundary value
-    while oe < len(oldEnergies) and oldEnergies[oe] <= newEnergies[0]: oe += 1
-    ne0 = 0
-    while newEnergies[ne0] <= oldEnergies[oe]:
-        ne0 += 1
-
-    # loop through and distribute old counts into new bins
-    for ne in range(ne0, len(newCounts)):
-        if oe == len(oldEnergies): break  # have already distributed all old counts
-
-        # if no old energy boundaries within this new bin, new bin is fraction of old bin
-        if oldEnergies[oe] > newEnergies[ne + 1]:
-            newCounts[ne] = counts[oe - 1] * (newEnergies[ne + 1] - newEnergies[ne]) \
-                            / (oldEnergies[oe] - oldEnergies[oe - 1])
-
-        # else there are old energy boundaries in this new bin: add each portion of old bins
-        else:
-            # Step 1: add first partial(or full) old bin
-            # TODO: This will crash if (oldEnergies[oe] - oldEnergies[oe-1]) < 0; might be necessary to handle this?
-            newCounts[ne] = counts[oe-1] * (oldEnergies[oe] - newEnergies[ne]) \
-                            / (oldEnergies[oe] - oldEnergies[oe-1])
-            oe += 1
-
-            # Step 2: add middle full old bins
-            while oe < len(oldEnergies) and oldEnergies[oe] <= newEnergies[ne+1]:
-                newCounts[ne] += counts[oe-1]
-                oe += 1
-            if oe == len(oldEnergies): break
-
-            # Step 3: add last partial old bin
-            newCounts[ne] += counts[oe-1] * (newEnergies[ne+1] - oldEnergies[oe-1]) \
-                             / (oldEnergies[oe] - oldEnergies[oe-1])
-    return newCounts
-
-
-def _getCountsDoseAndSensitivity(scenario, detector, degradations=None):
-    """
-
-    :param scenario:
-    :param detector:
-    :return:
-    """
-    session = Session()
-
-    # distortion:  distort ecal with influence factors
-    # ecal = [detector.ecal3, detector.ecal2, detector.ecal1, detector.ecal0]
-    #get ecal: either the only ecal in the list of sources, or the preferred ecal of the detector if the sources differ
-    scenMaterialnames =  [m.material_name for m in scenario.scen_materials + scenario.scen_bckg_materials]
-    baseSpectra = session.query(BaseSpectrum).filter(BaseSpectrum.detector_name == detector.name,
-                                                     BaseSpectrum.material_name.in_(scenMaterialnames)).all()
-
-    ecals = [bs.ecal for bs in baseSpectra]
-    all_same_ecal = all(np.array_equal(ecals[0], other) for other in ecals)
-
-    # if all_same_ecal:
-    #     ecal = ecals[0]
-    # else:
-    #     ecal = detector.ecal
-    ecal = detector.ecal
-
-    new_influences, bin_widths, energies = calculate_influence(scenario,detector,degradations,ecal)
-
-    # get dose, counts and sensitivity for each material
-    countsDoseAndSensitivity = []
-    for scenMaterial in scenario.scen_materials + scenario.scen_bckg_materials:
-        baseSpectrum = (session.query(BaseSpectrum)
-                        .filter_by(detector_name=detector.name,
-                                   material_name=scenMaterial.material_name)
-                        ).first()
-        counts = rebin_ecal_disagreement(ecal, baseSpectrum.ecal, detector.chan_count, baseSpectrum.counts)
-
-        if scenario.influences:
-            for index, infl in enumerate(new_influences):
-                counts = apply_distortions(infl, counts, bin_widths[index], energies, ecal)
-
-        if scenMaterial.fd_mode == 'FLUX':
-            countsDoseAndSensitivity.append((counts, scenMaterial.dose, baseSpectrum.flux_sensitivity))
-        else:
-            countsDoseAndSensitivity.append((counts, scenMaterial.dose, baseSpectrum.rase_sensitivity))
-
-    # if the detector has an internal calibration source, it needs to be added with special treatment
-    if detector.includeSecondarySpectrum and detector.sample_intrinsic:
-
-        secondary_spectra = session.query(SecondarySpectrum).filter_by(detector_name=detector.name).all()
-        secondary_spectrum = [k for k in secondary_spectra if k.classcode == detector.intrinsic_classcode][0]
-        # secondary_spectrum = (session.query(BackgroundSpectrum).filter_by(detector_name=detector.name)).first()
-        counts = rebin_ecal_disagreement(ecal, secondary_spectra.ecal, detector.chan_count,
-                                         secondary_spectrum.get_counts_as_np())
-
-        # apply distortion on counts
-        if scenario.influences:
-            for index, infl in enumerate(new_influences):
-                counts = apply_distortions(infl, counts, bin_widths[index], energies, ecal)
-
-        # extract counts per second
-        cps = sum(counts)/secondary_spectrum.livetime
-
-        # the internal calibration spectrum is scaled only by time
-        # so the sensitivity parameter is set to the cps and the dose to 1
-        countsDoseAndSensitivity.append((counts, 1.0, cps))
-
-    return countsDoseAndSensitivity
-
 def rebin_ecal_disagreement(newEcal, oldEcal, chancount, counts):
     if not (np.array_equal(newEcal, oldEcal)):
         oldenergies = np.polyval(np.flip(oldEcal), np.arange(chancount))
@@ -617,7 +517,7 @@ def create_n42_file_from_template(n42_mako_template, filename, scenario, detecto
         template_data['compressed_sample_counts'] = ' '.join('{:d}'.format(x) for x in compress_counts(sample_counts))
         template_data['sample_counts_array'] = sample_counts
         template_data['bin_edges'] = ' '.join(str(v) for v in np.polyval([detector.ecal3, detector.ecal2, detector.ecal1, detector.ecal0], np.arange(detector.chan_count+1)))
-    except TypeError:
+    except TypeError: # used for DRASE only.
         template_data['sample_periods'] = sample_counts
 
     if secondary_spectrum:
@@ -671,38 +571,78 @@ def strip_xml_tag(str):
     """
     return re.sub('<[^<]+>', "", str)
 
+##############################################
+'''
+# Helpers to build RASE output folder structure:
+data_dir/
+  detector1/
+    scenario1/
+      RASE-spectra/
+      replay1/
+        spectra/
+        results/
+      replay2/
+        results/      
+      replay3/
+        spectra/
+        results/
+        translatedResults/
+    scenario2/
+      RASE-spectra/
+      replay2/
+        results/
+      replay4/
+        spectra/
+        results/
+  detector2/
+    scenario1/
+      RASE-spectra/
+'''
 
-def get_sample_dir(sample_root_dir, detector: Detector, scenario_id: str):
+def get_data_dir(data_root_dir: str | os.PathLike, detector: Detector, scenario_id: str) -> str:
     """
-    Returns the name of the folder where the generated sample spectra are saved
+    Returns the base folder where all output data are stored for a given detector-scenario pair.
     """
-    return os.path.join(sample_root_dir, f'{scenario_id}--{detector.id}')
+    return str(Path(data_root_dir) / detector.id / scenario_id)
 
 
-def get_replay_input_dir(sample_root_dir, detector: Detector, replay: Replay, scenario_id: str):
+def get_sample_dir(data_root_dir, detector: Detector, scenario_id: str):
     """
-    Returns the name of the folder where the sample spectra are saved in the format for the replay tool
+    Returns the folder where the generated sample spectra are saved.
     """
-    return os.path.join(get_sample_dir(sample_root_dir, detector, scenario_id),
-                        replay.id if (replay and replay.n42_template_path) else '')
+    return str(Path(get_data_dir(data_root_dir, detector, scenario_id)) / 'RASE-spectra')
 
 
-def get_replay_output_dir(sample_root_dir, detector: Detector, replay: Replay, scenario_id: str):
+def get_replay_input_dir(data_root_dir, detector: Detector, replay: Optional[Replay], scenario_id: str):
     """
-    Returns the name of the folder where the output of the replay tool is placed
+    Returns the folder where the sample spectra are saved in the format for the replay tool.
+    If no replay template is configured, falls back to the RASE sample spectra folder.
     """
-    dir_name = f'{replay.id}_results' if replay else 'results'
-    return os.path.join(get_replay_input_dir(sample_root_dir, detector, replay, scenario_id), dir_name, "")
+    data_dir = get_data_dir(data_root_dir, detector, scenario_id)
+    if replay and replay.n42_template_path:
+        return str(Path(data_dir) / replay.id / "spectra")
+    return get_sample_dir(data_root_dir, detector, scenario_id)
 
 
-def get_results_dir(sample_root_dir, detector:Detector, replay: Replay, scenario_id: str) -> str:
+def get_replay_output_dir(data_root_dir, detector: Detector, replay: Replay, scenario_id: str):
+    """
+    Returns the folder where the output of the replay tool is placed.
+    """
+    data_dir = get_data_dir(data_root_dir, detector, scenario_id)
+    return str(Path(data_dir) / replay.id / "results")
+
+
+def get_results_dir(data_root_dir, detector:Detector, replay: Replay, scenario_id: str) -> str:
     """
     Returns the name of the folder with the analyzed files (after replay) in RASE format
+    If a translator is configured (translator_exe_path is not empty), returns '{replay.id}-translatedResults',
     """
-    if replay and replay.translator_exe_path:
-        return os.path.join(get_replay_input_dir(sample_root_dir, detector, replay, scenario_id) + f"{replay.id}_translatedResults", "")
-    else:
-        return get_replay_output_dir(sample_root_dir, detector, replay, scenario_id)
+    data_dir = get_data_dir(data_root_dir, detector, scenario_id)
+    if replay.translator_exe_path:
+        return str(Path(data_dir) / replay.id / "translatedResults")
+    return get_replay_output_dir(data_root_dir, detector, replay, scenario_id)
+
+##############################################
 
 
 def get_sample_spectra_filename(detector_id: str, scenario_id: str, filenum: int, suffix=".n42"):
@@ -755,7 +695,13 @@ def count_files_endwith(dir, endswith_filters):
     return num_files
 
 
-def delete_scenario(scenario_ids, sample_root_dir):
+def find_scenario_dirs(root_dir: os.PathLike | str, scenario_id: str) -> List[Path]:
+    root_path = Path(root_dir)
+    # '**/scenario' finds all 'scenario' directories at any depth
+    return [p for p in root_path.glob(f'**/{scenario_id}') if p.is_dir()]
+
+
+def delete_scenarios(scenario_ids: List[str], sample_root_dir: os.PathLike | str):
     """
     Delete scenarios from database and cleanup sample folders
     """
@@ -764,7 +710,7 @@ def delete_scenario(scenario_ids, sample_root_dir):
         scenDelete = session.query(Scenario).filter(Scenario.id == id)
 
         # folders
-        folders = [name for name in glob.glob(os.path.join(sample_root_dir, "*" + id + "*"))]
+        folders = find_scenario_dirs(sample_root_dir, id)
         for folder in folders:
             shutil.rmtree(folder)
 
@@ -772,16 +718,17 @@ def delete_scenario(scenario_ids, sample_root_dir):
         scenObj = scenDelete.first()
         scenObj.scenario_groups.clear()
         scenObj.influences.clear()
-        scenDelete.delete()
+        session.delete(scenObj)
 
         matDelete = session.query(ScenarioMaterial).filter(ScenarioMaterial.scenario_id == id)
-        matDelete.delete()
+        if matDelete.first():
+            session.delete(matDelete.first())
         backgMatDelete = session.query(ScenarioBackgroundMaterial).filter(ScenarioBackgroundMaterial.scenario_id == id)
-        backgMatDelete.delete()
+        if backgMatDelete.first():
+            session.delete(backgMatDelete.first())
 
         session.commit()
-
-    session.close()
+    # session.close()
 
 
 def delete_instrument(session, name):
@@ -793,16 +740,8 @@ def delete_instrument(session, name):
         detReplayDelete.influences.clear()
         detReplayDelete.replays.clear()
         session.delete(detReplayDelete)
-
-    # delete any unattached backgrounds (should there be any?)
-    # for bg in session.query(BackgroundSpectrum).filter_by(detectors=None).all():
-    #     session.delete(bg)
-
-    # detBaseRelationDelete = session.query(BaseSpectrum).filter(BaseSpectrum.detector_name == name)
-    # detBaseRelationDelete.delete()
-    # detBackRelationDelete = session.query(BackgroundSpectrum).filter(BackgroundSpectrum.detector_name == name)
-    # detBackRelationDelete.delete()
     session.commit()
+
 
 def delete_replay(session, replay_name:str):
     """Delete one instrument from database given its name"""
@@ -810,6 +749,7 @@ def delete_replay(session, replay_name:str):
     if replay:
         replay.detectors.clear()
         session.delete(replay)
+
 
 def get_or_create_material(session, matname, include_intrinsic=False):
     material_name = Material.get_name(matname, include_intrinsic)
@@ -829,6 +769,7 @@ def check_groups():
     if not session.query(ScenarioGroup).filter_by(name='default_group').first():
         session.add(ScenarioGroup(name='default_group'))
         session.commit()
+
 
 def export_scenarios(scenarios_ids, file_path):
     """
@@ -960,54 +901,90 @@ def gaussian_smearing(orig_hist, bin_widths, res_percent, is_float=False):
 
     return smeared_hist
 
+def find_nearest_inlist(thicknesses: list, goal_thickness: float) -> list:
+    """
+    Given a list of numbers and a value, finds the numbers in the list closest to the value.
+    If out of bounds, gives the two highest or lowest in the list.
+    If exactly a number in the list, returns a list of length 1.
+    :param thicknesses: list of floats (usually in units of cm)
+    :param goal_thickness: float (same units as thicknesses) indicating the shielding thickness we want
+    :return:
+    """
+    keys = sorted(thicknesses)
+    idx = bisect.bisect_left(keys, goal_thickness)
+    if idx < len(keys) and keys[idx] == goal_thickness:  # value is exactly a value in the list
+        return [goal_thickness]
+    elif idx == 0:  # value is less than the smallest key
+        return [keys[0], keys[1]]
+    elif idx == len(keys):  # value is greater than the largest key
+        return [keys[-2], keys[-1]]
+    else:  # value is between two keys
+        return [keys[idx-1], keys[idx]]
 
-def get_ids_from_webid(inputdir, outputdir, drf, url='https://full-spectrum.sandia.gov/', bkg_file=None, synthesize_bkg=False):
-    api_url = url.strip('/') + "/api/v1/analysis"
-    for ff in [f for f in os.listdir(inputdir) if f.endswith(".n42")]:
-        files = {"ipc": open(os.path.join(inputdir, ff), 'rb')}
-        if bkg_file:
-            files["back"] = open(bkg_file, 'rb')
 
-        import json
-        payload = {"options": json.dumps({'synthesizeBackground': synthesize_bkg, 'drf': drf})}
+
+
+
+def remove_xmlblock(in_dir: str | os.PathLike, out_dir: str | os.PathLike, removal_tag: str='AnalysisResults',
+                    copy_unmodified: bool=True, additional_suffixes: Optional[List[str]]=None,
+                    log_noanalysis_files: bool=True) -> List[int]:
+    """
+    Removes data formatted with a given tag. By default, this is used for AnalysisResults, but
+    can in principle be used to remove any blocks. Looks for all .n42/.N42 and .xml/.XML files
+    :param in_dir: Path object (or string), the path where the input spectra are located
+    :param out_dir: Path object (or string), the path where the output spectra are located
+    :param removal_tag: string, The tag to be removed from the .n42/.xml file
+    :param copy_unmodified: bool, write all files to output directory regardless of if there were results
+                            in the original file to be removed or not
+    :param additional_suffixes: list, include file suffixes that are beyond the default (*.n42, *.N42, *.xml, *.XML)
+    :param log_noanalysis_files: bool, write a text file in the output dir noting which files did not have their
+                          results removed (includes files without results)
+    :return: A list containing two integers: [n_converted, n_copied].
+    """
+    in_dir = Path(in_dir)  # in case input is string (API implementation)
+    out_dir = Path(out_dir)
+    Path(out_dir / f'{removal_tag}_not_present.txt').unlink(missing_ok=True)
+
+    if not in_dir.is_dir():
+        raise FileNotFoundError(QCoreApplication.translate('funcs', 'Input dir does not exist. '
+                                                                    'Select a directory that exists.'))
+
+    patterns = ['*.n42', '*.N42', '*.xml', '*.XML']  # deal with cases
+    if additional_suffixes:
+        patterns += additional_suffixes
+    # Windows doesn't distinguish between caps/non-caps, macos does. So we have to avoid those duplicates on Windows
+    matching_files = list(set(k for p in patterns for k in in_dir.rglob(p) if k.is_file()))
+
+    n_converted = 0  # track files for output message
+    n_copied = 0
+    for filename in matching_files:
+        relative_path = filename.relative_to(in_dir)  # maintain relative directory structure for nested directories
+        target_path = out_dir / relative_path
+        target_path.parent.mkdir(parents=True, exist_ok=True)
 
         try:
-            import requests
-            r = requests.post(f'{api_url}', files=files, data=payload)
-        except Exception as e:
-            print(e)
-            raise
+            tree = etree.parse(filename)
+        except etree.XMLSyntaxError: # possible causes could be settings files, for example
+            logging.info(QCoreApplication.translate('funcs',
+                          'Could not parse {} due to file incompatibility\n (possible causes include non-spectra '
+                          '.n42/.xml files, and is not necessarily a problem.'.format(filename)))
+            if copy_unmodified:  # copy over those files anyways
+                shutil.copy(filename, target_path)
+                n_copied += 1
+            continue
 
-        try:
-            ids = [(i['name'], str(i['confidence'])) for i in r.json()['isotopes']]
-        except:
-            # if zero counts in primary spectrum, r.json() has no 'isotopes' key
-            ids = None
-        if not ids:  # no identifications
-            ids = [('', '0')]
+        root = tree.getroot()
+        results_block = root.find('{*}'+f'{removal_tag}')
+        if results_block is not None:
+            root.remove(results_block)
+            tree.write(out_dir / target_path, pretty_print=True, xml_declaration=True, encoding="UTF-8")
+            n_converted += 1
+        else:
+            if log_noanalysis_files:
+                with open(out_dir / f'{removal_tag}_not_present.txt', 'a') as f:
+                    f.write(str(relative_path) + '\n')
+            if copy_unmodified:
+                n_copied += 1
+                tree.write(out_dir / relative_path, pretty_print=True, xml_declaration=True, encoding="UTF-8")
 
-        id_report = etree.Element('IdentificationResults')
-        for id_iso, id_conf in ids:
-            id_result = etree.SubElement(id_report, 'Identification')
-            id_name = etree.SubElement(id_result, 'IDName')
-            id_name.text = id_iso
-            id_confidence = etree.SubElement(id_result, 'IDConfidence')
-            id_confidence.text = id_conf
-        indent(id_report)
-
-        etree.ElementTree(id_report).write(os.path.join(outputdir, ff.replace(".n42", ".res")), encoding='utf-8',
-                                        xml_declaration=True, method='xml')
-
-
-def get_DRFList_from_webid(url='https://full-spectrum.sandia.gov/'):
-    """
-    Get List of DRFs available in WebID from querying the API
-    """
-    try:
-        import requests
-        r = requests.post(f'{url}/api/v1/info')
-    except Exception as e:
-        print(e)
-        return None
-
-    return r.json()['Options'][0]['possibleValues'] if r else None
+    return n_converted, n_copied

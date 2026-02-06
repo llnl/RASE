@@ -1,8 +1,9 @@
-.. _dynamic_RASE:
+.. _dynamic_rase:
 
-************
 Dynamic RASE
-************
+============
+
+This section covers the Dynamic RASE documentation. See the following pages:
 
 .. toctree::
    :maxdepth: 2
@@ -15,5 +16,3 @@ Dynamic RASE
    Dynamic_models
    Dynamic_create_base_spectra
    Dynamic_n42_templates
-
-

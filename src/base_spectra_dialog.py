@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -46,7 +46,7 @@ from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QHeaderView, QA
 from .spectrum_file_reading import readSpectrumFile, yield_spectra
 from .spectrum_file_reading import all_spec as read_spec
 from .rase_functions import get_or_create_material, get_ET_from_file
-from .table_def import BaseSpectrum, BackgroundSpectrum, SecondarySpectrum, Session
+from .table_def import BaseSpectrum, SecondarySpectrum, Session
 from .ui_generated import ui_import_base_spectra_dialog
 from .utils import profileit
 from .rase_settings import RaseSettings
@@ -54,7 +54,7 @@ from .rase_settings import RaseSettings
 # translation_tag = 'bsp_d'
 
 
-class BaseSpectraDialog(ui_import_base_spectra_dialog.Ui_Dialog, QDialog):
+class BaseSpectraDialog(ui_import_base_spectra_dialog.Ui_ImportBaseSpectraDialog, QDialog):
     def __init__(self):
         QDialog.__init__(self)
         self.model = BaseSpectraLoadModel()
@@ -121,10 +121,13 @@ class BaseSpectraDialog(ui_import_base_spectra_dialog.Ui_Dialog, QDialog):
     def backgroundSpectrumType(self, value):
         self.model.bgnd_spectrum_type = value
 
-
     def appendtxtStatus(self, statstring):
         self.model.text_status.append(statstring)
-        self.txtStatus.append(self.model.text_status[-1])
+        self.resettxtStatus()
+
+    def resettxtStatus(self):
+        self.txtStatus.clear()
+        self.txtStatus.setText('\n'.join(self.model.text_status[1:]))
 
     def validate_spectra(self, spectra):
         """
@@ -174,6 +177,7 @@ class BaseSpectraDialog(ui_import_base_spectra_dialog.Ui_Dialog, QDialog):
                 return
             try:
                 self.model.get_spectra_data(self.model.sourcedir, filenames)  #read the spectra into memory
+                self.resettxtStatus()
             except Exception as e:
                 traceback.print_exc()
                 logging.exception(self.tr('Handled Exception'), exc_info=True)
@@ -256,7 +260,7 @@ class BaseSpectraLoadModel(QAbstractTableModel):
         self.specMap = {}
         self.channel_count = None
         self.ecal = None
-        self.sourcedir = ''
+        self.sourcedir = None
 
     def _assign_data(self, newSpecs):
         self.layoutAboutToBeChanged.emit()
@@ -340,7 +344,7 @@ class BaseSpectraLoadModel(QAbstractTableModel):
             self.secondary_spectra = [spec for spec in spectra if isinstance(spec, SecondarySpectrum)]
         except Exception as e:
             pass
-
+        new_filenames = []
         for filename in filenames:
             try:
                 counts, ecal, realtime, livetime, rase_sensitivity, flux_sensitivity, countsBckg, ecalBckg,\
@@ -351,11 +355,19 @@ class BaseSpectraLoadModel(QAbstractTableModel):
                 newSpecs[filename] = ReadFileObject(counts, ecal, realtime, livetime, rase_sensitivity,
                                                     flux_sensitivity, countsBckg, ecalBckg, realtimeBckg, livetimeBckg,
                                                     neutrons, neutron_sensitivity)
+                new_filenames.append(filename)
                 # TODO: replace background elements of the RFO with the background from the
                 # secondary spectra list if it's present
-            except ValueError:
-                pass
+            except ValueError as e:
+                error_message = self.tr(f'Handled Exception: Value Error {e}')
+                logging.exception(error_message, exc_info=True)
+                self.text_status.append(error_message)
+            except TypeError as e:
+                error_message = self.tr(f'Handled Exception: Type Error {e}')
+                logging.exception(error_message, exc_info=True)
+                self.text_status.append(error_message)
 
+        filenames = new_filenames
         self.channel_count = len(newSpecs[filenames[0]].counts.split(','))
         self.ecal = newSpecs[filenames[0]].ecal
         #
@@ -405,29 +417,11 @@ class BaseSpectraLoadModel(QAbstractTableModel):
             material = get_or_create_material(session, materialName, include_instrinsic)
             self.intrinsic_is_included = self.intrinsic_is_included or include_instrinsic
             baseSpectraFilename = str(self._data.iloc[row, 1])
-            baseSpectraFilepath = os.path.join(self.sourcedir, baseSpectraFilename)
+            baseSpectraFilepath = os.path.join((self.sourcedir if self.sourcedir is not None else ''), baseSpectraFilename)
             if 'n42' not in baseSpectraFilepath.lower():
                 continue
 
             rfo = self.specMap[baseSpectraFilename]
-
-            if self.sharedObject.bkgndSpectrumInFile and not self.bckgrndCorrupted and row >= background_index:
-                if row == background_index:
-                     # sets default background to first in list
-                    self.backgroundSpectrum = BackgroundSpectrum(material=material,
-                                                                 filename=baseSpectraFilepath,
-                                                                 realtime=rfo.realtimeBckg,
-                                                                 livetime=rfo.livetimeBckg,
-                                                                 baseCounts=rfo.countsBckg,
-                                                                 ecal=rfo.ecalBckg)
-                elif self.backgroundSpectrum.livetime != rfo.livetimeBckg and rfo.livetimeBckg is not None:
-                    if rfo.livetimeBckg > self.backgroundSpectrum.livetime:
-                        self.backgroundSpectrum = BackgroundSpectrum(material=material,
-                                                                     filename=baseSpectraFilepath,
-                                                                     realtime=rfo.realtimeBckg,
-                                                                     livetime=rfo.livetimeBckg,
-                                                                     baseCounts=rfo.countsBckg,
-                                                                     ecal=rfo.ecalBckg)
 
             baseSpectrum = BaseSpectrum(material=material, filename=baseSpectraFilepath,
                                         realtime=rfo.realtime,
@@ -436,6 +430,16 @@ class BaseSpectraLoadModel(QAbstractTableModel):
                                         flux_sensitivity=rfo.flux_sensitivity,
                                         baseCounts=rfo.counts, ecal=rfo.ecal, neutrons=rfo.neutrons,
                                         neutron_sensitivity=rfo.neutron_sensitivity)
+
+            if self.sharedObject.bkgndSpectrumInFile and not self.bckgrndCorrupted and row >= background_index:
+                if row == background_index:
+                     # sets default background to first in list
+                    self.backgroundSpectrum = baseSpectrum
+                elif self.backgroundSpectrum.livetime != rfo.livetimeBckg and rfo.livetimeBckg is not None:
+                    if rfo.livetimeBckg > self.backgroundSpectrum.livetime:
+                        self.backgroundSpectrum = baseSpectrum
+
+
 
             self.baseSpectra.append(baseSpectrum)
 

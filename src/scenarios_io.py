@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -49,8 +49,6 @@ from src.table_def import Scenario, Session, ScenarioMaterial, Material, \
     ScenarioBackgroundMaterial, Influence, ScenarioGroup
 
 
-# translation_tag = 'scen_io'
-
 class ScenariosIO:
 
     def __init__(self, group_name='Imported', group_desc=''):
@@ -64,7 +62,9 @@ class ScenariosIO:
             value['id'] = Scenario.scenario_hash(value['acq_time'],
                                                  value['scen_materials'],
                                                  value['scen_bckg_materials'],
-                                                 value['influences'])
+                                                 value['influences'],
+                                                 value['shielding_material'],
+                                                 value['shielding_thickness'])
             q = session.query(Scenario).filter_by(id=value['id']).first()
             if q:
                 if self.scenario_group:
@@ -72,12 +72,16 @@ class ScenariosIO:
                 return q
             else:
                 comment = value['comment'] if 'comment' in value.keys() else ''
+                shield_material = value['shielding_material'] if 'shielding_material' in value.keys() else ''
+                shield_thickness = value['shielding_thickness'] if 'shielding_thickness' in value.keys() else 0
                 scenario = Scenario(value['acq_time'],
                                     value['replication'],
                                     value['scen_materials'],
                                     value['scen_bckg_materials'],
                                     value['influences'],
                                     [self.scenario_group],
+                                    shield_material,
+                                    shield_thickness,
                                     comment)
 
             return scenario
@@ -95,7 +99,7 @@ class ScenariosIO:
                 return value
 
         def trace(state, value):
-            print(QCoreApplication.translate('scen_io', 'Got {} at {}').format(value, state))
+            print('Got {} at {}').format(value, state)
             print(value.__dict__)
             return value
 
@@ -149,6 +153,8 @@ class ScenariosIO:
             xml.floating_point('acq_time'),
             xml.integer('replication'),
             xml.string('comment', required=False),
+            xml.string('shielding_material', required=False),
+            xml.floating_point('shielding_thickness', required=False),
             xml.array(self.sourcematerials_processor),
             xml.array(self.bkgmaterial_processor),
             xml.array(self.influence_processor)
@@ -195,6 +201,10 @@ class ScenariosIO:
                 replication.text = str(row['replications'])
                 comment = ET.SubElement(scenario, 'comment')
                 comment.text = row['comment']
+                shielding_material = ET.SubElement(scenario, 'shielding_material')
+                shielding_material.text = row['shielding_material']
+                shielding_thickness = ET.SubElement(scenario, 'shielding_thickness')
+                shielding_thickness.text = row['shielding_thickness']
             else:
                 return False
             # if source materials are defined
@@ -221,6 +231,7 @@ class ScenariosIO:
         return ET.tostring(tree, 'utf-8', method='xml')
 
 
+# TODO: move test to test folder
 def main():
     from src.rase_functions import initializeDatabase
     initializeDatabase(str(Path(Path.home(), 'test.sql')))
@@ -237,26 +248,26 @@ def main():
 
     sio = ScenariosIO('Test', 'My test')
 
-    print(QCoreApplication.translate('scen_io', '\n***\nTest export of newly created scenario\n***\n'))
+    print('\n***\nTest export of newly created scenario\n***\n')
     xml_str = sio.scenario_export([sc1, sc2])
     print(xml_str)
 
-    print(QCoreApplication.translate('scen_io', '\n***\nTest importing back the xml just generated\n***\n'))
+    print('\n***\nTest importing back the xml just generated\n***\n')
     ss = sio.scenario_import(xml_str)
     for s in ss:
         print(s.__dict__)
 
-    print(QCoreApplication.translate('scen_io', '\n***\nTest exporting a scenario from the db\n***\n'))
+    print('\n***\nTest exporting a scenario from the db\n***\n')
     prev = session.query(Scenario).first()
     print(prev.__dict__)
     xml_str = sio.scenario_export([prev])
     print(xml_str)
 
-    print(QCoreApplication.translate('scen_io', '\n***\nTest importing a scenario that exists in the db\n***\n'))
+    print('\n***\nTest importing a scenario that exists in the db\n***\n')
     ss = sio.scenario_import(xml_str)
     print(ss[0].__dict__)
 
-    print(QCoreApplication.translate('scen_io', '\n***\nTest importing from a xml string\n***\n'))
+    print('\n***\nTest importing from a xml string\n***\n')
     xml_str = """<?xml version="1.0" encoding="utf-8"?>
 <Scenarios>
     <Scenario>

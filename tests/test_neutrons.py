@@ -93,7 +93,7 @@ class Test_neutrons_basic:
         spec_generation.work()
 
 class Test_neutrons_mvc:
-    def test_scen_column_hidden_if_no_neutrons(self, qtbot,main_window, filled_db):
+    def test_scen_column_hidden_if_no_neutrons(self, qtbot, main_window, filled_db):
         d = scenario_dialog.ScenarioDialog(main_window)
         assert not d.get_neutrons_visible()
 
@@ -132,15 +132,21 @@ class Test_neutrons_mvc:
 
         id = scens[0].id
         d = scenario_dialog.ScenarioDialog(main_window,id)
-        assert d.get_neutrons_visible()
-        model = d.model
+        assert not any([b.neutrons for b in dets[0].base_spectra])  # There should be no neutrons yet
+        assert not d.get_neutrons_visible()
 
-        edit_index = model.modelSource.index(0,scenario_dialog.INTENSITY_NEUTRON)
+        model = d.model
+        edit_index = model.modelSource.index(0, scenario_dialog.INTENSITY_NEUTRON)
         model.modelSource.setData(edit_index,'1.23')
         edit_index = model.modelSource.index(0, scenario_dialog.MATERIAL)
         model.modelSource.setData(edit_index, 'Co60')
         d.accept()
+
         dets, scens = filled_db.get_default_workflow_objects()
+        id = scens[0].id
+        d = scenario_dialog.ScenarioDialog(main_window, id)
+
+        assert d.get_neutrons_visible()
         assert scens[0].scen_materials[0].neutron_dose == 1.23
 
     def test_spec_gen(self, qtbot, filled_db):

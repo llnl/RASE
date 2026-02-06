@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -35,8 +35,8 @@ This module allows user to change program settings such as the data directory
 and sampling algorithm
 """
 
-from PySide6.QtCore import Slot, QCoreApplication
-from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox
+from PySide6.QtCore import Slot, Qt
+from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QLabel, QComboBox
 
 from src import sampling_algos
 from src.rase_settings import RaseSettings
@@ -45,9 +45,8 @@ import os
 import sys
 import inspect
 
-# translation_tag = 'sett_d'
 
-class SettingsDialog(ui_prefs_dialog.Ui_Dialog, QDialog):
+class SettingsDialog(ui_prefs_dialog.Ui_PreferencesDialog, QDialog):
     def __init__(self, parent):
         QDialog.__init__(self, parent)
         self.settings = RaseSettings()
@@ -73,6 +72,22 @@ class SettingsDialog(ui_prefs_dialog.Ui_Dialog, QDialog):
             algoCount += 1
         self.algorithmSelected = False
         self.downSapmplingAlgoComboBox.currentIndexChanged.connect(self.chooseSamplingAlgo)
+        # add shielding oscillation reduction algorithm selector
+        self.oscLabel = QLabel(self)
+        self.oscLabel.setText(self.tr("Shielding Oscillation\nReduction Algorithm"))
+        self.gridLayout.addWidget(self.oscLabel, 2, 0, 1, 1)
+        self.oscComboBox = QComboBox(self)
+        # options map to 0=None,1=Auto-Response Cancelling,2=Post-Peak Zeroing
+        self.oscComboBox.addItems([self.tr("None"),
+                                   self.tr("Auto-Response Cancelling"),
+                                   self.tr("Post-Peak Zeroing")])
+        # set saved value and connect change
+        current = self.settings.getOscillationReductionAlgo()
+        self.oscComboBox.setCurrentIndex(current)
+        self.gridLayout.addWidget(self.oscComboBox, 2, 1, 1, 1)
+        # move buttons down
+        self.gridLayout.removeWidget(self.buttonBox)
+        self.gridLayout.addWidget(self.buttonBox, 3, 0, 1, 3, Qt.AlignHCenter)
 
     @Slot(bool)
     def on_btnBrowseDataDir_clicked(self, checked):
@@ -99,9 +114,9 @@ class SettingsDialog(ui_prefs_dialog.Ui_Dialog, QDialog):
         if self.dataDirectoryChanged:
             self.settings.setDataDirectory(os.path.normpath(self.txtDataDir.text()))
         idx = self.downSapmplingAlgoComboBox.currentIndex()
-        if self. algorithmSelected:
+        if self.algorithmSelected:
             self.settings.setSamplingAlgo(self.algoDictionary[idx])
-        # if current state is different from initial state (somehow record the initial state so if the user toggles
-        # but then toggles back the user is not prompted to reset RASE)
-
+        # Persist new oscillation reduction algorithm selection
+        osc_idx = self.oscComboBox.currentIndex()
+        self.settings.setOscillationReductionAlgo(osc_idx)
         super().accept()

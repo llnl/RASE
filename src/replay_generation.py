@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -37,16 +37,17 @@ import subprocess
 import sys
 import traceback
 import logging
-
-from PySide6.QtCore import QCoreApplication
+from pathlib import Path
 
 from src.contexts import SimContext
+from src.datadir_view import DataDirViewManager
+from src.qt_utils import Translatable
 from src.table_def import ReplayTypes
 from src.rase_settings import RaseSettings, APPLICATION_PATH
 from src.rase_functions import get_replay_input_dir, get_replay_output_dir, files_endswith_exists, \
-    get_sample_dir, get_ids_from_webid, get_results_dir, files_exist
+    get_sample_dir, get_results_dir, files_exist
+from src.webid_utils import get_ids_from_webid
 
-# translation_tag = 'rep_g'
 
 # On Windows platforms, pass this startupinfo to avoid showing the console when running a process via popen
 popen_startupinfo = None
@@ -56,7 +57,7 @@ if sys.platform.startswith("win"):
     popen_startupinfo.wShowWindow = subprocess.SW_HIDE
 
 
-class ReplayGeneration:
+class ReplayGeneration(Translatable):
     def __init__(self, sim_context_list: list[SimContext], settings=None):
         self.sim_context_list = sim_context_list
         self.settings = settings
@@ -65,7 +66,7 @@ class ReplayGeneration:
         if settings is None:
             self.settings = RaseSettings()
 
-    def runReplay(self):
+    def runReplay(self, datadir_view_manager: DataDirViewManager | None = None):
         """
         Execute replay process
         """
@@ -77,7 +78,7 @@ class ReplayGeneration:
 
             if replay and replay.is_defined():
                 self._gui_set_value(i)
-                self._gui_set_label(QCoreApplication.translate('rep_g', 'Replay in progress for {}...').format(detector.name))
+                self._gui_set_label(self.tr('Replay in progress for {}...').format(detector.name))
                 if replay.type == ReplayTypes.standalone:
                     if replay.is_cmd_line:
                         if replay.exe_path.endswith('.py'):
@@ -106,8 +107,7 @@ class ReplayGeneration:
                             os.makedirs(resultsDir, exist_ok=True)
 
                             # The stdout and stderr of the replay tool (if any) are sent to a log file
-                            stdout_file = open(os.path.join(get_sample_dir(sampleRootDir, detector, scenario.id),
-                                                f"replay_tool_output_{replay.id}.log"), mode='w')
+                            stdout_file = open(Path(resultsDir) / f"replay_tool_output.log", mode='w')
 
                             replayargs= replayExe + settingsList
 
@@ -144,9 +144,9 @@ class ReplayGeneration:
                         except Exception as e:
                             self._gui_set_value(self.n + 1)
                             traceback.print_exc()
-                            logging.exception(QCoreApplication.translate('rep_g', 'Handled Exception'), exc_info=True)
-                            self._gui_QCritical(QCoreApplication.translate('rep_g', 'Replay failed'),
-                                    QCoreApplication.translate('rep_g', 'Could not execute '
+                            logging.exception(self.tr('Handled Exception'), exc_info=True)
+                            self._gui_QCritical(self.tr('Replay failed'),
+                                    self.tr('Could not execute '
                                     'replay for instrument {}, replay {}, and scenario {}<br><br>').format(detector.name, replay.name, scenario.id) + str(e))
                             if resultsDir is not None:
                                 shutil.rmtree(resultsDir)
@@ -165,8 +165,8 @@ class ReplayGeneration:
                         os.makedirs(resultsDir, exist_ok=True)
                         # FIXME: this works only on Windows
                         os.startfile(replay.exe_path)
-                        self._gui_QInformation(QCoreApplication.translate('rep_g', 'Manual Replay Tool'),
-                               QCoreApplication.translate('rep_g', 'Replay tool has been '
+                        self._gui_QInformation(self.tr('Manual Replay Tool'),
+                               self.tr('Replay tool has been '
                                  'opened in a separate window and must be run manually.<br>'
                                  'Press OK when done.<br><br>Use the following settings:<br>'
                                 'Input folder:<br> {}<br><br>Output folder:<br> {}<br>').format(sampleDir, resultsDir))
@@ -189,17 +189,21 @@ class ReplayGeneration:
                     except Exception as e:
                         self._gui_set_value(self.n + 1)
                         traceback.print_exc()
-                        logging.exception(QCoreApplication.translate('rep_g', 'Handled Exception'), exc_info=True)
-                        self._gui_QCritical(QCoreApplication.translate('rep_g', 'Replay failed'),
-                                QCoreApplication.translate('rep_g', 'Could not execute replay {}'
+                        logging.exception(self.tr('Handled Exception'), exc_info=True)
+                        self._gui_QCritical(self.tr('Replay failed'),
+                                self.tr('Could not execute replay {}'
                               'for instrument {} and scenario {}<br><br>').format(replay.name, detector.name, scenario.id) + str(e))
                         if resultsDir is not None:
                             shutil.rmtree(resultsDir)
                         return
+
+            if datadir_view_manager:
+                datadir_view_manager.resync_single_view(detector.id, scenario.id, replay.id)
+
         self._gui_set_value(self.n+1)
 
         translator = TranslationGeneration(self.sim_context_list, self.settings)
-        translate_status = translator.runTranslator()
+        translate_status = translator.runTranslator(datadir_view_manager)
         return translate_status
 
     def _gui_progress_bar(self):
@@ -221,7 +225,7 @@ class ReplayGeneration:
         pass
 
 
-class TranslationGeneration:
+class TranslationGeneration(Translatable):
     def __init__(self, sim_context_list: list[SimContext], settings=None):
         self.sim_context_list = sim_context_list
         self.settings = settings
@@ -237,7 +241,7 @@ class TranslationGeneration:
             self.popen_startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             self.popen_startupinfo.wShowWindow = subprocess.SW_HIDE
 
-    def runTranslator(self):
+    def runTranslator(self, datadir_view_manager: DataDirViewManager | None = None):
         """
         Launches Translate Results
         """
@@ -248,8 +252,7 @@ class TranslationGeneration:
             replay = sim_context.replay
             self._gui_set_value(i)
             if replay and replay.translator_exe_path and replay.translator_is_cmd_line:
-                self._gui_set_label(QCoreApplication.translate('rep_g',
-                                                               'Translation in progress for {} | {} | {}...')
+                self._gui_set_label(self.tr('Translation in progress for {} | {} | {}...')
                                     .format(detector.name, replay.name, scenario.id))
                 self._gui_set_value(i)
 
@@ -287,27 +290,31 @@ class TranslationGeneration:
                     log_fname = os.path.join(get_sample_dir(sampleRootDir, detector, scenario.id),
                                              f'results_translator_output_{replay.id}.log')
                     log = open(log_fname, 'w')
-                    log.write(QCoreApplication.translate('rep_g', '### Command: ') + os.linesep)
+                    log.write(self.tr('### Command: ') + os.linesep)
                     log.write(' '.join(e.cmd) + os.linesep)
-                    log.write(QCoreApplication.translate('rep_g', '### Output: ') + os.linesep)
+                    log.write(self.tr('### Output: ') + os.linesep)
                     log.write(e.output)
                     log.close()
-                    self._gui_QCritical(QCoreApplication.translate('rep_g', 'Error!'),
-                            QCoreApplication.translate('rep_g', 'Results translation exited '
+                    self._gui_QCritical(self.tr('Error!'),
+                            self.tr('Results translation exited '
                                 'with error code {} when running translator.<br><br>Output '
                                 'log at: <br>{}').format(str(e.returncode), log_fname))
                     shutil.rmtree(output_dir, ignore_errors=True)
                     return False
                 except Exception as e:
                     traceback.print_exc()
-                    logging.exception(QCoreApplication.translate('rep_g', 'Handled Exception'), exc_info=True)
+                    logging.exception(self.tr('Handled Exception'), exc_info=True)
                     self._gui_set_value(self.n + 1)
-                    self._gui_QCritical(QCoreApplication.translate('rep_g', 'Error!'),
-                            QCoreApplication.translate('rep_g', 'Results translation failed '
+                    self._gui_QCritical(self.tr('Error!'),
+                            self.tr('Results translation failed '
                                     'for instrument {}, replay {}, and scenario {}<br><br>')
                                         .format(detector.name, replay.name, scenario.id) + str(e))
                     shutil.rmtree(output_dir, ignore_errors=True)
                     return False
+
+        if datadir_view_manager:
+            datadir_view_manager.resync_single_view(detector.id, scenario.id, replay.id)
+
         self._gui_set_value(self.n + 1)
         return True
 
@@ -322,4 +329,3 @@ class TranslationGeneration:
 
     def _gui_set_label(self, label):
         pass
-

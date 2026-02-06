@@ -137,11 +137,15 @@ def parseMeasurement(measurement, filepath, sharedObject, tstatus, requireRASESe
         countsChar = chanData.text.strip("'").strip().split()
         if len(countsChar) < 2:
             countsChar = chanData.text.strip("'").strip().split(',')
-        if ("." in countsChar[0]):
-            sharedObject.chanDataType = 'float'
-        else:
-            sharedObject.chanDataType = 'int'
-        counts = [float(count) for count in countsChar]
+        #TODO: Make this a neater function
+        sharedObject.chanDataType = 'int'
+        counts = [int(float(count)) for count in countsChar]
+        for binval in countsChar:
+            c = float(binval)
+            if c and (c < 1 or int(c) % c):
+                sharedObject.chanDataType = 'float'
+                counts = [float(count) for count in countsChar]
+                break
         if not counts:
             raise BaseSpectraFormatException(QCoreApplication.translate('sf_read',
                                                                 'Could not parse ChannelData'))
@@ -150,7 +154,12 @@ def parseMeasurement(measurement, filepath, sharedObject, tstatus, requireRASESe
         if sharedObject.isBckgrndSave and sharedObject.bkgndSpectrumInFile:
             chanDataBckg = requiredElement('.//ChannelData', specElementBckg, 'secondary spectrum')
             countsChar = chanDataBckg.text.strip("'").strip().split()
-            countsBckg = [float(count) for count in countsChar]
+            countsBckg = [int(count) for count in countsChar]
+            for binval in countsChar:
+                c = float(binval)
+                if c and (c < 1 or int(c) % c):
+                    countsBckg = [float(count) for count in countsChar]
+                    break
             if not countsBckg:
                 raise BaseSpectraFormatException(QCoreApplication.translate('sf_read', 'Could not '
                                                        'parse ChannelData (secondary spectrum)'))
@@ -227,9 +236,19 @@ def parseRadMeasurement(root, filepath, sharedObject, tstatus, requireRASESens, 
     try:
         radElement = requiredElement('.//RadMeasurement', root, )
         allRad = root.findall('RadMeasurement')
+        radElementBckg = None
         if len(allRad) > 1:
             sharedObject.bkgndSpectrumInFile = True
-            radElementBckg = allRad[1]
+            for meas in allRad:
+                try:
+                    if requiredElement('.//MeasurementClassCode', meas).text == 'Foreground':
+                        radElement = meas
+                    elif requiredElement('.//MeasurementClassCode', meas).text == 'Background':
+                        radElementBckg = meas
+                except BaseSpectraFormatException:
+                    continue
+            if radElementBckg is None:
+                radElementBckg = allRad[1]
         else:
             # TODO: check what issues could arise from loading some spectra with secondary backgrounds and others without
             sharedObject.bkgndSpectrumInFile = False
@@ -242,26 +261,36 @@ def parseRadMeasurement(root, filepath, sharedObject, tstatus, requireRASESens, 
         countsChar = chanData.text.strip("'").strip().split()
         if len(countsChar) < 2:
             countsChar = chanData.text.strip("'").strip().split(',')
-        counts = [float(count) for count in countsChar]
+        sharedObject.chanDataType = 'int'
+        counts = [int(float(count)) for count in countsChar]  # strange construction to deal with input string decimal values
+        for binval in countsChar:
+            c = float(binval)
+            if c and (c < 1 or int(c) % c):
+                sharedObject.chanDataType = 'float'
+                counts = [float(count) for count in countsChar]
+                break
         if not counts:
             raise BaseSpectraFormatException(QCoreApplication.translate('sf_read', 'Could not parse ChannelData'))
 
-        if ('.' in countsChar[0]):
-            sharedObject.chanDataType = 'float'
-        else:
-            sharedObject.chanDataType = 'int'
-        counts = ','.join(map(str, counts))
+        counts = uncompressCountedZeroes(chanData,counts)
         chanDataBckg = None
         countsBckg = None
         if sharedObject.isBckgrndSave and sharedObject.bkgndSpectrumInFile:
             specElementBckg = requiredElement('.//Spectrum', radElementBckg, 'secondary spectrum')
             chanDataBckg = requiredElement('.//ChannelData', specElementBckg, 'secondary spectrum')
             countsChar = chanDataBckg.text.strip("'").strip().split()
-            countsBckg = [float(count) for count in countsChar]
-            if not counts:
+            countsBckg = [int(float(count)) for count in countsChar]
+            for binval in countsChar:
+                c = float(binval)
+                if c and (c < 1 or int(c) % c):
+                    countsBckg = [float(count) for count in countsChar]
+                    break
+            if not countsBckg:
                 raise BaseSpectraFormatException(QCoreApplication.translate('sf_read',
                                             'Could not parse ChannelData in secondary spectrum'))
-            countsBckg = ','.join(map(str, countsBckg))
+            if chanDataBckg is not None:
+                countsBckg = uncompressCountedZeroes(chanDataBckg, countsBckg)
+            # countsBckg = ','.join(map(str, countsBckg))
         realtimeBckg = None
         livetimeBckg = None
         ecalBckg = None

@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<RadInstrumentData>
+  <RadMeasurement id="Foreground">
+    <MeasurementClassCode>Foreground</MeasurementClassCode>
+    <RealTimeDuration>${scenario.acq_time}</RealTimeDuration>
+    <Spectrum>
+      <LiveTimeDuration Unit="sec">${scenario.acq_time}</LiveTimeDuration>
+      <ChannelData>${sample_counts}</ChannelData>
+    </Spectrum>
+  </RadMeasurement>
+  <EnergyCalibration>
+    <CoefficientValues>${detector.ecal0} ${detector.ecal1} ${detector.ecal2} ${detector.ecal3} </CoefficientValues>
+  </EnergyCalibration>
+%for name, secondary_spectrum in secondaries.items():
+  <RadMeasurement id="${name}">
+    <MeasurementClassCode>${secondary_spectrum.classcode}</MeasurementClassCode>
+    <RealTimeDuration>PT${secondary_spectrum.realtime}S</RealTimeDuration>
+    <Spectrum>
+      <LiveTimeDuration Unit="sec">PT${secondary_spectrum.livetime}S</LiveTimeDuration>
+      <ChannelData>${secondary_spectrum.get_counts_as_str()}</ChannelData>
+    </Spectrum>
+  </RadMeasurement>
+%endfor
+</RadInstrumentData>

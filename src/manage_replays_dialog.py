@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -52,7 +52,7 @@ TRANSL_PATH, TRANSL_IS_CMD_LINE, TRANSL_SETTING = range(NUM_COL)
 
 # translation_tag = 'mrep_d'
 
-class ManageReplaysDialog(ui_manage_replays_dialog.Ui_Dialog, QDialog):
+class ManageReplaysDialog(ui_manage_replays_dialog.Ui_ManageReplaysDialog, QDialog):
     def __init__(self):
         QDialog.__init__(self)
         self.session = Session()

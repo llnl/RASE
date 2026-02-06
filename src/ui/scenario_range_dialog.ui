@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>RangeDefinition</class>
- <widget class="QDialog" name="RangeDefinition">
+ <class>ScenarioRangeDefinitionDialog</class>
+ <widget class="QDialog" name="ScenarioRangeDefinitionDialog">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -331,7 +331,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>accepted()</signal>
-   <receiver>RangeDefinition</receiver>
+   <receiver>ScenarioRangeDefinitionDialog</receiver>
    <slot>accept()</slot>
    <hints>
     <hint type="sourcelabel">
@@ -347,7 +347,7 @@
   <connection>
    <sender>buttonBox</sender>
    <signal>rejected()</signal>
-   <receiver>RangeDefinition</receiver>
+   <receiver>ScenarioRangeDefinitionDialog</receiver>
    <slot>reject()</slot>
    <hints>
     <hint type="sourcelabel">

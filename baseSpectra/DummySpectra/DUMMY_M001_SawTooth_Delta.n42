@@ -5,7 +5,7 @@
       <Remark>Dummy-Sawtooth</Remark>
       <StartTime>2016-01-15T16:44:36</StartTime>
       <RealTime>PT1205.76S</RealTime>
-      <LiveTime>PT1200.0</LiveTime>
+      <LiveTime>PT1200.0S</LiveTime>
       <SourceType>Item</SourceType>
       <DetectorType>Gamma</DetectorType>
       <Calibration Type="Energy" EnergyUnits="keV">

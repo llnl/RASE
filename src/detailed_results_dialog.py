@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -50,7 +50,7 @@ from src.rase_settings import RaseSettings
 from .utils import natural_keys
 
 
-class DetailedResultsDialog(ui_detailed_results_dialog.Ui_dlgDetailedResults, QDialog):
+class DetailedResultsDialog(ui_detailed_results_dialog.Ui_DetailedResultsDialog, QDialog):
     def __init__(self, resultMap, sim_context: SimContext):
         QDialog.__init__(self)
         self.setupUi(self)
@@ -135,7 +135,13 @@ class DetailedResultsDialog(ui_detailed_results_dialog.Ui_dlgDetailedResults, QD
         # FIXME: Note plotting order is guaranteed only if filenames of results files match sample spectra filenames
         if count_files_endwith(get_sample_dir(self.settings.getSampleDirectory(), self.sim_context.detector,
                                               self.sim_context.scenario.id),('.n42',)) > row:
-            SampleSpectraViewerDialog(self, self.sim_context.scenario, self.sim_context.detector, row).exec_()
+            if not hasattr(self, "sample_spectra_viewer_dialog"):
+                self.sample_spectra_viewer_dialog = SampleSpectraViewerDialog(self, self.sim_context.scenario, self.sim_context.detector, row)
+                self.sample_spectra_viewer_dialog.setModal(True)
+            else:
+                self.sample_spectra_viewer_dialog.index = row
+                self.sample_spectra_viewer_dialog.update_spectrum()
+            self.sample_spectra_viewer_dialog.exec()
         else:
             QMessageBox.information(self, self.tr('Information'), self.tr('Unable to display spectra.<br>No '
                                                'sampled spectra available in native RASE format'))

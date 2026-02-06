@@ -55,7 +55,7 @@ def calculateScenarioStats(sim_context_list: list[SimContext], gui=None):
 
     sampleRootDir = settings.getSampleDirectory()
     result_super_map = {}
-    columns = ['Det', 'Replay', 'Mat_Dose', 'Bkg_Mat_Dose', 'Mat_Flux', 'Bkg_Mat_Flux', 'Infl',
+    columns = ['Det', 'Replay', 'Mat_Dose', 'Bkg_Mat_Dose', 'Mat_Flux', 'Bkg_Mat_Flux', 'Shielding', 'Infl',
                'AcqTime', 'Repl',
                'Comment', 'PID', 'PID_L', 'PID_H', 'PFID', 'C&C', 'C&C_L', 'C&C_H', 'TP', 'FP',
                'FN', 'Precision', 'Recall',
@@ -78,6 +78,9 @@ def calculateScenarioStats(sim_context_list: list[SimContext], gui=None):
         detector = sc.detector
         detName = detector.name
         replay = sc.replay
+
+        if not replay:
+            continue
 
         res_dir = get_results_dir(sampleRootDir, detector, replay, scenId)
         if not files_exist(res_dir):
@@ -216,9 +219,12 @@ def calculateScenarioStats(sim_context_list: list[SimContext], gui=None):
         mat_flux_bkg_dict = {scen_mat.material.name: scen_mat.dose for scen_mat in
                              scenario.scen_bckg_materials if
                              scen_mat.fd_mode == 'FLUX'}
+        shielding_string = scenario.shielding_material + ': {:.3f}cm'.format(scenario.shielding_thickness) if (
+                            scenario.shielding_thickness) else ''
         scenario_stats_df.loc[result_super_map_key] = [detector.name, [replay.name if replay else None][0],
                                                         mat_dose_dict, mat_dose_bkg_dict,
                                                         mat_flux_dict, mat_flux_bkg_dict,
+                                                        shielding_string,
                                                         [infl.name for infl in scenario.influences],
                                                         scenario.acq_time, scenario.replication,
                                                         scenario.comment, pid_freq, P_CI_n, P_CI_p,
@@ -245,7 +251,7 @@ def calculateScenarioStats(sim_context_list: list[SimContext], gui=None):
     scenario_stats_df['Scen Desc'] = '' if flux_scen_desc.empty else dose_scen_desc.str.cat(flux_scen_desc, sep=", ")
     scenario_stats_df = pd.concat([scenario_stats_df[['Det', 'Replay']],
                                         MatDose_df, BkgMatDose_df, MatFlux_df, BkgMatFlux_df,
-                                        scenario_stats_df.loc[:, 'Infl':]], axis=1)
+                                        scenario_stats_df.loc[:, 'Shielding':]], axis=1)
     if gui is not None:
         progress.setValue(len(sim_context_list) + 1)
     return result_super_map, scenario_stats_df

@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -30,8 +30,14 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ###############################################################################
+import locale
+import platform
+
 from PySide6 import QtGui, QtWidgets
-from PySide6.QtCore import Qt, QEventLoop, Slot, QObject, Signal, QAbstractListModel
+from PySide6.QtCore import Qt, QEventLoop, Slot, QObject, Signal, QAbstractListModel, QCoreApplication, QLibraryInfo, \
+    QTranslator
+from PySide6.QtWidgets import QApplication
+
 from src.table_def import Session, Detector
 
 
@@ -176,7 +182,7 @@ class BaseSpectraListModel(QAbstractListModel):
 
     def add_spectra(self, base_spectra):
         self.layoutAboutToBeChanged.emit()
-        self.bs_list = sorted([baseSpectrum.material.name for baseSpectrum in base_spectra])
+        self.bs_list = sorted([baseSpectrum.material.name for baseSpectrum in base_spectra], key=lambda s: s.lower())
         self.layoutChanged.emit()
 
     def update_fromdetector(self, detector_name=''):
@@ -193,3 +199,36 @@ class BaseSpectraListModel(QAbstractListModel):
         if role == Qt.DisplayRole:
             return self.bs_list[index.row()]
 
+class Translatable:
+    @classmethod
+    def tr(cls, text: str) -> str:
+        return QCoreApplication.translate(cls.__name__, text)
+
+def get_lang():
+    # Apparently there is a bug in Qt QLocale.system() function, so I'm using a workaround to get the language
+    if platform.system() == 'Windows':
+        import ctypes
+        windll = ctypes.windll.kernel32
+        return locale.windows_locale[windll.GetUserDefaultUILanguage()]
+    else:
+        return locale.getdefaultlocale()[0]
+
+def qt_install_translator():
+    app = QApplication.instance()
+
+    lang = get_lang()
+
+    path = QLibraryInfo.path(QLibraryInfo.TranslationsPath)
+    translator = QTranslator(app)
+    if translator.load(f'qtbase_{lang}', path):
+        app.installTranslator(translator)
+
+    translator = QTranslator(app)
+    # This would be the correct implementation if QLocale().system() worked on Mac
+    # if translator.load(QLocale().system(), 'rase', '_', tr_path, '.qm'):
+    #     app.installTranslator(translator)
+    # attempt to load from subfolder of current or parent folder (useful e.g. when running tests)
+    if translator.load(f'rase_{lang}', './translations') or translator.load(f'rase_{lang}', '../translations'):
+        app.installTranslator(translator)
+
+    return lang

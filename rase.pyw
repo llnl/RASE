@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -39,13 +39,12 @@ import traceback
 import os
 import logging
 
-from PySide6.QtCore import Qt, QCoreApplication, QTranslator, QLibraryInfo
+from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication, QMessageBox
+
+from src.qt_utils import qt_install_translator
 from src.rase import Rase
-from src.rase_settings import RaseSettings, APPLICATION_PATH
-
-RASE_VERSION = 'v2.4'
-
+from src.rase_settings import RaseSettings, APPLICATION_PATH, RASE_VERSION
 
 # configure the logger
 # TODO: Remember to update the version number at each release!
@@ -90,7 +89,6 @@ def log_except_hook(eType, eValue, tracebackobj):
     # quit
     sys.exit(1)
 
-
 # Install custom exception handler
 sys.excepthook = log_except_hook
 
@@ -100,28 +98,9 @@ if __name__ == '__main__':
     # QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)  # use highdpi icons
     app = QApplication(sys.argv)
 
-    # Apparently there is a bug in Qt QLocale.system() function, so I'm using a workaround to get the language
-    if platform.system() == 'Windows':
-        import ctypes
-        windll = ctypes.windll.kernel32
-        lang = locale.windows_locale[windll.GetUserDefaultUILanguage()]
-    else:
-        lang = locale.getdefaultlocale()[0]
-
-    path = QLibraryInfo.path(QLibraryInfo.TranslationsPath)
-    translator = QTranslator(app)
-    if translator.load(f'qtbase_{lang}', path):
-        app.installTranslator(translator)
-
-    tr_path = './translations'
-    translator = QTranslator(app)
-    # This would be the correct implementation if QLocale().system() worked on Mac
-    # if translator.load(QLocale().system(), 'rase', '_', tr_path, '.qm'):
-    #     app.installTranslator(translator)
-    if translator.load(f'rase_{lang}', tr_path):
-        app.installTranslator(translator)
+    qt_install_translator()
 
     win = Rase(sys.argv)
     win.show()
-    app.exec()
+    sys.exit(app.exec())
 

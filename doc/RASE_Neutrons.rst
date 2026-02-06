@@ -1,62 +1,88 @@
 .. _neutrons:
 
-*******************
-Neutron Simulations
-*******************
+#####################
+ Neutron simulations
+#####################
 
-Capability
-==========
-RASE is able to ingest base spectra containing neutron data and use that data to simulate neutron detection in scenarios.
+************
+ Capability
+************
+
+RASE ingests base spectra that include neutron data and uses that data to simulate neutron
+detection in scenarios.
 
 RASE can:
 
-1. Load RASE base spectra containing neutron gross count information.
-2. Create instruments that include these base spectra
-3. Create scenarios that include neutron-emitting sources and ambient background neutrons
-4. Simulate combinations of instruments and scenarios, evaluating the expectation value of the gross neutron counts and simulating random fluctuations around that number for each replication
-5. Place the simulated neutron results into a manufacturer-specific output format using RASE's template system
+#. Load RASE base spectra containing neutron gross count information.
+#. Create instruments that include these base spectra.
+#. Create scenarios that include neutron-emitting sources and ambient background neutrons.
+#. Simulate combinations of instruments and scenarios, computing the expected gross
+   neutron counts and simulating random fluctuations for each replication.
+#. Place simulated neutron results into a manufacturer-specific output format using RASE's
+   template system.
 
 RASE cannot:
 
-1. Simulate neutron spectra. RASE only works with neutron gross counts.
-2. Predict the neutron emission intensity from a source using its gamma emission intensity (flux or dose). RASE users must know the emitted neutron flux for the scenarios they wish to simulate.
-3. Automatically produce neutron-containing base spectra from detector records in a manufacturer-specific format. RASE users must manually add neutrons to base spectra (this feature may be added in a future update).
+#. Simulate neutron spectra. RASE only works with neutron gross counts.
 
+#. Predict neutron emission intensity from a source using its gamma emission intensity (flux or
+   dose). You must supply the emitted neutron flux for the scenarios you wish to simulate.
 
-Creating Base Spectra
-=====================
-Starting with a RASE base spectra created following the instruction in :ref:`create_base_spectra`, users can add information about the instrument's neutron detection capabilities::
+#. Automatically produce neutron-containing base spectra from detector records in a
+   manufacturer-specific format. You must add neutrons to base spectra manually (this feature
+   may be added in a future update).
 
+***********************
+ Creating base spectra
+***********************
 
-  <RadMeasurement id="Foreground">
-    <MeasurementClassCode>Foreground</MeasurementClassCode>
-    <RealTimeDuration>PT...S</RealTimeDuration>
-    <Spectrum>
-      <LiveTimeDuration Unit="sec">PT...S</LiveTimeDuration>
-      <ChannelData> ... </ChannelData>
-      <RASE_Sensitivity> ... </RASE_Sensitivity>
-      <FLUX_Sensitivity> ... </FLUX_Sensitivity>
-    </Spectrum>
-    <GrossCounts id="neutrons">
-      <CountData> 75 </CountData>
-      <neutron_Sensitivity>0.315</neutron_Sensitivity>
-    </GrossCounts>
-  </RadMeasurement>
+Starting with a RASE base spectra created following the instruction in ``<GrossCounts id="neutrons">``,
+users can add information about the instrument's neutron detection capabilities:
+
+.. code::
+
+   <RadMeasurement id="Foreground">
+     <MeasurementClassCode>Foreground</MeasurementClassCode>
+     <RealTimeDuration>PT...S</RealTimeDuration>
+     <Spectrum>
+       <LiveTimeDuration Unit="sec">PT...S</LiveTimeDuration>
+       <ChannelData> ... </ChannelData>
+       <RASE_Sensitivity> ... </RASE_Sensitivity>
+       <FLUX_Sensitivity> ... </FLUX_Sensitivity>
+     </Spectrum>
+     <GrossCounts id="neutrons">
+       <CountData> 75 </CountData>
+       <neutron_Sensitivity>0.315</neutron_Sensitivity>
+     </GrossCounts>
+   </RadMeasurement>
 
 As illustrated by this example, add neutron information to a base spectrum by:
 
-1. Add a :code:`<GrossCounts id="neutrons">` block as a child of :code:`<RadMeasurement>`.
-2. In this block, include :code:`<neutron_Sensitivity>`, listing the neutron sensitivity factor of this source, calculated as described below.
-3. This block may optionally include a :code:`<CountData>` entry. This value is NOT used during any RASE calculations, but may be used as a reminder of the neutron measurement that was used to calculate the neutron sensitivity.
+#. Add a ``<GrossCounts id="neutrons">`` block as a child of ``<RadMeasurement>``.
 
-A base spectrum should also contain gamma detection results. For a pure neutron source, the :code:`<RASE_Sensitivity>` should be set to zero. Most neutron emitting sources will produce gammas, and so gamma and neutron information are combined into a single base spectrum file for this source.
+#. In this block, include ``<neutron_Sensitivity>``, listing the neutron sensitivity factor of this
+   source, calculated as described below.
+
+#. This block may optionally include a ``<CountData>`` entry. This value is NOT used during any RASE
+   calculations, but may be used as a reminder of the neutron measurement that was used to calculate
+   the neutron sensitivity.
+
+A base spectrum should also contain gamma detection results. For a pure neutron source, the
+``<RASE_Sensitivity>`` should be set to zero. Most neutron-emitting sources produce gammas, so gamma and
+neutron information are combined into a single base spectrum file for a source.
 
 Calculating the neutron sensitivity factor
-------------------------------------------
-The neutron sensitivity factor can be calculated in a similar manner as the gamma sensitivity factor: neutron count rate in the measured spectrum divided by the ground truth neutron flux (in units of neutrons / :math:`\text{cm}^2-s`) at the face of the detector. This is often a difficult quantity to measure empirically, and instead can be calculated using known source activities and determining the solid angle of 1:math:`\text{cm}^2` at that standoff.
+==========================================
+
+The neutron sensitivity factor is calculated in a similar manner as the gamma sensitivity
+factor: neutron count rate in the measured spectrum divided by the ground truth neutron flux (in
+units of neutrons / :math:`\text{cm}^2-s`) at the face of the detector. This is often difficult
+to measure empirically; instead you can calculate it using known source activities and
+the solid angle of 1:math:`text{cm}^2` at the measurement standoff.
 
 .. math::
-    S_{\text{neutron}} = \frac{ \text{(net measured neutron counts [n])}/\text{(livetime [s])}}{\text{(neutron flux at measurement location} [\text{n}\text{/cm}^2\text{s}])}
+
+   S_{\text{neutron}} = \frac{ \text{(net measured neutron counts [n])}/\text{(livetime [s])}}{\text{(neutron flux at measurement location} [\text{n}\text{/cm}^2\text{s}])}
 
 In other words:
 
@@ -66,59 +92,96 @@ In other words:
 
 This sensitivity factor has units of :math:`\text{cm}^2`.
 
-NB: the flux calculation is a property of the neutrons emitted by the source and the surface area of the sphere where those neutrons meet the instrument. The face area of the instrument does not enter into this calculation.
+NB: the flux calculation depends on the neutrons emitted by the source and the surface area of
+the sphere where those neutrons reach the instrument. The face area of the instrument does not enter
+into this calculation.
 
-In the above example, the sensitivity factor of 0.315 corresponds to 75 neutrons measured from a 1e6 neutrons/s source measured at 2 m for 120 seconds.
+In the above example, the sensitivity factor of 0.315 corresponds to 75 neutrons measured from a 1e6
+neutrons/s source measured at 2 m for 120 seconds.
 
-Estimating the neutron emission rate for an experimental test source can be challenging. RASE users are encouraged to reference calibration data provided with their sources or calibrate the sources themselves.
+Estimating the neutron emission rate for an experimental test source can be challenging. RASE users
+are encouraged to reference calibration data provided with their sources or to calibrate the sources
+themselves.
 
-As a special case, an ambient background measurement should record the neutron sensitivity factor as if the ground truth neutron flux was 1, as the ground truth neutron flux cannot practically be estimated for an ambient neutron background. In other words:
+As a special case, an ambient background measurement should record the neutron sensitivity factor as
+if the ground truth neutron flux were 1, because the actual ground truth flux cannot practically be
+estimated for an ambient neutron background. In other words:
 
 .. math::
+
    S_{\text{neutron background}} = \frac{\text{net measured neutron counts [n]}}{\text{livetime [s]}}
 
-A consequence of this decision is that during scenario creation (described below), ambient neutron backgrounds are described in terms of a scaling factor relative to the measurement, e.g. 1x or 2x.
+A consequence of this decision is that during scenario creation (described below), ambient neutron
+backgrounds are specified as a scaling factor relative to the measurement, e.g., 1x or 2x.
 
-Instrument Creation
-===================
-Creating a RASE instrument with neutrons only requires providing that instrument with base spectra created as described above. No other changes from the usual procedure are required.
+*********************
+ Instrument creation
+*********************
 
+Creating a RASE instrument with neutrons only requires providing that instrument with base spectra
+created as described above. No other changes to the usual procedure are required.
 
-Scenario Creation
-=================
-When creating a RASE scenario, if any instruments have been created using neutron-containing base spectra, the scenario creation window will contain a column for "Neutron Intensity." When adding a material to a scenario, the user may specify some neutron intensity for that material.
+*******************
+ Scenario creation
+*******************
 
-Any material with nonzero neutron intensity in the scenario and nonzero neutron measurement in its base spectrum will cause neutrons to be simulated.
+When creating a RASE scenario, if any instruments use neutron-containing base spectra, the scenario
+creation window will contain a column for "Neutron Intensity." When adding a material to a scenario,
+specify a neutron intensity for that material.
 
-Providing a neutron intensity to a material with no neutrons in its base spectrum will result in zero neutrons in the result. This situation can occur when simulating an instrument without neutron detection capability, which will, as expected, not detect any neutrons in the RASE simulation even in scenarios where neutron-emitting sources are present.
+Any material with nonzero neutron intensity in the scenario and nonzero neutron measurement in its
+base spectrum will cause neutrons to be simulated.
 
-Calculating Neutron Intensity
------------------------------
-The neutron intensity of a material in a scenario is its emitted neutron flux. For example, a source emitting 1e6 neutrons / s observed from 2 m away will have a neutron flux of 1.99 :math:`\text{neutrons / s / cm}^2`.
+Providing a neutron intensity to a material with no neutrons in its base spectrum will result in
+zero neutrons in the result. This occurs when simulating an instrument without neutron
+detection capability, which will not detect neutrons in the RASE simulation even when
+neutron-emitting sources are present.
 
-As a special case, estimating the neutron flux from ambient backgrounds is very challenging. Instead, the neutron intensity should be specified as a multiplicative factor relative to the measurements used in the base spectra describing the ambient background. For example, an ambient background base spectrum is measured to be 5 neutrons / minute. In the base spectrum, this is recorded as :code:`<neutron_Sensitivity>` 5/60 =0.0833. If a user wishes to create a scenario that includes this background, they should set the ambient background neutron intensity to 1. If the user desires to simulate twice as much background, they should set neutron intensity to 2, in which case RASE will simulate a background with an expectation of 10 neutrons / minute.
+Calculating neutron intensity
+=============================
 
+The neutron intensity of a material in a scenario is its emitted neutron flux. For example, a source
+emitting 1e6 neutrons / s observed from 2 m away will have a neutron flux of 1.99
+:math:`\text{neutrons / s / cm}^2`.
 
-Output Neutrons to Template
-===========================
-After simulating neutrons in RASE, many users will want to record results in the format expected by some specific replay tool. The approach in :ref:`n42_templates`  can be augmented by including additional fields in the template::
+As a special case, estimating the neutron flux from ambient backgrounds is very challenging.
+Instead, specify the neutron intensity as a multiplicative factor relative to the
+measurements used in the base spectra that describe the ambient background. For example, an ambient
+background base spectrum is measured to be 5 neutrons / minute. In the base spectrum, this is
+recorded as ``<neutron_Sensitivity>`` 5/60 =0.0833. If you create a scenario that
+includes this background, set the ambient background neutron intensity to 1. If you want to simulate
+twice as much background, set neutron intensity to 2; RASE will simulate a background with an expectation
+of 10 neutrons / minute.
 
-    ${neutrons}
-    ${secondary_spectrum.neutrons}
+*****************************
+ Output neutrons to template
+*****************************
 
-These two fields will be filled with the neutron results from the foreground simulation and secondary background simulation, respectively.
+After simulating neutrons in RASE, you will often want to record results in the format expected by
+a specific replay tool. The approach in :ref:`n42_templates` can be augmented by adding
+additional fields to the template:
 
-Below is a simple example of a template containing neutrons. This example must be adapted to the expectations of whatever replay tool the user intends to use::
+.. code::
 
-    <RadMeasurement id="Foreground">
-        <MeasurementClassCode>Foreground</MeasurementClassCode>
-        <RealTimeDuration>PT${scenario.acq_time}S</RealTimeDuration>
-        <Spectrum>
-          <LiveTimeDuration Unit="sec">PT${scenario.acq_time}S</LiveTimeDuration>
-          <ChannelData> ${sample_counts} </ChannelData>
-        </Spectrum>
-        <GrossCounts id="neutrons">
-          <CountData> ${neutrons} </CountData>
-        </GrossCounts>
-    </RadMeasurement>
+   ${neutrons}
+   ${secondary_spectrum.neutrons}
 
+These two fields will be filled with the neutron results from the foreground simulation and
+secondary background simulation, respectively.
+
+Below is a simple example of a template containing neutrons. Adapt this example to the
+expectations of the replay tool you intend to use:
+
+.. code::
+
+   <RadMeasurement id="Foreground">
+       <MeasurementClassCode>Foreground</MeasurementClassCode>
+       <RealTimeDuration>PT${scenario.acq_time}S</RealTimeDuration>
+       <Spectrum>
+         <LiveTimeDuration Unit="sec">PT${scenario.acq_time}S</LiveTimeDuration>
+         <ChannelData> ${sample_counts} </ChannelData>
+       </Spectrum>
+       <GrossCounts id="neutrons">
+         <CountData> ${neutrons} </CountData>
+       </GrossCounts>
+   </RadMeasurement>

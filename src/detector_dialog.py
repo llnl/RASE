@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -33,6 +33,7 @@
 """
 This module specifies the base spectra, influences, and other detector info
 """
+import os
 import logging
 from PySide6.QtCore import Qt, Slot, QRegularExpression, QAbstractItemModel, QAbstractListModel, QModelIndex, \
     QAbstractTableModel
@@ -51,14 +52,14 @@ from src.rase_functions import secondary_type  # , secondary_index, importDistor
 from src.rase_settings import RaseSettings
 from src.replay_dialog import ReplayDialog
 from src.table_def import Session, Replay, Detector, Influence, DetectorSchema, \
-    SecondarySpectrum, BackgroundSpectrum, Spectrum
+    SecondarySpectrum, Spectrum
 from src.ui_generated import ui_add_detector_dialog
 
 import yaml
 
 # translation_tag = 'det_d'
 
-class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
+class DetectorDialog(ui_add_detector_dialog.Ui_AddDetectorDialog, QDialog):
     def __init__(self, parent, detectorName=None):
         QDialog.__init__(self, parent)
         self.parent = parent
@@ -114,6 +115,8 @@ class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
         # TODO: put these in setters that take care of their typing! 10/21
         self.txtDetector.textChanged.connect(self.enable_export)
         self.txtChannelCount.textChanged.connect(lambda: self.model.set_chan_count(self.txtChannelCount.text()))
+        self.txtChannelCount.textChanged.connect(lambda: self.set_combo_shielddrf(self.txtChannelCount.text()))
+        self.combo_shielddrf.currentIndexChanged.connect(lambda: self.model.set_shielddrf(self.combo_shielddrf.currentText()))
         self.combo_basesecondary.currentIndexChanged.connect(lambda: setattr(self.model, 'base_secondary',
                                                          self.combo_basesecondary.currentText()))
         self.combo_selectIntrinsic.currentIndexChanged.connect(lambda:
@@ -122,7 +125,9 @@ class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
                                                                     self.cb_resample.isChecked()))
         self.spinBox_secondarydwell.textChanged.connect(lambda: self.model.set_bgnd_spec_dwell(
                                                     float(self.spinBox_secondarydwell.text()[:-1])))
-        self.modelBSL.layoutChanged.connect(lambda: self.btnCreateShieldSpec.setEnabled(self.modelBSL.rowCount() > 0))
+        self.modelBSL.layoutChanged.connect(lambda: self.btnCreateShieldSpec.setEnabled(self.modelBSL.rowCount() > 0
+                                                    and self.model.detector.name != '' and self.session.query(Detector).
+                                                    filter_by(name=self.model.detector.name).first() is not None))
 
         self.model.reinitialize_detector(detectorName)
         self.model.get_db_detnames(detectorName)
@@ -142,6 +147,12 @@ class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
         for w, c in zip(self.model_lineedits, col_names):
             self.mapper.addMapping(w, self.model.column_dict[c])
 
+        def mapperprint(self):
+            print('mapper submitted')
+            super().submit()
+        self.mapper.submit = mapperprint
+        self.mapper.currentIndexChanged.connect(lambda index: print(f"Mapper index changed: {index}"))
+
     def handleEditingFinished(self):
         # must grab them at the beginning to make sure that the scenario update doesn't replace
         # the values in the process
@@ -153,8 +164,10 @@ class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
 
     def populate_gui_from_detector(self, detectorName):
         # case that this is an edit of an existing detector
+        shield_drf = None
         if detectorName:
             # populate materials
+            shield_drf = self.detector.shielding_drf
             self.modelBSL.add_spectra(self.detector.base_spectra)
             self.set_neutrons_display()
 
@@ -179,6 +192,8 @@ class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
                     if val == self.detector.secondary_type:
                         self.combo_typesecondary.setCurrentIndex(secondary_type[key])
                         break
+        if shield_drf:
+            self.set_combo_shielddrf(self.txtChannelCount.text())
         self.modelINL.add_influences(self.detector.influences)
 
     @property
@@ -188,6 +203,7 @@ class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
     def detector(self, value):
         self.model.detector = value
 
+    # TODO: Remove, no longer a replay field in detector model (25/06/09)
     @property
     def replay(self):
         return self.model.replay
@@ -229,12 +245,24 @@ class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
         """
         Plot loaded base spectra
         """
-        spectra = self.newBaseSpectra
-        if not self.newBaseSpectra:
-            spectra = self.detector.base_spectra
-        d = BaseSpectraViewerDialog(self, spectra, self.detector, self.modelBSL.data(
-                                            self.lstBaseSpectra.currentIndex(), Qt.DisplayRole))
-        d.exec_()
+        # Choose currently loaded spectra (newly added) or detector's base spectra
+        spectra = self.newBaseSpectra or self.detector.base_spectra
+
+        # Sort spectra by material_name (case-insensitive) so viewer order matches list view
+        sorted_spectra = sorted(spectra, key=lambda s: s.material.name.lower())
+
+        selected = self.modelBSL.data(self.lstBaseSpectra.currentIndex(), Qt.DisplayRole)
+
+        # If dialog doesn't exist, create it with the sorted spectra. If it exists, update it.
+        if not hasattr(self, "base_spectra_viewer_dialog"):
+            self.base_spectra_viewer_dialog = BaseSpectraViewerDialog(self, sorted_spectra,
+                                                                      self.detector,
+                                                                      selected)
+            self.base_spectra_viewer_dialog.setModal(True)
+        else:
+            self.base_spectra_viewer_dialog.set_selected(selected)
+
+        self.base_spectra_viewer_dialog.exec()
 
     def addIntrinsicToggle(self, checked=False):
         """All cosmetic"""
@@ -268,7 +296,7 @@ class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
 
     @Slot(bool)
     def on_btnCreateShieldSpec_clicked(self, checked):
-        dialog = CreateShieldedSpectraDialog(self, self.detector.name)
+        dialog = CreateShieldedSpectraDialog(self, self.detector.name, self.combo_shielddrf.currentText())
         dialog.exec_()
         self.modelBSL.update_fromdetector(self.detector.name)
 
@@ -291,6 +319,8 @@ class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
         self.changeIntrinsicText()
         self.checkAddIntrinsic.setChecked(False)
         self.checkAddIntrinsic.setEnabled(False)
+        self.combo_shielddrf.setCurrentText('')
+        self.combo_shielddrf.setEnabled(False)
         self.set_neutrons_display()
 
     def reinitialize_combotypesecondary(self):
@@ -298,26 +328,26 @@ class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
             self.combo_typesecondary.addItem(self.tr('Use secondary defined in base spectra files'))
 
     @Slot(bool)
-    def on_btnAddBaseSpectra_clicked(self, checked, dlg = None):
+    def on_btnAddBaseSpectra_clicked(self, checked, dlg : BaseSpectraDialog = None):
         """
         Loads base spectra
         :param dlg: optional BaseSpectraDialog input
         """
-        dialog = dlg
-        if dialog is None:
-            dialog = BaseSpectraDialog()
-            dialog.exec_()
-        if dialog.baseSpectra:
+        basespec_dialog = dlg
+        if basespec_dialog is None:
+            basespec_dialog = BaseSpectraDialog()
+            basespec_dialog.exec_()
+        if basespec_dialog.baseSpectra:
             self.reinitialize_combotypesecondary()
 
-            self.newBaseSpectra = dialog.baseSpectra
-            self.model.assign_spectra(dialog.model)
+            self.newBaseSpectra = basespec_dialog.baseSpectra
+            self.model.assign_spectra(basespec_dialog.model)
 
             # set base spectra list
             self.modelBSL.add_spectra(self.detector.base_spectra)
 
             # initialize newBackgroundSpectrum
-            self.newBackgroundSpectrum = dialog.backgroundSpectrum  # auto-grabs the first secondary
+            self.newBackgroundSpectrum = basespec_dialog.backgroundSpectrum  # auto-grabs the first secondary
             self.includeSecondarySpectrumCheckBox.setEnabled(True)  # enable regardless of if there is a secondary or not
             if self.detector.secondary_spectra or self.newBackgroundSpectrum:
                 self.checkAddIntrinsic.setEnabled(True)
@@ -340,14 +370,14 @@ class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
             if self.newBackgroundSpectrum is None:
                 self.noSecondaryRadio.setChecked(True)
             else:
-                self.internal_secondary = dialog.backgroundSpectrum.material.name  # cosmetic
+                self.internal_secondary = basespec_dialog.backgroundSpectrum.material.name  # cosmetic
             self.noSecondaryRadio.setChecked(True)
             if self.newBackgroundSpectrum is not None:
-                self.model.append_bgndspec(self.newBackgroundSpectrum)
-                self.internal_secondary = dialog.backgroundSpectrum.material.name
+                self.model.detector.bckg_spectrum = self.newBackgroundSpectrum
+                self.internal_secondary = basespec_dialog.backgroundSpectrum.material.name
                 self.secondaryIsBackgroundRadio.setChecked(True)
                 self.combo_typesecondary.setEnabled(True)
-                self.setDefaultSecondary(sorted([baseSpec.material.name for baseSpec in dialog.baseSpectra]))
+                self.setDefaultSecondary(sorted([baseSpec.material.name for baseSpec in basespec_dialog.baseSpectra]))
             self.changeIntrinsicText(self.newBaseSpectra)
         self.set_neutrons_display()
 
@@ -422,8 +452,8 @@ class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
         if comboindex == secondary_type['base_spec']:
             self.setBackgroundIsoCombo(True)
             self.populateComboBase([item for item in self.modelBSL.bs_list])
-            if self.detector and len(self.detector.bckg_spectra):
-                self.combo_basesecondary.setCurrentText(self.detector.bckg_spectra[0].material_name)
+            if self.detector and self.detector.bckg_spectrum:
+                self.combo_basesecondary.setCurrentText(self.detector.bckg_spectrum.material_name)
             else:
                 self.setDefaultSecondary([item for item in self.modelBSL.bs_list])
         elif comboindex == secondary_type['file']:
@@ -468,6 +498,24 @@ class DetectorDialog(ui_add_detector_dialog.Ui_Dialog, QDialog):
             self.populate_gui_from_detector(self.detector.name)
             self.refresh_replays()
             # self.model.update_detector()
+
+    def set_combo_shielddrf(self, text):
+        self.combo_shielddrf.clear()
+        if not os.path.isfile(self.settings.getShieldingPathConfig()):
+            return  # TODO: actually return a message here
+        with open(self.settings.getShieldingPathConfig(), mode='r') as file:
+            config = yaml.safe_load(file)
+        if config.get(int(text), None) is not None:
+            compatible_drfs = list(k for k in config[int(text)].keys() if type(config[int(text)][k]) == dict)
+            drf = None
+            if self.model.detector.shielding_drf in compatible_drfs:
+                drf = self.model.detector.shielding_drf
+            self.combo_shielddrf.addItems(compatible_drfs)
+            if drf is not None:
+                self.combo_shielddrf.setCurrentText(drf)
+            # else:
+            #     self.combo_shielddrf.setCurrentIndex(0)
+            self.combo_shielddrf.setEnabled(True)
 
     @Slot()
     def accept(self):
@@ -633,17 +681,6 @@ class DetectorModel(QAbstractItemModel):
             raise Exception('Defined secondary type is not one of the allowed secondary types (base_spec, file, '
                             'scenario, or None)')
         if self.detector.includeSecondarySpectrum:
-            # if there has been a modification to the secondary spectrum of choice
-            if len(self.detector.bckg_spectra) == 0:
-                background = session.query(BackgroundSpectrum).filter_by(
-                    detector_name=self.detector.name).first() or BackgroundSpectrum()
-                self.append_bgndspec(background)
-            elif self.detector.bckg_spectra[0].detector_name is not None:
-                background = session.query(BackgroundSpectrum).filter_by(
-                    detector_name=self.detector.name).first()
-            else:
-                background = self.detector.bckg_spectra[0]
-
             if self.detector_type_secondary == 'base_spec':
                 for i, spec in enumerate(self.detector.base_spectra):
                     if not self.base_secondary:
@@ -651,43 +688,26 @@ class DetectorModel(QAbstractItemModel):
                     else:
                         base_secondary_names = [self.base_secondary.lower()]
                     if i == 0 or spec.material.name.lower() in base_secondary_names:
-                        background.counts = spec.counts
-                        background.filename = spec.filename
-                        background.livetime = spec.livetime
-                        background.ecal     = spec.ecal
-                        background.ecal0    = spec.ecal0
-                        background.ecal1    = spec.ecal1
-                        background.ecal2    = spec.ecal2
-                        background.ecal3    = spec.ecal3
-                        background.material = spec.material
-                        background.material_name = spec.material_name
-                        background.realtime = spec.realtime
-                        background.metadata = spec.metadata
-                        if spec.material.name.lower() in base_secondary_names:
-                            break
+                        self.detector.bckg_spectrum = spec
             elif self.detector_type_secondary == 'file':
                 bgnd = [k for k in self.detector.secondary_spectra if k.classcode ==
                         self.base_secondary][0]
                 if not bgnd:
                     raise Exception(self.tr('Error: should not be able to select '
                                                    'a material type not in secondary spectra list'))
-                self.detector.bckg_spectra.clear()
-                self.detector.bckg_spectra.append(self._map_secondary_to_bgnd(bgnd))
+                self.detector.bckg_spectrum = bgnd
             elif self.detector_type_secondary == 'scenario':
-                self.detector.bckg_spectra.clear()
-                # self.detector.bckg_spectra.append(None)
+                self.detector.bckg_spectrum=None
             if include_intrinsic_only:
                 self.detector.secondary_type = None
                 self.detector.secondary_classcode = self.detector.intrinsic_classcode
             else:
                 self.detector.secondary_type = secondary_type[self.detector_type_secondary]
                 if self.detector_type_secondary == 'base_spec':
-                    self.detector.secondary_classcode = self.detector.bckg_spectra[0].classcode
+                    self.detector.secondary_classcode = 'Background' # this used to be, effectively, None, since it referenced a variable that was never set.
                 elif self.detector_type_secondary == 'file':
                     self.detector.secondary_classcode = self.base_secondary
 
-        for bg in session.query(BackgroundSpectrum).filter_by(detectors=None).all():
-            session.delete(bg)  # delete any non-attached bckg spectra (happens during clear and append above).
         if not self.editDetector:
             session.add(self.detector)
         session.commit()
@@ -700,21 +720,6 @@ class DetectorModel(QAbstractItemModel):
         if self.detector.name in self.detector_names:
             return True
         return False
-
-    def _map_secondary_to_bgnd(self, spec=None):
-        """
-        Utility function for table class conversion
-        (Note for future development: is BackgroundSpectrum strictly necessary,
-        or can we get away with just using SecondarySpectrum?)
-        """
-        if spec is None:
-            return
-        b = BackgroundSpectrum()
-        for m in [k for k in dir(spec) if not callable(getattr(spec, k)) and not k.startswith("_")
-                  and not k in ['id', 'spectrum_type', 'detector_name', 'detectors']]:
-            if m in dir(b):
-                setattr(b, m, getattr(spec, m))
-        return b
 
     def get_db_detnames(self, current_name=None):
         """
@@ -773,10 +778,6 @@ class DetectorModel(QAbstractItemModel):
             self.detector.secondary_spectra.append(secondaryspec)
         # self.update_detector()
 
-    def append_bgndspec(self, bgndspec):
-        self.detector.bckg_spectra.clear()
-        self.detector.bckg_spectra.append(bgndspec)
-        # self.update_detector()
 
     def append_influences(self, influences: list):
         """
@@ -811,8 +812,7 @@ class DetectorModel(QAbstractItemModel):
             self.detector.base_spectra.clear()
         if self.detector.secondary_spectra is not None:
             self.detector.secondary_spectra.clear()
-        if self.detector.bckg_spectra is not None:
-            self.detector.bckg_spectra.clear()
+        self.detector.bckg_spectrum = None
         self.update_detector()
 
     # The following are all called on an API basis\
@@ -859,6 +859,9 @@ class DetectorModel(QAbstractItemModel):
         for replay in replays:
             self.detector.add_replay(replay)
         self.detector.resultsTranslator = resultsTranslator
+
+    def set_shielddrf(self, text):
+        self.setData(self.index(0, self.column_dict['shielding_drf']), text)
 
     def import_from_file(self, importfilepath=None):
         """
@@ -1011,7 +1014,7 @@ class ReplayTableModel(QAbstractTableModel):
         if not index.isValid():
             return Qt.NoItemFlags
         if index.column() == 0:
-            return Qt.ItemIsEnabled | Qt.ItemIsUserCheckable
+            return Qt.ItemIsEnabled | Qt.ItemIsUserCheckable | Qt.ItemIsEditable
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
@@ -1019,7 +1022,6 @@ class ReplayTableModel(QAbstractTableModel):
             if orientation == Qt.Horizontal:
                 return self.headers[section]
         return None
-
 
 
 

@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -63,28 +63,14 @@ from src.help_dialog import HelpDialog
 
 # translation_tag = 'vres_d'
 
-NUM_COL = 16
-INST_REPL, SCEN_ID, SCEN_DESC, ACQ_TIME, REPL, INFL, PD, PD_CI, TP, FP, FN, CANDC, CANDC_CI, \
+NUM_COL = 17
+INST_REPL, SCEN_ID, SCEN_DESC, SHIELDING, ACQ_TIME, REPL, INFL, PD, PD_CI, TP, FP, FN, CANDC, CANDC_CI, \
 PRECISION, RECALL, FSCORE = range(NUM_COL)
 
 # color scale from https://colorbrewer2.org/#type=diverging&scheme=RdYlGn&n=11
 STOPLIGHT_COLORS = ['#a50026', '#d73027', '#f46d43', '#fdae61', '#fee08b', '#ffffbf', '#d9ef8b',
                     '#a6d96a', '#66bd63', '#1a9850', '#006837']
 
-COLS = [QCoreApplication.translate('vres_d', 'Det/Replay'), QCoreApplication.translate('vres_d', 'Scen Desc'),
-    QCoreApplication.translate('vres_d', 'Dose'), QCoreApplication.translate('vres_d', 'BkgDose'),
-    QCoreApplication.translate('vres_d', 'Flux'), QCoreApplication.translate('vres_d', 'BkgFlux'),
-    QCoreApplication.translate('vres_d', 'Infl'), QCoreApplication.translate('vres_d', 'AcqTime'),
-    QCoreApplication.translate('vres_d', 'Repl'), QCoreApplication.translate('vres_d', 'Comment'),
-    QCoreApplication.translate('vres_d', 'PID'), QCoreApplication.translate('vres_d', 'PID CI'),
-    QCoreApplication.translate('vres_d', 'PFID'), QCoreApplication.translate('vres_d', 'C&C'),
-    QCoreApplication.translate('vres_d', 'C&C CI'), QCoreApplication.translate('vres_d', 'TP'),
-    QCoreApplication.translate('vres_d', 'FP'), QCoreApplication.translate('vres_d', 'FN'),
-    QCoreApplication.translate('vres_d', 'Precision'), QCoreApplication.translate('vres_d', 'Recall'),
-    QCoreApplication.translate('vres_d', 'F_Score'), QCoreApplication.translate('vres_d', 'wTP'),
-    QCoreApplication.translate('vres_d', 'wFP'), QCoreApplication.translate('vres_d', 'wFN'),
-    QCoreApplication.translate('vres_d', 'wPrecision'), QCoreApplication.translate('vres_d', 'wRecall'),
-    QCoreApplication.translate('vres_d', 'wF_Score')]
 
 class ResultsTableModel(QAbstractTableModel):
     """Table Model for the Identification Results
@@ -113,7 +99,7 @@ class ResultsTableModel(QAbstractTableModel):
         mat_cols = [s for s in self._data.columns.to_list() if (s.startswith('Dose_') or s.startswith('Flux_'))]
         bkg_cols = [s for s in self._data.columns.to_list() if (s.startswith('BkgDose_') or s.startswith('BkgFlux_'))]
 
-        cols = ['Det/Replay', 'Scen Desc'] + mat_cols + bkg_cols + ['Infl', 'AcqTime', 'Repl',
+        cols = ['Det/Replay', 'Scen Desc'] + mat_cols + bkg_cols + ['Shielding', 'Infl', 'AcqTime', 'Repl',
                                         'Comment', 'PID', 'PID CI', 'PFID', 'C&C', 'C&C CI',
                                         'TP', 'FP', 'FN', 'Precision', 'Recall', 'F_Score',
                                         'wTP', 'wFP', 'wFN', 'wPrecision', 'wRecall', 'wF_Score']
@@ -179,7 +165,7 @@ class ResultsTableModel(QAbstractTableModel):
                     desc = "".join(h[1:]).split('-')
                     return f'{self.tr(h[0])}\n{desc[0]}\n{"".join(desc[1:])}'
                 else:
-                    return self.tr(self._data.columns[section])
+                    return self.tr(self._data.columns[section])  # TODO: this doesn't work
             # if orientation == Qt.Vertical:
             #     print(self._data.index[section].detector.name)
             #     return (f"{self._data.index[section].detector.id} * "
@@ -201,7 +187,7 @@ class ResultsTableModel(QAbstractTableModel):
         return None
 
 
-class ViewResultsDialog(ui_results_dialog.Ui_dlgResults, QDialog):
+class ViewResultsDialog(ui_results_dialog.Ui_ResultsDialog, QDialog):
     """Dialog to display identification results and select variables for plotting
 
     :param parent: the parent dialog
@@ -216,19 +202,36 @@ class ViewResultsDialog(ui_results_dialog.Ui_dlgResults, QDialog):
         self.result_super_map, self.scenario_stats_df = calculateScenarioStats(sim_context_list, gui=self)
 
         self.help_dialog = None
-        self.comboListXY = ['', 'Det', 'Replay', 'Source Dose', 'Source Flux', 'Distance (given dose)',
-                     'Distance (given flux)', 'Background Dose', 'Background Flux', 'Infl',
-                     'AcqTime', 'Repl', 'PID', 'PFID', 'C&C', 'TP', 'FP', 'FN', 'Precision',
-                     'Recall', 'F_Score', 'wTP', 'wFP', 'wFN', 'wPrecision', 'wRecall', 'wF_Score']
-        self.cmbXaxis.addItems(self.tr(c) for c in self.comboListXY)
-        self.cmbYaxis.addItems(self.tr(c) for c in self.comboListXY)
+        self.comboListXY = ['', 'Det', 'Replay', 'Source Dose', 'Source Flux',
+                            'Distance (given dose)',  'Distance (given flux)', 'Background Dose',
+                            'Background Flux', 'Shielding', 'Infl',  'AcqTime', 'Repl', 'PID',
+                            'PFID', 'C&C', 'TP', 'FP', 'FN', 'Precision', 'Recall', 'F_Score',
+                            'wTP', 'wFP', 'wFN', 'wPrecision', 'wRecall', 'wF_Score']
+        self.comboListXY_tr = ['', self.tr('Det'), self.tr('Replay'), self.tr('Source Dose'), self.tr('Source Flux'),
+                            self.tr('Distance (given dose)'), self.tr('Distance (given flux)'), self.tr('Background Dose'),
+                            self.tr('Background Flux'), self.tr('Shielding'), self.tr('Infl'), self.tr('AcqTime'), self.tr('Repl'), 'PID',
+                            'PFID', 'C&C', 'TP', 'FP', 'FN', self.tr('Precision'), self.tr('Recall'), self.tr('F_Score'),
+                            'wTP', 'wFP', 'wFN', 'w'+self.tr('Precision'), 'w'+self.tr('Recall'), 'w'+self.tr('F_Score')]
+        self.cmbXaxis.addItems(self.comboListXY_tr)
+        self.cmbYaxis.addItems(self.comboListXY_tr)
         self.comboListZ = ['', 'PID', 'PFID', 'C&C', 'TP', 'FP', 'FN', 'Precision', 'Recall',
-                        'F_Score', 'wTP', 'wFP', 'wFN', 'wPrecision', 'wRecall', 'wF_Score']
-        self.cmbZaxis.addItems(self.tr(c) for c in self.comboListZ)
-        self.comboListGrp = ['', 'Det', 'Replay', 'Source Material', 'Background Material', 'Infl',
-                     'AcqTime', 'Repl', 'PID', 'PFID', 'C&C', 'TP', 'FP', 'FN', 'Precision',
-                     'Recall', 'F_Score', 'wTP', 'wFP', 'wFN', 'wPrecision', 'wRecall', 'wF_Score']
-        self.cmbGroupBy.addItems(self.tr(c) for c in self.comboListGrp)
+                            'F_Score', 'wTP', 'wFP', 'wFN', 'wPrecision', 'wRecall',
+                           'wF_Score']
+        self.comboListZ_tr = ['', 'PID', 'PFID', 'C&C', 'TP', 'FP', 'FN',  self.tr('Precision'), self.tr('Recall'),
+                             self.tr('F_Score'), 'wTP', 'wFP', 'wFN', 'w'+self.tr('Precision'), 'w'+self.tr('Recall'),
+                             'w'+self.tr('F_Score')]
+        self.cmbZaxis.addItems(self.comboListZ_tr)
+        self.comboListGrp = ['', 'Det', 'Replay', 'Source Material',
+                             'Background Material', 'Shielding Environment', 'Shielding Material',
+                             'Shielding Thickness', 'Infl', 'AcqTime', 'Repl', 'PID', 'PFID', 'C&C', 'TP', 'FP', 'FN',
+                             'Precision', 'Recall', 'F_Score', 'wTP', 'wFP', 'wFN', 'wPrecision', 'wRecall', 'wF_Score']
+        self.comboListGrp_tr = ['', self.tr('Det'), self.tr('Replay'), self.tr('Source Material'),
+                             self.tr('Background Material'), self.tr('Shielding Environment'),
+                             self.tr('Shielding Material'), self.tr('Shielding Thickness'), self.tr('Infl'),
+                             self.tr('AcqTime'), self.tr('Repl'), 'PID', 'PFID', 'C&C', 'TP', 'FP', 'FN',
+                             self.tr('Precision'), self.tr('Recall'), self.tr('F_Score'), 'wTP', 'wFP', 'wFN',
+                             'w'+self.tr('Precision'), 'w'+self.tr('Recall'), 'w'+self.tr('F_Score')]
+        self.cmbGroupBy.addItems(self.comboListGrp_tr)
         self.cmbGroupBy.setEnabled(False)
 
         for wdgt in [getattr(self, f'txtRef{l}{a}') for a in ['X', 'Y'] for l in ['Dose', 'Distance']]:
@@ -312,8 +315,7 @@ class ViewResultsDialog(ui_results_dialog.Ui_dlgResults, QDialog):
         filter_str = f'{file_type.upper()} (*.{file_type})'
         path = QFileDialog.getSaveFileName(self, 'Save File', RaseSettings().getDataDirectory(), filter_str)
         if path[0]:
-            export_results(self.result_super_map,
-                                    self.scenario_stats_df, path[0], file_type)
+            export_results(self.result_super_map, self.scenario_stats_df, path[0], file_type)
 
     def closeSelected(self):
         """
@@ -324,7 +326,9 @@ class ViewResultsDialog(ui_results_dialog.Ui_dlgResults, QDialog):
     def showDetailView(self, index):
         sim_context = self.results_model.headerData(index.row(), Qt.Vertical, Qt.UserRole)
         resultMap = self.result_super_map[sim_context]
-        DetailedResultsDialog(resultMap, sim_context).exec()
+        self.ddialog = DetailedResultsDialog(resultMap, sim_context)
+        self.ddialog.setModal(True)
+        self.ddialog.exec()
 
     @Slot(QPoint)
     def on_tblResView_customContextMenuRequested(self, point):
@@ -490,6 +494,11 @@ class ViewResultsDialog(ui_results_dialog.Ui_dlgResults, QDialog):
                 ref_distance = float(txtRefDistance.text())
                 ref_dose = float(txtRefDose.text())
                 df[ax_var] = ref_distance * np.sqrt(ref_dose / df[unappended_title])  # simple 1/r^2
+            elif combolist[cmbAxis] in ['Shielding']:
+                title = self.tr('Shielding')
+                unappended_title = self.tr('Shielding_') + f'{matName}'
+                ax_var = f'Shielding'
+                trans_ax_var = self.tr('Shielding') + f'_{matName}'
             else:
                 title = combolist[cmbAxis]
                 unappended_title = combolist[cmbAxis]
@@ -509,6 +518,8 @@ class ViewResultsDialog(ui_results_dialog.Ui_dlgResults, QDialog):
                 elif ax_title.startswith(self.tr('Flux')) or \
                         ax_title.startswith(self.tr('BkgFlux')):
                     titles[i] = ax_title + (' (\u03B3/(cm\u00B2s))')
+                elif ax_title.startswith(self.tr('Shielding')):
+                    titles[i] = ax_title + ' (cm)'
 
         try:
             if self.cmbZaxis.currentText():  # 3D plotting case
@@ -533,6 +544,13 @@ class ViewResultsDialog(ui_results_dialog.Ui_dlgResults, QDialog):
                     elif self.comboListGrp[cat] == 'Background Material':
                         categories = [s for s in df.columns.to_list() if
                                       s.startswith('BkgDose_') or s.startswith('BkgFlux_')]
+                    elif self.comboListGrp[cat] == 'Shielding Environment':
+                        categories = pd.unique(df['Shielding'].values).tolist()
+                    elif self.comboListGrp[cat] == 'Shielding Material':
+                        categories = set(df['Shielding'].str.split(':').str[0].str.strip())
+                    elif self.comboListGrp[cat] == 'Shielding Thickness':
+                        categories = set(df['Shielding'].str.split(':').str[1].str.strip().str[:-2].astype(float))
+
                     else:
                         if len(df[self.comboListGrp[cat]].values) > 0 and type(df[self.comboListGrp[cat]].values[0]) == list:  # this is a workaround for lists of lists of influences
                             categories = list(pd.unique([', '.join(k) for k in df[self.comboListGrp[cat]].values]).tolist())
@@ -546,19 +564,45 @@ class ViewResultsDialog(ui_results_dialog.Ui_dlgResults, QDialog):
                     df[f'{v}_L_err'] = (df[v] - df[f'{v}_L']).abs()
 
                 for cat_label in categories:
-                    if isinstance(cat_label, str) and (cat_label.startswith('Dose') or cat_label.startswith('BkgDose') or
-                            cat_label.startswith('Flux') or cat_label.startswith('BkgFlux') or cat_label.startswith('Distance')):
-                        if cat_label.startswith('Distance'):
-                            df_tmp = df.loc[df[cat_label] != float('inf')]
-                        else:
-                            df_tmp = df.loc[df[cat_label] != 0]
-                        x.append(df_tmp[cat_label].to_list())
+                    if self.comboListGrp[cat] == 'Shielding Material':
+                        df_tmp = df[df['Shielding'].str.split(':').str[0].str.strip() == cat_label]
+                        try:
+                            vals_tmp = df_tmp[ax_vars[0]].str.split(':').str[1].str.strip().str[:-2].astype(float).tolist()
+                        except:  # usually hit this if plotting e.g.: flux/dose vs PID grouped by shielding; TODO 250731 do better checking
+                            vals_tmp = df_tmp[ax_vars[0]].to_list()  # TODO 250730: add error handling here
+                        x.append(vals_tmp)
+                    elif self.comboListGrp[cat] == 'Shielding Thickness':
+                        df_tmp = df[df['Shielding'].str.split(':').str[1].str.strip().str[:-2].astype(float) == cat_label]
+                        try:
+                            vals_tmp = df_tmp[ax_vars[0]]['Shielding'].str.split(':').str[0].str.strip().tolist()
+                        except:  # usually hit this if plotting e.g.: flux/dose vs PID grouped by shielding; TODO 250731 do better checking
+                            vals_tmp = df_tmp[ax_vars[0]].to_list()  # TODO 250730: add error handling here
+                        x.append(vals_tmp)
                     else:
-                        df_tmp = df.loc[df[self.comboListGrp[cat]] == cat_label] if cat else df
-                        x.append(df_tmp[ax_vars[0]].to_list())
-                        if ax_vars[0] in ['PID', 'C&C']:
-                            x_err.append([(l, h) for (l, h) in zip(df_tmp[f'{ax_vars[0]}_L_err'],
-                                                                   df_tmp[f'{ax_vars[0]}_H_err'])])
+                        if isinstance(cat_label, str) and (cat_label.startswith('Dose') or cat_label.startswith('BkgDose') or
+                                cat_label.startswith('Flux') or cat_label.startswith('BkgFlux') or cat_label.startswith('Distance')):
+                            if cat_label.startswith('Distance'):
+                                df_tmp = df.loc[df[cat_label] != float('inf')]
+                            else:
+                                df_tmp = df.loc[df[cat_label] != 0]
+                            x.append(df_tmp[cat_label].to_list())
+                        else:
+                            if self.comboListGrp[cat] == 'Shielding Environment':
+                                df_tmp = df.loc[df['Shielding'] == cat_label] if cat else df
+                            else:
+                                df_tmp = df.loc[df[self.comboListGrp[cat]] == cat_label] if cat else df
+                            vals_tmp = df_tmp[ax_vars[0]].to_list()
+                            if isinstance(cat_label, str) and (ax_vars[0] == 'Shielding'):
+                                try:
+                                    vals_tmp = [float(item.split(': ')[1].replace('cm', '')) if ': ' in item and 'cm'
+                                                                    in item else 0 for item in vals_tmp]
+                                except Exception as e:
+                                    self.error_handling(e)
+                                    return
+                            x.append(vals_tmp)
+                            if ax_vars[0] in ['PID', 'C&C']:
+                                x_err.append([(l, h) for (l, h) in zip(df_tmp[f'{ax_vars[0]}_L_err'],
+                                                                       df_tmp[f'{ax_vars[0]}_H_err'])])
                     repl.append(df_tmp['Repl'].tolist())
                     if ax_vars[1]:
                         y.append(df_tmp[ax_vars[1]].to_list())
@@ -570,11 +614,7 @@ class ViewResultsDialog(ui_results_dialog.Ui_dlgResults, QDialog):
                 dialog.exec_()
 
         except Exception as e:
-            traceback.print_exc()
-            logging.exception(self.tr('Handled Exception'), exc_info=True)
-            QMessageBox.information(self, self.tr('Info'),
-                                self.tr('Sorry, the requested plot '
-                                                 'cannot be generated because:\n') + str(e))
+            self.error_handling(e)
             return
 
     def open_help(self):
@@ -601,6 +641,13 @@ class ViewResultsDialog(ui_results_dialog.Ui_dlgResults, QDialog):
         self.tblResView.resizeColumnsToContents()
         self.tblResView.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
 
+    def error_handling(self, e):
+        traceback.print_exc()
+        logging.exception(self.tr('Handled Exception'), exc_info=True)
+        QMessageBox.information(self, self.tr('Info'),
+                                self.tr('Sorry, the requested plot '
+                                        'cannot be generated because:\n') + str(e))
+        return
 
 class ResultsTableSettings(QDialog):
     """Simple Dialog to allow the user to select which column to display in the results table
@@ -612,12 +659,17 @@ class ResultsTableSettings(QDialog):
     def __init__(self, parent):
         QDialog.__init__(self, parent)
         self.cols_list = ['Det/Replay', 'Scen Desc', 'Dose', 'Flux', 'Background Dose',
-                     'Background Flux', 'Infl', 'AcqTime', 'Repl', 'Comment', 'PID', 'PID CI',
+                     'Background Flux', 'Shielding', 'Infl', 'AcqTime', 'Repl', 'Comment', 'PID', 'PID CI',
                      'PFID', 'C&C', 'C&C CI', 'TP', 'FP', 'FN', 'Precision', 'Recall', 'F_Score',
                      'wTP', 'wFP', 'wFN', 'wPrecision', 'wRecall', 'wF_Score']
+        self.cols_list_tr = [self.tr('Det/Replay'), self.tr('Scen Desc'), self.tr('Dose'), self.tr('Flux'),
+                              self.tr('Background Dose'), self.tr('Background Flux'), self.tr('Shielding'),
+                             self.tr('Infl'), self.tr('AcqTime'), self.tr('Repl'), self.tr('Comment'), 'PID', 'PID CI',
+                             'PFID', 'C&C', 'C&C CI', 'TP', 'FP', 'FN', self.tr('Precision'), self.tr('Recall'), self.tr('F_Score'),
+                            'wTP', 'wFP', 'wFN', 'w'+self.tr('Precision'), 'w'+self.tr('Recall'), 'w'+self.tr('F_Score')]
         # QT treats the ampersand symbol as a special character, so it needs special treatment
-        self.cb_list = [QCheckBox(self.tr(v).replace('&', '&&')) for
-                        v in self.cols_list]
+        self.cb_list = [QCheckBox(v.replace('&', '&&')) for v in self.cols_list_tr]
+
         layout = QVBoxLayout()
         for cb in self.cb_list:
             # if not (cb.text() == self.not_fd_mode):

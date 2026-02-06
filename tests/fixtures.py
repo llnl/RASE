@@ -17,7 +17,9 @@ from PySide6.QtCore import QObject, Signal
 
 
 from src.correspondence_table_dialog import CorrespondenceTableDialog as ctd
-from src.detector_dialog import DetectorDialog
+from src.correspondence_table_dialog import DEFAULT_CORRESPONDENCE_TABLE
+
+from src.detector_dialog import DetectorModel
 
 from src.rase_functions import *
 from src.rase_settings import RaseSettings
@@ -25,6 +27,35 @@ from src.scenario_group_dialog import GroupSettings as gsd
 from src.table_def import ScenarioGroup, Replay, CorrespondenceTable
 from sqlalchemy.orm import close_all_sessions
 from pathlib import Path
+
+
+def cleanup():
+    """Delete and recreate the database between test classes"""
+    close_all_sessions()
+    try:
+        if Session.bind:
+            Session.bind.dispose()
+    except NameError:
+        pass
+    settings = RaseSettings()
+    # remove sampled spectra dir if present
+    if os.path.isdir(settings.getSampleDirectory()):
+        shutil.rmtree(settings.getSampleDirectory(), ignore_errors=True)
+        print(f'Deleting sample dir at {settings.getSampleDirectory()}')
+    if os.path.isfile(settings.getDatabaseFilepath()):
+        os.remove(settings.getDatabaseFilepath())
+        print(f'Deleting DB at {settings.getDatabaseFilepath()}')
+    if os.path.isdir(Path(settings.getDataDirectory())/'gadras_injections'):
+        shutil.rmtree(Path(settings.getDataDirectory())/'gadras_injections', ignore_errors=True)
+        print(f'Deleting gadras pcfs at {Path(settings.getDataDirectory())/'gadras_injections'}')
+    if os.path.isdir(Path(settings.getDataDirectory())/'converted_gadras'):
+        shutil.rmtree(Path(settings.getDataDirectory())/'converted_gadras', ignore_errors=True)
+        print(f'Deleting gadras N42s at {Path(settings.getDataDirectory())/'converted_gadras'}')
+    # If using the temporary test data directory, remove it entirely
+    data_dir = Path(settings.getDataDirectory())
+    if data_dir.name == '__temp_test_rase' and data_dir.exists():
+        shutil.rmtree(data_dir, ignore_errors=True)
+
 
 @pytest.fixture(scope='session', autouse=True)
 def temp_data_dir():
@@ -35,48 +66,48 @@ def temp_data_dir():
     yield settings.getDataDirectory()  # anything before this line will be run prior to the tests
     settings = RaseSettings()
     settings.setDataDirectory(original_data_dir)
+    # Best-effort removal of the temp directory at end of session
+    temp_dir = Path(os.path.join(os.getcwd(),'__temp_test_rase'))
+    if temp_dir.exists():
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 @pytest.fixture(scope="class", autouse=True)
 def db_and_output_folder():
-    settings = RaseSettings()
     close_all_sessions()
     if Session.bind:
         Session.bind.dispose()
-    """Delete and recreate the database between test classes"""
-    if os.path.isdir(settings.getSampleDirectory()):
-        shutil.rmtree(settings.getSampleDirectory())
-        print(f'Deleting sample dir at {settings.getSampleDirectory()}')
-    if os.path.isfile(settings.getDatabaseFilepath()):
-        os.remove(settings.getDatabaseFilepath())
-        print(f'Deleting DB at {settings.getDatabaseFilepath()}')
-    if os.path.isdir(Path(settings.getDataDirectory())/'gadras_injections'):
-        shutil.rmtree(Path(settings.getDataDirectory())/'gadras_injections')
-        print(f'Deleting gadras pcfs at {Path(settings.getDataDirectory())/"gadras_injections"}')
-    if os.path.isdir(Path(settings.getDataDirectory())/'converted_gadras'):
-        shutil.rmtree(Path(settings.getDataDirectory())/'converted_gadras')
-        print(f'Deleting gadras N42s at {Path(settings.getDataDirectory())/"converted_gadras"}')
+    cleanup()
     settings = RaseSettings()
     close_all_sessions()
-    dataDir = settings.getDataDirectory()
-
-    os.makedirs(dataDir, exist_ok=True)
+    settings.ensureDataDirectories()
     initializeDatabase(settings.getDatabaseFilepath())
     yield
     close_all_sessions()
+    cleanup()
+    # Repeat deletion logic here if you want to clean up after the class
 
 @pytest.fixture(scope="session",)
 def dummy_base_spectrum():
-    dummy_dir = Path(__file__).parent/'..'/'baseSpectra'/ 'DummySpectra'
+    dummy_dir = Path(__file__).parent.parent /'baseSpectra'/ 'DummySpectra'
     assert dummy_dir.is_dir()
     assert (dummy_dir/'DUMMY_M001_Delta_Delta.n42').is_file()
     return str(dummy_dir.resolve())
 
 @pytest.fixture(scope="session",)
 def generic_nai_spectra():
-    dummy_dir = Path(__file__).parent/'..'/'baseSpectra'/'genericNaI'
+    dummy_dir = Path(__file__).parent.parent /'baseSpectra'/ 'genericNaI'
     assert dummy_dir.is_dir()
-    assert (dummy_dir/'Cs137,n42').is_file()
+    assert (dummy_dir/'VGeneric_MNaI2x2_Cs137.n42').is_file()
     return str(dummy_dir.resolve())
+
+@pytest.fixture(scope="session",)
+def example_multisec_base():
+    dummy_dir = Path(__file__).parent/'example_base'/'multisec'
+    assert dummy_dir.is_dir()
+    assert (dummy_dir/'VTest_MTest_Co60_multisec.n42').is_file()
+    return str(dummy_dir.resolve())
+
+
 
 class Helper(QObject):
     finished = Signal()
@@ -84,42 +115,7 @@ class Helper(QObject):
 
 class HelpObjectCreation:
     def __init__(self):
-        self.default_correspondence_table = [('Bgnd','','K40;K-40;Potassium-40;Th;Th232;Th-232;Th-232Counts;Thorium-232;Ra226;Ra-226;Radium-226;NORM;No ID;Insufficient Counts;Spt cnts > Bkg;No iso. found;Not Identified'),
-                            ('Am241','Am241;Am-241;Americium-241;Am-241 (unshielded)',''),
-                            ('Ba133','Ba133;Ba-133;Barium-133',''),
-                            ('Cd109','Cd109;Cd-109;Cadmium-109',''),
-                            ('Cf252','Cf252;Cf-252;Californium-252','Neutrons'),
-                            ('Cs137','Cs137;Cs-137;Cesium-137',''),
-                            ('Co57','Co57;Co-57;Cobalt-57',''),
-                            ('Co60','Co60;Co-60;Cobalt-60','Annihilation;Annihilation Photons'),
-                            ('Cr51','Cr51;Cr-51;Chromium-51',''),
-                            ('Cu67','Cu67;Cu-67;Copper-67','Ga67;Ga-67;Gallium-67'),
-                            ('DU','DU;U238;U_238;U-238;U238_DU;Uranium-238;DU-238;Uranium','LEU'),
-                            ('Ga67','Ga67;Ga-67;Gallium-67','Cu67;Cu-67;Copper-67'),
-                            ('HEU','HEU;U235;U_235;U-235;Uranium;Uranium-235;U risk;U-HEU;U','U_238;U-238;U238;Uranium-238;DU-238;LEU'),
-                            ('I131','I131;I-131;Iodine-131',''),
-                            ('K40','K40;K-40;Potassium;Potassium-40','NORM'),
-                            ('LEU','LEU;U235;U-235;Uranium;Uranium-235;U risk;U','DU;HEU;U238;U-238;DU-238;Uranium-238;U-HEU'),
-                            ('Lu177','Lu177;Lu-177;Lutetium-177;Lu177m;Lu-177m;Lu-177m;Lutetium-177m','Ta177;Ta-177'),
-                            ('Mo99','Mo99;Mo-99;Molybdenum-99','Tc99m;Tc-99m;Tc-99;Technetium-99m'),
-                            ('Na22','Na22;Na-22;Sodium-22;Beta+@Na','Annihilation;Annihilation Photons'),
-                            ('Np237','Np237;Np-237;Neptunium-237',''),
-                            ('Pu239','Pu239;Pu-239;WGPu;WGPu_S;WGPu-HS;Plutonium-239;Plutonium;Pu;LB Pu;MB Pu','Am241;Am-241;Americium-241;Am-241 (unshielded);Neutrons'),
-                            ('Ra226','Ra226;Ra-226;Radium-226','Rn222;Rn-222;Radon-222;Radon;Po210;Po-210;Bi210;Bi-210'),
-                            ('RGPu','RGPu;Pu239;Pu-239;Plutonium;Plutonium-239;Reactor Grade Plutonium;LB Pu;MB Pu;WGPu;WGPu-HS;WGPu-S','Am241;Am-241;Americium-241;Am-241 (unshielded);Neutrons;'),
-                            ('Se75','Se75;Se-75;Selenium-75',''),
-                            ('Sr85','Sr85;Sr-85;Strontium-85',''),
-                            ('Tc99m','Tc99m;Tc-99m;Tc-99M;Technetium-99m;Tc-99','Mo99;Mo-99;Molybdenum-99'),
-                            ('Tl201','Tl201;Tl-201;Thallium-201',''),
-                            ('Th228','Th228;Th-228;Thorium;Thorium-228;Thorium;Th;U232;U-232;Uranium-232;U-232D;Th-232Chain','NORM;'),
-                            ('Th232','Th232;Th-232;Thorium;Thorium-232;Th;Th-232Chain','Th228;Th-228;NORM'),
-                            ('U232','U232;U-232;Uranium;Uranium-232;U risk;Th228;Th-228;','Th232;Th-232;Thorium'),
-                            ('U233','U233;U-233;Uranium;Uranium-233;U risk','U232;U-232'),
-                            ('U235','HEU;U235;U_235;U-235;Uranium;Uranium-235;U risk;U-HEU;U;','U_238;U-238;U238;Uranium-238;DU-238;LEU'),
-                            ('U238','DU;U238;U_238;U-238;U238_DU;Uranium-238;DU-238','Uranium;LEU'),
-                            ('WGPu','WGPu;WGPu_S;WGPu-HS;Plutonium-239;Pu-239;Pu239;Plutonium;Pu;LB Pu;MB Pu','Am241;Am-241;Americium-241;Am-241 (unshielded);Neutrons;RGPu'),
-                            ('PuO2','PuO2;RGPu;WGPu;WGPu_S;WGPu-HS;Plutonium-239;Pu-239;Pu239;Plutonium;Pu;LB Pu;MB Pu','Am241;Am-241;Americium-241;Am-241 (unshielded);Neutrons')]
-
+        self.default_correspondence_table = DEFAULT_CORRESPONDENCE_TABLE.copy()
 
     def get_default_detector_name(self):
         return 'test_detector'
@@ -231,11 +227,10 @@ class HelpObjectCreation:
     def create_empty_detector(self):
         detector_name = self.get_default_detector_name()
         session = Session()
-        d_dialog = DetectorDialog(None)
         if session.query(Detector).filter_by(name=detector_name).first():
             delete_instrument(session, detector_name)
-        d_dialog.detector = Detector(name=detector_name)
-        session.add(d_dialog.detector)
+        model = DetectorModel(detector_name)
+        model.accept()
 
     def add_default_base_spectra(self):
         session = Session()
@@ -288,10 +283,12 @@ class HelpObjectCreation:
 
     def set_default_detector_params(self):
         chan_counts, ecal, params = self.get_default_detector_params()
-        d_dialog = DetectorDialog(None, self.get_default_detector_name())
-        d_dialog.model.set_chan_count_from_spectrum(chan_counts)
-        d_dialog.model.set_ecal(ecal)
-        d_dialog.model.set_detector_params(*params)
+        model = DetectorModel(self.get_default_detector_name())
+        # d_dialog = DetectorDialog(None, self.get_default_detector_name())
+        model.set_chan_count_from_spectrum(chan_counts)
+        model.set_ecal(ecal)
+        model.set_detector_params(*params)
+        model.accept()
 
     def create_default_replay(self):
         session = Session()
@@ -400,7 +397,8 @@ class HelpObjectCreation:
         scens = session.query(Scenario).order_by(Scenario.id.desc()).all()
         assert scens
         return dets, scens
-#
+
+
 @pytest.fixture(scope='session')
 def main_window():
     w = Rase(None)

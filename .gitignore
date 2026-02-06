@@ -15,3 +15,7 @@ rase.log
 /base_spectra_config.yaml
 /tools/config_basebuild.yaml
 /translations/*.qm
+ui_generated/
+screenshots/
+/.vale/styles/Microsoft/
+/.vale/styles/Readability/

@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -116,10 +116,6 @@ class Test_gadras:
         detector = Detector()
         detector.base_spectra.append(spectrum)
 
-    def test_create_detector_from_converted(self,setup_gadras):
-        spectrum = setup_gadras.get_spectrum('Cs137')
-        detector = Detector()
-        detector.base_spectra.append(spectrum)
 
     def test_export(self, temp_data_dir, db_and_output_folder):
         dschema = DetectorSchema()

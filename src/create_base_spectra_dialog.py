@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -293,7 +293,7 @@ class CreateBaseSpectraTableWidget(QWidget):
                 self.sourceTable.blockSignals(False)
 
 
-class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_Dialog, QDialog):
+class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_CreateBaseSpectraDialog, QDialog):
     def __init__(self, session):
         QDialog.__init__(self)
         self.setupUi(self)
@@ -326,16 +326,17 @@ class CreateBaseSpectraDialog(ui_create_base_spectra_dialog.Ui_Dialog, QDialog):
         self.txtOutFolder.textChanged.connect(self.update_Ok_button_state)
 
     @Slot(bool)
-    def on_btnLoadSources_clicked(self, checked):
+    def on_btnLoadSources_clicked(self, checked, path=None):
         """
         Loads source spectra files in the source table
         """
-        options = QFileDialog.ShowDirsOnly
-        if sys.platform.startswith('win'): options = QFileDialog.DontUseNativeDialog
-        path = QFileDialog.getExistingDirectory(self, self.tr('Choose Base Spectra Directory'),
-                                                self.settings.getLastDirectory(), options)
-        if not path:
-            return
+        if path is None:
+            options = QFileDialog.ShowDirsOnly
+            if sys.platform.startswith('win'): options = QFileDialog.DontUseNativeDialog
+            path = QFileDialog.getExistingDirectory(self, self.tr('Choose Base Spectra Directory'),
+                                                    self.settings.getLastDirectory(), options)
+            if not path:
+                return
 
         if self.comboConfig.currentText() == pcf_config_txt:
             filenames = [f for f in os.listdir(path) if f.lower().endswith(".pcf")]
@@ -522,11 +523,7 @@ def create_base_spectra_from_input_data(config_dict: dict, pcf: bool, data: list
             subtraction = bkg_out_file
             config_dict['subtraction_spectrum_xpath'] = './RadMeasurement[@id="Foreground"]/Spectrum'
 
-        if 'ndetectors' not in config_dict.keys():
-            config_dict['ndetectors'] = 1
-        for additional_key in ['additional_meas', 'additional_sub', 'additional_liv', 'additional_cal']:
-            if additional_key not in config_dict.keys():
-                config_dict[additional_key] = None
+
 
         os.makedirs(out_folder, exist_ok=True)
 
@@ -541,7 +538,7 @@ def create_base_spectra_from_input_data(config_dict: dict, pcf: bool, data: list
             master_ecal = do_glob(inputfileglob=in_file, config=config_dict, outputfolder=out_folder,
                     manufacturer=vendorID, model=modelID, source=row[ColNum.matID],
                     uSievertsph=row[ColNum.dose], fluxValue=row[ColNum.flux],
-                    subtraction=subtraction, description=row[ColNum.otherID], master_ecal=master_ecal)
+                    subtraction=subtraction, subtraction_config=default_config['rase n42'], description=row[ColNum.otherID], master_ecal=master_ecal)
 
         except BaseSpectraFormatException as e:
             print(QCoreApplication.translate('cbs_d', 'Base Spectrum Creation Error'), e.args)

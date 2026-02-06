@@ -3,6 +3,7 @@ from time import sleep
 
 import pytest
 from PySide6.QtCore import Qt, QTimer, QObject, Signal
+from PySide6.QtWidgets import QDialogButtonBox, QMenu, QApplication, QMessageBox, QDialog
 
 from src.replay_dialog import ReplayDialog
 from src.base_spectra_dialog import BaseSpectraDialog
@@ -13,27 +14,10 @@ from src.rase_functions import *
 from src.rase_settings import RaseSettings
 from src.scenario_group_dialog import GroupSettings as gsd
 from sqlalchemy.orm import close_all_sessions
-from dynamic.dynamic_table_def import *
 
 
-
-@pytest.fixture(scope="class", autouse=True)
-def db_and_output_folder():
-    """Delete and recreate the database between test classes"""
-    settings = RaseSettings()
-    close_all_sessions()
-    if os.path.isdir(settings.getSampleDirectory()):
-        shutil.rmtree(settings.getSampleDirectory())
-        print(f'Deleting sample dir at {settings.getSampleDirectory()}')
-    if os.path.isfile(settings.getDatabaseFilepath()):
-        os.remove(settings.getDatabaseFilepath())
-        print(f'Deleting DB at {settings.getDatabaseFilepath()}')
-    dataDir = settings.getDataDirectory()
-    if not os.path.exists(dataDir):
-        os.makedirs(dataDir, exist_ok=True)
-    initializeDatabase(settings.getDatabaseFilepath())
-    yield Session()
-    close_all_sessions()
+from .fixtures import (temp_data_dir, db_and_output_folder, generic_nai_spectra, dummy_base_spectrum,
+                       HelpObjectCreation, Helper, example_multisec_base)
 
 
 
@@ -41,7 +25,7 @@ def db_and_output_folder():
 
 @pytest.fixture(scope='class')
 def base_import_window():
-    w = BaseSpectraDialog(Session())
+    w = BaseSpectraDialog()
     return w
 
 @pytest.fixture(scope='session')
@@ -56,24 +40,27 @@ class Helper(QObject):
 
 # GUI testing
 class Test_Load_spectra:
-    def test_load_dir(self,qtbot, base_import_window ):
+    def test_load_dir(self,qtbot, base_import_window, example_multisec_base ):
         w = base_import_window
         w.show()
         qtbot.addWidget(w)
         w.on_btnBrowse_clicked(False,
-                              r"C:\Users\brodsky3\OneDrive - LLNL\Documents\RASE\testout\testout_multisec",
+                              example_multisec_base,
                                secType='Background Spectrum'
                               )
         w.accept()
 
     def test_detector_dialog(self,qtbot, base_import_window):
+        print('testing-----------', flush=True)
         session = Session()
         w = base_import_window
 
         dd = DetectorDialog(None)
         dd.show()
         qtbot.addWidget(dd)
-        dd.txtDetector.setText('test_detector')
+        qtbot.keyClicks(dd.txtDetector, 'test_detector'+'\t') # triggers handleEditingFinished()
+        # dd.txtDetector.setText('test_detector')
+        # dd.handleEditingFinished()
         dd.on_btnAddBaseSpectra_clicked(False,w)
         dd.secondaryIsBackgroundRadio.setChecked(True)
         dd.combo_typesecondary.setCurrentIndex(secondary_type['file'])
@@ -85,14 +72,19 @@ class Test_Load_spectra:
         replaydialog.txtTemplatePath.setText(
             str(Path(__file__).parent/'../n42Templates/example_multisecondary_template.n42'))
         replaydialog.accept()
-        dd.on_btnNewReplay_clicked(False, replaydialog)
+        dd.on_btnNewReplay_clicked(False, replaydialog) #added replay, not yet checkboxed
+        checkbox_index = dd.tblViewReplay.model().index(0,0)
+        dd.tblViewReplay.setCurrentIndex(checkbox_index)
+        qtbot.keyPress(dd.tblViewReplay, Qt.Key_Space)
+        # dd.model.set_replay('testreplay')
 
 
         dd.accept()
-        assert (dd.detector.replay)
+        assert dd.detector.replays
+        assert dd.detector.replays[0].name == 'testreplay'
         saved_det = session.query(Detector).filter_by(name='test_detector').one()
         assert len(saved_det.secondary_spectra)==2
-        assert saved_det.bckg_spectra[0].livetime >300
+        assert saved_det.bckg_spectrum.livetime >300
 
         #TODO: test delete spectra
 
@@ -111,19 +103,24 @@ class Test_Load_spectra:
         w = ScenarioDialog(main_window)
         w.show()
         # comboSelectMaterial = w.tblMaterial.itemDelegate().createEditor()
-        item = w.tblMaterial.item(0, 1)
+        item = w.tblMaterial.model().index(0,1)
         assert item is not None
-        rect = w.tblMaterial.visualItemRect(item)
+        rect = w.tblMaterial.visualRect(item)
         qtbot.mouseClick(w.tblMaterial.viewport(), Qt.LeftButton, pos=rect.center())
         qtbot.mouseDClick(w.tblMaterial.viewport(), Qt.LeftButton, pos=rect.center())
         qtbot.mouseClick(w.tblMaterial.viewport(), Qt.LeftButton, pos=rect.center())
-        cell = w.tblMaterial.cellWidget(0,1)
-        qtbot.keyClicks(cell, 'Co60')
+
+        cell = w.tblMaterial.model().index(0,1)
+        w.tblMaterial.setCurrentIndex(cell)
+        qtbot.mouseClick(w.tblMaterial.viewport(), Qt.LeftButton, pos=rect.center())
+        qtbot.keyClicks(w.tblMaterial, 'Co60') # types in just enough to select the drop down item
         qtbot.mouseClick(w.tblMaterial.viewport(), Qt.LeftButton, pos=rect.center())
         w.accept()
         main_window.populateScenarios()
         main_window.populateScenarioGroupCombo()
-        testscen = Session.query(DynamicScenario).one_or_none()
+        assert main_window.tblScenario.rowCount() == 1
+        assert main_window.tblScenario.item(0,1).text() == 'Co60-multisec(0.1)'
+
     def test_run_generation(self,qtbot, main_window):
         w = main_window
         w.show()
@@ -135,7 +132,14 @@ class Test_Load_spectra:
         qtbot.mouseClick(w.tblDetectorReplay.viewport(), Qt.LeftButton, pos=detrect.center())
         qtbot.mouseClick(w.tblScenario.viewport(), Qt.LeftButton, pos=scenrect.center())
         assert(main_window.btnGenerate.isEnabled())
-        main_window.on_btnGenerate_clicked(False)
+
+        def handle_ok(w, qtbot):
+            messagebox = w.findChild(QMessageBox)
+            ok_button = messagebox.button(QMessageBox.Ok)
+            qtbot.mouseClick(ok_button, Qt.LeftButton, delay=1)
+
+        QTimer.singleShot(3000, lambda: handle_ok(w, qtbot))
+        assert main_window.on_btnGenerate_clicked(False)
     #
     # def test_paths_dialog(self,qtbot):
     #     w = DynamicPathsDialog()

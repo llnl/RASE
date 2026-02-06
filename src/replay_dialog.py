@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -40,13 +40,11 @@ from PySide6.QtCore import Slot, Qt, QModelIndex, QAbstractTableModel, QRegularE
     QCoreApplication
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QItemDelegate, QLineEdit, \
     QTableView, QSizePolicy, QDialogButtonBox, QVBoxLayout
-from src.qt_utils import RegExpValidator
+from src.qt_utils import RegExpValidator, Translatable
 from src.rase_settings import RaseSettings
-from src.rase_functions import get_DRFList_from_webid
+from src.webid_utils import get_DRFList_from_webid
 from src.table_def import Replay, Session, ReplayTypes, ConfidenceTypes
 from src.ui_generated import ui_new_replay_dialog
-
-# translation_tag = 'rep_d'
 
 
 class ReplayDialog(ui_new_replay_dialog.Ui_ReplayDialog, QDialog):
@@ -117,8 +115,7 @@ class ReplayDialog(ui_new_replay_dialog.Ui_ReplayDialog, QDialog):
         """
         Selects Replay executable
         """
-        filepath = QFileDialog.getOpenFileName(self, QCoreApplication.translate('rep_d',
-                                        'Path to Replay Tool'), self.settings.getDataDirectory())[0]
+        filepath = QFileDialog.getOpenFileName(self, self.tr('Path to Replay Tool'), self.settings.getDataDirectory())[0]
         if filepath:
             self.txtCmdLine.setText(filepath)
 
@@ -127,8 +124,7 @@ class ReplayDialog(ui_new_replay_dialog.Ui_ReplayDialog, QDialog):
         """
         Selects Translator Template
         """
-        filepath = QFileDialog.getOpenFileName(self, QCoreApplication.translate('rep_d',
-                                        'Path to n42 Template'), self.settings.getDataDirectory())[0]
+        filepath = QFileDialog.getOpenFileName(self, self.tr('Path to n42 Template'), self.settings.getDataDirectory())[0]
         if filepath:
             self.txtTemplatePath.setText(filepath)
 
@@ -137,8 +133,7 @@ class ReplayDialog(ui_new_replay_dialog.Ui_ReplayDialog, QDialog):
         """
         Selects Results Translator Executable
         """
-        filepath = QFileDialog.getOpenFileName(self, QCoreApplication.translate('rep_d',
-                          'Path to Results Translator Tool'), self.settings.getDataDirectory())[0]
+        filepath = QFileDialog.getOpenFileName(self, self.tr('Path to Results Translator Tool'), self.settings.getDataDirectory())[0]
         if filepath:
             self.txtResultsTranslator.setText(filepath)
 
@@ -238,7 +233,7 @@ class ReplayDialog(ui_new_replay_dialog.Ui_ReplayDialog, QDialog):
         return QDialog.accept(self)
 
 
-class ReplayModel(Replay):
+class ReplayModel(Replay, Translatable):
     def __init__(self, replay=None, *args, **kwargs):
         super(ReplayModel, self).__init__(*args, **kwargs)
         self.set_default_values(kwargs.get('name') if 'name' in kwargs.keys() else '')
@@ -291,16 +286,16 @@ class ReplayModel(Replay):
 
     def accept(self):
         if not self.name:
-            return (QCoreApplication.translate('rep_d', 'critical'),
-                    QCoreApplication.translate('rep_d', 'Insufficient Information'),
-                    QCoreApplication.translate('rep_d', 'Must specify a replay tool name'))
+            return (self.tr('critical'),
+                    self.tr('Insufficient Information'),
+                    self.tr('Must specify a replay tool name'))
         session = Session()
         replay = session.query(Replay).filter_by(name=self.name).first()
         # if we are trying to name our RT with a name that already exists for another RT
         if replay and not self.orig_name == self.name:
-            return (QCoreApplication.translate('rep_d', 'warning'),
-                    QCoreApplication.translate('rep_d', 'Bad Replay Name'),
-                    QCoreApplication.translate('rep_d', 'Replay with this name exists. Specify Different Replay Name'))
+            return (self.tr('warning'),
+                    self.tr('Bad Replay Name'),
+                    self.tr('Replay with this name exists. Specify Different Replay Name'))
         if not replay:
             orig_replay = session.query(Replay).filter_by(name=self.orig_name).first()
             # if we are editing the name of our existing RT
@@ -331,8 +326,8 @@ class ConfidenceTableModel(QAbstractTableModel):
         @param kwargs:
         """
         super(ConfidenceTableModel, self).__init__(*args, **kwargs)
-        self._colheaders = [QCoreApplication.translate('rep_d', 'Reported'),
-                            QCoreApplication.translate('rep_d', 'Weight')]
+        self._colheaders = [self.tr('Reported'),
+                            self.tr('Weight')]
         self._data = self._set_empty_data()
         if data is not None:
             self.setDataFromTable(data)

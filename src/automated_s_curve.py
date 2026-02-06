@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -30,24 +30,35 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ###############################################################################
-from PySide6.QtCore import QSize, Qt
+import os
+import glob
+import numpy as np
+import shutil
+from tqdm import tqdm
+from typing import List
+
+from PySide6.QtCore import QCoreApplication, QSize, Qt
 from PySide6.QtWidgets import QMessageBox, QProgressDialog
 
 from src.contexts import SimContext
 from src.correspondence_table_dialog import CorrespondenceTableDialog
-from src.rase_functions import *
-from src.rase_settings import RaseSettings
 from src.spectra_generation import SampleSpectraGeneration
+from src.rase_functions import allowed_results_file_exts, delete_scenarios, files_endswith_exists, get_results_dir
+from src.rase_settings import RaseSettings
 from src.replay_generation import ReplayGeneration, TranslationGeneration
 from src.results_calculation import calculateScenarioStats, export_results
-from src.table_def import Scenario, Session, ScenarioMaterial, Material, \
-    ScenarioBackgroundMaterial, ScenarioGroup, CorrespondenceTable
+from src.table_def import CorrespondenceTable, Detector, Material, Scenario, ScenarioMaterial, \
+                            ScenarioBackgroundMaterial, ScenarioGroup, Session, Replay
 from src.view_results_dialog import ViewResultsDialog
-from tqdm import tqdm
 
 # translation tag = 'auto_s'
 
-def generate_curve(input_data, advanced, gui=None, export_path=None, custom_filename=None, export_filetype='both'):
+def generate_curve(input_data, advanced,
+                   gui=None,
+                   export_path=None,
+                   custom_filename=None,
+                   export_filetype='both'
+                   ) -> List[SimContext]:
     """
     Primary function where the points that make up the S-curve are determined
     input_data: dict, see main or docs for sample format
@@ -55,13 +66,29 @@ def generate_curve(input_data, advanced, gui=None, export_path=None, custom_file
     gui: automatically passes GUI if running in GUI mode
     export_path: str, custom path to export as csv or json
     export_filetype: str, set to "csv", "json", or "both"
+
+    returns: list of sim_contexts created by this process
     """
     session = Session()
     input_data = input_data.copy()
     advanced = advanced.copy()
+
+    # optional arguments
+    defaults = {'source_intensity': None, 'shield_material': '', 'curve_type': 0,  'shield_thickness': 0}
+    for k, v in defaults.items():
+        input_data.setdefault(k, v)
+
     if advanced['custom_name'] == QCoreApplication.translate('auto_s', '[Default]'):
-        group_name = (QCoreApplication.translate('auto_s', 'AutoScurve_{}_{}').format(
-                                    input_data["instrument"], input_data["source"]))
+        if input_data['curve_type'] == 0:
+            group_name = (QCoreApplication.translate('auto_s', 'AutoScurve_{}_{}{}{}').format(
+                    input_data['instrument'], input_data['source'],
+                    '_{}'.format(input_data['shield_material']) if input_data['shield_thickness'] else '',
+                    '={}cm'.format(input_data['shield_thickness']) if input_data['shield_thickness'] else ''))
+        else:
+            group_name = (QCoreApplication.translate('auto_s', 'AutoScurve_{}_{}_{}={}{}').format(
+                        input_data['instrument'], input_data['shield_material'],
+                        input_data['source'], input_data['source_intensity'],
+                        '\u00B5Sv/h' if input_data['source_fd']=='DOSE' else '\u03B3/(cm\u00B2s)'))
     else:
         suffix = 0
         while True:
@@ -91,7 +118,7 @@ def generate_curve(input_data, advanced, gui=None, export_path=None, custom_file
     # scenarios that will be rerun in this run
     scenIds_no_persist = []
     additional_points = None
-    sim_context_all = [SimContext(detector=detector, replay=replay, scenario=session.query(Scenario).filter_by(id=s).first()) for s in scenIdall]
+    # sim_context_all = [SimContext(detector=detector, replay=replay, scenario=session.query(Scenario).filter_by(id=s).first()) for s in scenIdall]
 
     maxback = 0
     if input_data['background']:
@@ -115,14 +142,14 @@ def generate_curve(input_data, advanced, gui=None, export_path=None, custom_file
                                        group_name, advanced['repetitions'], condition, additional_points, edge_points)
 
         try:
-            abort = run_scenarios(scenIds, detector, replay, condition, expand,
-                                  first_run, gui, edges=edges)
+            abort = run_scenarios(scenIds, detector, replay, condition, expand, first_run, gui, edges=edges,
+                                  curve_type=input_data['curve_type'], source_fd=input_data['source_fd'])
         except KeyboardInterrupt:
             abort = True
         first_run = False
         if abort:
             cleanup_scenarios(advanced['repetitions'], scenIds_no_persist)
-            return
+            return []
 
         sim_context_all = [SimContext(detector=detector, replay=replay,
                                       scenario=session.query(Scenario).filter_by(id=s).first()) for s in scenIdall]
@@ -135,10 +162,6 @@ def generate_curve(input_data, advanced, gui=None, export_path=None, custom_file
         else:  # to add more later
             results = scenario_stats_df['PID']
         results = results.sort_values(ascending=(not input_data['invert_curve']))
-        if not input_data['invert_curve']:
-            results = results.sort_values()
-        else:
-            results = results.sort_values(ascending=False)
 
         if max(results) >= advanced['upper_bound'] and min(results) <= advanced['lower_bound']:
             """If there are values surrounding the rising edge"""
@@ -165,14 +188,18 @@ def generate_curve(input_data, advanced, gui=None, export_path=None, custom_file
             start_val = [1e-8, 1e-8]
             end_val = [1e-3, 1e-3]
 
-            for inpointlist, scenlist, reversed in zip([start_val, end_val], [start_list, end_list], [False, True]):
-                doselist = [session.query(Scenario).filter_by(id=s).first().scen_materials[0].dose for s in scenlist]
-                if not len(doselist):
-                    continue
-                elif len(doselist) == 1:
-                    inpointlist[0:] = [doselist[0], doselist[0]]
+            # refines the start_val and end_val values based on the start and end lists
+            for startendvallist, scenlist, reversed in zip([start_val, end_val], [start_list, end_list], [False, True]):
+                if input_data['curve_type'] == 0:
+                    doseorthicklist = [session.query(Scenario).filter_by(id=s).first().scen_materials[0].dose for s in scenlist]
                 else:
-                    inpointlist[0:] = sorted(doselist, reverse=reversed)[-2:]
+                    doseorthicklist = [session.query(Scenario).filter_by(id=s).first().shielding_thickness for s in scenlist]
+                if not len(doseorthicklist):
+                    continue
+                elif len(doseorthicklist) == 1:
+                    startendvallist[0:] = [doseorthicklist[0], doseorthicklist[0]]
+                else:
+                    startendvallist[0:] = sorted(doseorthicklist, reverse=reversed)[-2:]
 
             # check if there are enough points on the rising edge
             if len(ids_on_edge) >= advanced['rise_points'] and len(end_list) > advanced['end_points'] and len(
@@ -222,7 +249,7 @@ def generate_curve(input_data, advanced, gui=None, export_path=None, custom_file
                     nabove += 1
                     if nabove > 20:  # to prevent an infinite loop
                         fail_endpoints(scenIdall, detector, replay, gui)
-                        return
+                        return [SimContext(detector, replay, session.get(Scenario, s_id)) for s_id in scenIdall]
                     edges = True
                 else:
                     advanced['min_guess'] = start_val[0] / (nbelow + 0.1)
@@ -231,74 +258,80 @@ def generate_curve(input_data, advanced, gui=None, export_path=None, custom_file
                     nbelow += 1
                     if nbelow > 20:  # to prevent an infinite loop
                         fail_endpoints(scenIdall, detector, replay, gui)
-                        return
+                        return [SimContext(detector, replay, session.get(Scenario, s_id)) for s_id in scenIdall]
                     edges = True
 
         elif min(results) > advanced['lower_bound']:
             """If the quoted results aren't small enough yet"""
             expand += 1
-            dose_list = []
+            val_list = []
             for scenId in scenIdall:
                 scen = session.query(Scenario).filter_by(id=scenId).first()
-                dose_list.append(scen.scen_materials[0].dose)
-            dose_list.sort()
+                if input_data['curve_type'] == 0:
+                    val_list.append(scen.scen_materials[0].dose)
+                else:
+                    val_list.append(scen.shielding_thickness)
+            val_list.sort()
 
             if not input_data['invert_curve']:
-                dose_bound = dose_list[0]
-                if (0 < dose_bound <= 1E-9 * maxback and len(scenIdall) >= 9) or 0 < dose_bound <= 1E-12:
+                val_bound = val_list[0]
+                if (0 < val_bound <= 1E-9 * maxback and len(scenIdall) >= 9) or 0 < val_bound <= 1E-12:
                     fail_never(scenIdall, detector, replay, input_data['source'], export_path, custom_filename, gui)
-                    return
-                if len(dose_list) > 1:
-                    step_ratio = dose_list[0] / dose_list[1]
+                    return [SimContext(detector, replay, session.get(Scenario, s_id)) for s_id in scenIdall]
+                if len(val_list) > 1:
+                    step_ratio = val_list[0] / val_list[1]
                 else:
                     step_ratio = 1/1.5
-                advanced['min_guess'] = min(dose_bound, advanced['min_guess']) * step_ratio
+                advanced['min_guess'] = min(val_bound, advanced['min_guess']) * step_ratio
                 advanced['max_guess'] = advanced['min_guess']
                 advanced['num_points'] = 2
             else:
-                dose_bound = dose_list[-1]
-                if dose_bound >= 800 * maxback and len(scenIdall) >= 9:
+                val_bound = val_list[-1]
+                if val_bound >= 800 * maxback and len(scenIdall) >= 9:
                     fail_never(scenIdall, detector, replay, input_data['source'], export_path, custom_filename, gui)
-                    return
-                if len(dose_list) > 1:
-                    step_ratio = dose_list[-1] / dose_list[-2]
+                    return [SimContext(detector, replay, session.get(Scenario, s_id)) for s_id in scenIdall]
+                if len(val_list) > 1:
+                    step_ratio = val_list[-1] / val_list[-2]
                 else:
                     step_ratio = 1.5
-                advanced['min_guess'] = max(dose_bound, advanced['max_guess']) * step_ratio
+                advanced['min_guess'] = max(val_bound, advanced['max_guess']) * step_ratio
                 advanced['max_guess'] = advanced['min_guess']
                 advanced['num_points'] = 2
 
         elif max(results) < advanced['upper_bound']:
             """If the quoted results aren't large enough yet"""
             expand += 1
-            dose_list = []
+            val_list = []
             for scenId in scenIdall:
                 scen = session.query(Scenario).filter_by(id=scenId).first()
-                dose_list.append(scen.scen_materials[0].dose)
-            dose_list.sort()
+                if input_data['curve_type'] == 0:
+                    val_list.append(scen.scen_materials[0].dose)
+                else:
+                    val_list.append(scen.shielding_thickness)
+            val_list.sort()
             if not input_data['invert_curve']:
-                dose_bound = dose_list[-1]
-                if dose_bound >= 800 * maxback and len(scenIdall) >= 9:
+                val_bound = val_list[-1]
+                if val_bound >= 800 * maxback and len(scenIdall) >= 9:
                     fail_always(scenIdall, detector, replay, input_data['source'], export_path, custom_filename, gui)
-                    return
-                if len(dose_list) > 1:
-                    step_ratio = dose_list[-1] / dose_list[-2]
+                    return [SimContext(detector, replay, session.get(Scenario, s_id)) for s_id in scenIdall]
+                if len(val_list) > 1:
+                    step_ratio = val_list[-1] / val_list[-2]
                 else:
                     step_ratio = 1.5
-                advanced['min_guess'] = max(dose_bound, advanced['max_guess']) * step_ratio
+                advanced['min_guess'] = max(val_bound, advanced['max_guess']) * step_ratio
                 advanced['max_guess'] = advanced['min_guess']
                 advanced['num_points'] = 2
             else:
-                dose_bound = dose_list[0]
-                if (0 < dose_bound <= 1E-9 * maxback and len(scenIdall) >= 9) or 0 < dose_bound <= 1E-12:
+                val_bound = val_list[0]
+                if (0 < val_bound <= 1E-9 * maxback and len(scenIdall) >= 9) or 0 < val_bound <= 1E-12:
                     fail_always(scenIdall, detector, replay, input_data['source'], export_path,
                                 custom_filename, gui)
-                    return
-                if len(dose_list) > 1:
-                    step_ratio = dose_list[0] / dose_list[1]
+                    return [SimContext(detector, replay, session.get(Scenario, s_id)) for s_id in scenIdall]
+                if len(val_list) > 1:
+                    step_ratio = val_list[0] / val_list[1]
                 else:
-                    step_ratio = dose_list[0] * 1/1.5
-                advanced['min_guess'] = min(dose_bound, advanced['min_guess']) * step_ratio
+                    step_ratio = val_list[0] * 1/1.5
+                advanced['min_guess'] = min(val_bound, advanced['min_guess']) * step_ratio
                 advanced['max_guess'] = advanced['min_guess']
                 advanced['num_points'] = 2
 
@@ -307,15 +340,17 @@ def generate_curve(input_data, advanced, gui=None, export_path=None, custom_file
             scenIds, _, _ = gen_scens(input_data, advanced, session, scenIdall, scenIds_no_persist,
                                       group_name, input_data['input_reps'], condition, additional_points, edge_points)
             detector = session.query(Detector).filter_by(name=detName[0]).first()
-            abort = run_scenarios(scenIds, detector, replay, condition, gui=gui)
+            abort = run_scenarios(scenIds, detector, replay, condition, gui=gui, curve_type=input_data['curve_type'],
+                                  source_fd=input_data['source_fd'])
             if abort:
                 cleanup_scenarios(advanced['repetitions'], scenIds_no_persist)
                 cleanup_scenarios(input_data['input_reps'], scenIds)
-                return
+                return []
         else:
             scens = [session.query(Scenario).filter_by(id=scenId).first() for scenId in scenIdall]
-            scenIds = [scen.id for scen in [s for s in scens if s.replication ==
-                                             max([k.replication for k in scens])]]
+            scenIds = [scen.id for scen in [s for s in scens if s.replication == max([k.replication for k in scens])]]
+
+        # Final cleanup if requested by user
         if advanced['cleanup']:
             cleanup_scenarios(advanced['repetitions'], scenIds_no_persist)
             if gui is not None:
@@ -358,6 +393,9 @@ def generate_curve(input_data, advanced, gui=None, export_path=None, custom_file
                 if export_filetype in ['json', 'both']:
                     export_results(result_super_map, scenario_stats_df,
                                    os.path.join(export_path, filename + '.json'), 'json')
+
+    final_scenario_ids = scenIds if advanced['cleanup'] else scenIds + scenIds_no_persist
+    return [SimContext(detector=detector, replay=replay, scenario=session.get(Scenario, s_id)) for s_id in final_scenario_ids]
 
 
 def check_edge_ids(session, replications, start_list, end_list, edge_ids, detector, replay):
@@ -462,29 +500,40 @@ def make_scen_group(session, group_name, input_data):
 
 
 def make_scenIdall(session, input_data):
+    """
+    Identify all scenarios for which results exist and that could be used as a part of this S-curve
+    :param session:
+    :param input_data:
+    :return:
+    """
     settings = RaseSettings()
     detector = session.query(Detector).filter_by(name=input_data['instrument']).first()
     replay = session.query(Replay).filter_by(name=input_data['replay']).first()
 
-    repeat_scens = []
-    for bkgd in input_data['background']:
-        repeat_scens = repeat_scens + session.query(Scenario).join(ScenarioMaterial).join(
+    repeat_scens = session.query(Scenario).join(ScenarioMaterial).join(
             ScenarioBackgroundMaterial).filter(
             Scenario.acq_time == float(input_data['dwell_time'])).filter(
+            Scenario.shielding_material == input_data['shield_material']).filter(
             ScenarioMaterial.fd_mode == input_data['source_fd'],
-            ScenarioMaterial.material_name == input_data['source']).filter(
-            ScenarioBackgroundMaterial.fd_mode == bkgd[0],
-            ScenarioBackgroundMaterial.material_name == bkgd[1],
-            ScenarioBackgroundMaterial.dose == bkgd[2]).all()
+            ScenarioMaterial.material_name == input_data['source'])
 
-    for s in list(repeat_scens):
-        if len(s.scen_materials) > 1:
-            repeat_scens.remove(s)
+    if input_data['curve_type'] == 0:
+        repeat_scens = repeat_scens.filter(Scenario.shielding_thickness == input_data['shield_thickness'])
+    else:
+        repeat_scens = repeat_scens.filter(ScenarioMaterial.dose == input_data['source_intensity'])
 
-    common_scens = [x for x in set(repeat_scens) if repeat_scens.count(x) == len(input_data['background'])]
+    input_bgnds = set(tuple([f[0], f[1], float(f[2])]) for f in input_data['background']) # ignore neutrons
+    matching_scenarios = [scen for scen in repeat_scens.all() if set((b.fd_mode, b.material_name, b.dose) for
+                                                                b in scen.scen_bckg_materials) == input_bgnds]
+
+    # for s in list(repeat_scens):
+    #     if len(s.scen_materials) > 1:
+    #         repeat_scens.remove(s)
+    #
+    # common_scens = [x for x in set(repeat_scens) if repeat_scens.count(x) == len(input_data['background'])]
 
     scenIdall = []
-    for scen in common_scens:
+    for scen in matching_scenarios:
         results_dir = get_results_dir(settings.getSampleDirectory(), detector, replay, scen.id)
         if files_endswith_exists(results_dir, allowed_results_file_exts):
             scenIdall.append(scen.id)
@@ -494,7 +543,22 @@ def make_scenIdall(session, input_data):
 
 def gen_scens(input_data, advanced, session, scenIdall, scenIds_no_persist, group_name, reps=1, condition=False,
               additional_points=None, edge_points=None):
-    """Generate the scenarios, including source, background, dwell time, and replications"""
+    """
+    Generate the scenarios, including source, background, dwell time, and replications
+    :param input_data: Object that contains all the basic data for the S-curve running
+    :param advanced: Object that contains all the data from the "advanced" tab on the dialog
+    :param session: Database session
+    :param scenIdall: All scenarios that are included in the development of the S-curve
+    :param scenIds_no_persist: List of scenarios to delete if the S-curve is aborted (cleanup). Distinct from
+                                scenIds in that scenIds includes previously-run scenarios that can also be
+                                included in the S-curve that we don't want to clear out if aborted
+    :param group_name: Group we will be putting the scenarios created here
+    :param reps: num replications for the scenario to be created
+    :param condition: Has the S-curve converged?
+    :param additional_points: User-provided points we want included in the final S-curve to matter what
+    :param edge_points: Points on the edge of the S-curve
+    :return:
+    """
     settings = RaseSettings()
     scenGroup = session.query(ScenarioGroup).filter_by(name=group_name).first()
     test_points = logspace_gen(num_points=advanced['num_points'],
@@ -511,71 +575,95 @@ def gen_scens(input_data, advanced, session, scenIdall, scenIds_no_persist, grou
     if edge_points is not None:
         test_points += edge_points
 
-    for d in set(test_points):
-        sm = ScenarioMaterial(material=m, fd_mode=input_data['source_fd'], dose=d)
+    for tp in set(test_points):
+        if input_data['curve_type'] == 0: # variable dose
+            sm = ScenarioMaterial(material=m, fd_mode=input_data['source_fd'], dose=tp)
+            shield_thick = input_data['shield_thickness']
+        else: # variable shielding
+            sm = ScenarioMaterial(material=m, fd_mode=input_data['source_fd'], dose=input_data['source_intensity'])
+            shield_thick = tp
         sb = []
         for mode, mat, dose, *n_dose in input_data['background']:   # backward
             bm = session.query(Material).filter_by(name=mat).first()
             n_dose = 0 if not n_dose or (n_dose and not n_dose[0]) else n_dose[0]
             sb.append(ScenarioBackgroundMaterial(material=bm, fd_mode=mode, dose=float(dose), neutron_dose=n_dose))
-        persist = session.query(Scenario).filter_by(id=Scenario.scenario_hash(
-                                                        input_data['dwell_time'], [sm], sb)).first()
-        if persist:
-            if persist.replication < reps:
-                #TODO: refactor with general RASE scenario delete
-                scenDelete = session.query(Scenario).filter(Scenario.id == persist.id)
-                matDelete = session.query(ScenarioMaterial).filter(ScenarioMaterial.scenario_id == persist.id)
-                backgMatDelete = session.query(ScenarioBackgroundMaterial).filter(
-                    ScenarioBackgroundMaterial.scenario_id == persist.id)
-                matDelete.delete()
-                backgMatDelete.delete()
-                scenDelete.delete()
+        # check if the scenario already exists in the database. If so, and replications are >= requested, include it
+        # in the S-curve, but make sure you don't delete it if S-curve is aborted
+        scen_preexisting = session.query(Scenario).filter_by(id=Scenario.scenario_hash(input_data['dwell_time'],
+                                                           [sm], sb, [], input_data['shield_material'],
+                                                                                       shield_thick)).first()
+        if scen_preexisting:
+            if scen_preexisting.replication < reps:
+                # Delete the scenario so it can be recreated
+                delete_scenarios([scen_preexisting.id,], settings.getSampleDirectory())
 
-                folders = [fd for fd in glob.glob(os.path.join(settings.getSampleDirectory(), '*' + persist.id + '*'))]
+                folders = [fd for fd in glob.glob(os.path.join(settings.getSampleDirectory(), '*' + scen_preexisting.id + '*'))]
                 for folder in folders:
                     shutil.rmtree(folder)
 
-                scens = Scenario(input_data['dwell_time'], reps, [sm], sb, [], [])
-                session.add(scens)
-                scenIds.append(scens.id)
-                scenIds_no_persist.append(scens.id)
-                scenGroup.scenarios.append(scens)
+                sm = ScenarioMaterial(material=m, fd_mode=input_data['source_fd'],
+                                      dose=tp if input_data['curve_type'] == 0 else input_data['source_intensity'])
+                define_and_add_scens(session, scenIds, scenIds_no_persist, scenGroup, input_data['dwell_time'],
+                                     reps, [sm], sb, input_data['shield_material'], shield_thick)
             else:
-                scenIds.append(persist.id)
+                scenIds.append(scen_preexisting.id)
         else:
-            scens = Scenario(input_data['dwell_time'], reps, [sm], sb, [], [])
-            session.add(scens)
-            scenIds.append(scens.id)
-            scenIds_no_persist.append(scens.id)
-            scenGroup.scenarios.append(scens)
+            define_and_add_scens(session, scenIds, scenIds_no_persist, scenGroup, input_data['dwell_time'],
+                                 reps, [sm], sb, input_data['shield_material'], shield_thick)
 
     scenIdall = scenIdall + [s for s in scenIds if not s in scenIdall]
     session.commit()
     return scenIds, scenIds_no_persist, scenIdall
 
+def define_and_add_scens(session, scenIds, scenIds_no_persist, scenGroup, dwell, reps, mats, bgnds, shmat, shthick):
+    """Utility function supporting gen_scens"""
+    scens = Scenario(dwell, reps, mats, bgnds, [], [], shmat, shthick)
+    session.add(scens)
+    scenIds.append(scens.id)
+    scenIds_no_persist.append(scens.id)
+    scenGroup.scenarios.append(scens)
 
-def run_scenarios(scenIds, detector, replay, condition=False, expand=0, first_run=False, gui=None, edges=False):
+def run_scenarios(scenIds, detector, replay, condition=False, expand=0, first_run=False, gui=None, edges=False,
+                  curve_type=0, source_fd='Dose'):
     """Runs the RASE workflow functions"""
     if not len(scenIds):
         return
     settings = RaseSettings()
     count = 0
     len_prog = len(scenIds)
+    session = Session()
+    if curve_type == 0:
+        doses = [session.query(Scenario).filter_by(id=s).first().scen_materials[0].dose for s in scenIds]
+    else:
+        material = session.query(Scenario).filter_by(id=scenIds[0]).first().shielding_material
+        thicknesses = [session.query(Scenario).filter_by(id=s).first().shielding_thickness for s in scenIds]
     if condition:
         message = [QCoreApplication.translate('auto_s', 'S-curve range found!'),
                    QCoreApplication.translate('auto_s', 'Generating higher statistics scenarios...')]
     else:
         if len(scenIds) == 1:
             len_prog = 3
-            message = [QCoreApplication.translate('auto_s', 'Expanding S-curve search...'),
-                       QCoreApplication.translate('auto_s', 'Steps taken = {}, Scenario ID = {}').
-                           format(str(expand - 1), scenIds[0])]
-        elif first_run:
-            message = [QCoreApplication.translate('auto_s', 'Generating range-finding S-curve scenarios...'), '']
-        elif edges:
-            message = [QCoreApplication.translate('auto_s', 'Adding points on the edges...'), '']
+            if curve_type == 0:
+                outstring = QCoreApplication.translate('auto_s', 'Steps taken = {}, Scenario ID = {}, '
+                             'looking at {}={}').format(str(expand - 1), scenIds[0], source_fd, doses[0])
+            else:
+                outstring = QCoreApplication.translate('auto_s', 'Steps taken = {}, Scenario ID = {}, '
+                             'looking at {}={}cm').format(str(expand - 1), scenIds[0], material, thicknesses[0])
+            message = [QCoreApplication.translate('auto_s', 'Expanding S-curve search...'), outstring]
         else:
-            message = [QCoreApplication.translate('auto_s', 'Adding scenarios to rising edge...'), '']
+            if curve_type == 0:
+                outstring = QCoreApplication.translate('auto_s', 'Looking at {}={}').format(
+                    source_fd, ', '.join(f'{k:.3f}' for k in doses))
+            else:
+                outstring = QCoreApplication.translate('auto_s', 'Looking at {}=({})cm').format(
+                    material, ', '.join(f'{k:.3f}' for k in thicknesses))
+            if first_run:
+                message = [QCoreApplication.translate('auto_s', 'Generating range-finding S-curve scenarios...'),
+                           outstring]
+            elif edges:
+                message = [QCoreApplication.translate('auto_s', 'Adding points on the edges...'), outstring]
+            else:
+                message = [QCoreApplication.translate('auto_s', 'Adding scenarios to rising edge...'), outstring]
 
     print(f'{message[0]} {message[1]}')
     if gui is not None:
@@ -636,19 +724,12 @@ def set_bounds(val, dose):
     return val
 
 
-def cleanup_scenarios(rangefind_rep, scenIds):
+def cleanup_scenarios(rangefind_rep, scenIds: List[str]):
     """Remove scenarios from the database that were rangefinders, i.e.: low replication scenarios"""
     settings = RaseSettings()
-    session = Session()
-    scenarios = []
-    for scen in scenIds:
-        scenarios.append(session.query(Scenario).filter_by(id=scen).first())
-    scens_to_delete = []
-    for scen in scenarios:
-        if scen.replication == rangefind_rep:
-            scens_to_delete.append(scen.id)
-    delete_scenario(scens_to_delete, settings.getSampleDirectory())
-    session.commit()
+    scenarios = Session().query(Scenario).filter(Scenario.id.in_(scenIds)).all()
+    scens_to_delete = [s.id for s in scenarios if s.replication == rangefind_rep]
+    delete_scenarios(scens_to_delete, settings.getSampleDirectory())
 
 
 def viewResults(gui, sim_context_list: list[SimContext]):
@@ -672,7 +753,9 @@ def viewResults(gui, sim_context_list: list[SimContext]):
         else:
             return
     gui.result_super_map, gui.scenario_stats_df = calculateScenarioStats(sim_context_list, gui)
-    ViewResultsDialog(gui, sim_context_list).exec()
+    d = ViewResultsDialog(gui, sim_context_list)
+    d.setModal(True)
+    d.exec()
 
 
 if __name__ == "__main__":
@@ -682,13 +765,17 @@ if __name__ == "__main__":
 
     input_inst = 'dummy'
     input_replay = 'dummy_webid'
+    curve_type = 0
+    results_type = 'PID'
+    invert_curve = False
     input_source = 'Cd109'
     source_units = 'FLUX'
+    source_intensity = None
+    shield_material = ''
+    shield_thickness = 0
     static_background = [('DOSE', 'Bgnd', 0.08)]
     dwell_time = 30
-    results_type = 'PID'
     input_repetitions = 50
-    invert_curve = False
 
     min_init_g = 1E-8
     max_init_g = 1E-3
@@ -703,13 +790,17 @@ if __name__ == "__main__":
 
     input_d = {'instrument': input_inst,
                'replay': input_replay,
+               'curve_type': curve_type,
+               'results_type': results_type,
+               'invert_curve': invert_curve,
                'source': input_source,
                'source_fd': source_units,
+               'source_intensity': source_intensity,
+               'shield_material': shield_material,
+               'shield_thickness': shield_thickness,
                'background': static_background,
                'dwell_time': dwell_time,
-               'results_type': results_type,
                'input_reps': input_repetitions,
-               'invert_curve': invert_curve
                }
 
     input_advanced = {'min_guess': min_init_g,

@@ -112,7 +112,7 @@ Citation
 Please cite use of the RASE software as:
 
 L. Bentley-Tammero, J. P. Brodsky, J. Chavez, S. A. Czyz, G. Kosinovsky, V. Mozin, & S. Sangiorgio. 
-(2024, Dec 5). LLNL/RASE: RASE v3.0 (Version v3.0). Zenodo. http://doi.org/10.5281/zenodo.14285934
+(2026, Feb 5). LLNL/RASE: RASE v3.1 (Version v3.1). Zenodo. https://doi.org/10.5281/zenodo.4910067
 
 
 Acknowledgements
@@ -135,4 +135,4 @@ License
 RASE is released under an MIT license and LGPL License. For more details see the [LICENSE]
 (/LICENSE-MIT) and [LICENSE](/LICENSE-LGPL) files.
 
-LLNL-CODE-2001375, LLNL-CODE-829509
+LLNL-CODE-2014600, LLNL-CODE-829509

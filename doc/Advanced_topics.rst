@@ -1,8 +1,8 @@
 .. _advanced_topics:
 
-***************
-Advanced Topics
-***************
+###############
+Advanced topics
+###############
 
 .. toctree::
    :maxdepth: 2
@@ -12,6 +12,8 @@ Advanced Topics
    Create_base_spectra
    Base_spectra_creation_tool
    Shielding_generation
+   Template_conversion_tool
+   Isotope_ID_Results_Removal
    Import_CSV
    n42_templates
    Results_file_format

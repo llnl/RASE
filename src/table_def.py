@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -39,17 +39,20 @@ import string
 
 from sqlalchemy import ForeignKey, Column, Integer, String, Float, Boolean, Enum, JSON, UniqueConstraint
 from sqlalchemy.ext.declarative import declared_attr
+from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import DeclarativeBase, mapped_column, relationship, sessionmaker, scoped_session, backref, Mapped
 from sqlalchemy.sql.schema import Table, CheckConstraint
-from sqlalchemy import event
+from sqlalchemy import event, and_
 import numpy as np
 import hashlib
 from typing import Set, Sequence, MutableSequence
 import json
-from src.utils import compress_counts
-from typing import List
 
-DB_VERSION_NAME = 'rase_db_v3_0_0'
+from src.datadir_view import DataDirViewManager
+from src.utils import compress_counts
+from typing import List, Optional
+
+DB_VERSION_NAME = 'rase_db_v3_1_2'
 
 class Base(DeclarativeBase):
     # see https://docs.sqlalchemy.org/en/20/changelog/whatsnew_20.html#migrating-an-existing-mapping
@@ -149,6 +152,8 @@ class Scenario(Base):
     id                  = mapped_column(String, primary_key=True)
     acq_time            = mapped_column(Float)
     replication         = mapped_column(Integer)
+    shielding_material  = mapped_column(String)
+    shielding_thickness = mapped_column(Float, nullable=False, default=0)
     comment             = mapped_column(String)
     # eager loading required by the import/export scenario functions in scenarios_io module
     scen_materials      = relationship('ScenarioMaterial', cascade='all, delete', lazy='joined')
@@ -162,29 +167,45 @@ class Scenario(Base):
     }
 
     def __init__(self, acq_time=1, replication=1, scen_materials=[], scen_bckg_materials=[], influences=[],
-                 scenario_groups=[], comment=''):
+                 scenario_groups=[], shielding_material='', shielding_thickness=0, comment=''):
         # id: a hash of scenario parameters, truncated to a 6-digit hex string
-        self.id = self.scenario_hash(acq_time, scen_materials, scen_bckg_materials, influences)
+        self.id = self.scenario_hash(acq_time, scen_materials, scen_bckg_materials, influences,
+                                     shielding_material, shielding_thickness)
         self.acq_time = acq_time
         self.replication = replication  # number of sample spectra to create
         self.influences = influences
         self.scen_materials = scen_materials
         self.scen_bckg_materials = scen_bckg_materials
         self.scenario_groups = scenario_groups
+        self.shielding_material = shielding_material
+        self.shielding_thickness = shielding_thickness
         self.comment = comment
 
     @staticmethod
-    def scenario_hash(acq_time, scen_materials, scen_bckg_materials, influences=[]):
+    def scenario_hash(acq_time, scen_materials, scen_bckg_materials, influences=[], shield_mat='', shield_thick=0):
         s = f'{acq_time}' + \
             ''.join(sorted('SRC{}{:9.12f}{}'.format(
                 scenMat.material.name, scenMat.dose, scenMat.fd_mode, scenMat.neutron_dose) for scenMat in scen_materials)) + \
             ''.join(sorted('BKGD{}{:9.12f}{}'.format(
                 scenMat.material.name, scenMat.dose, scenMat.fd_mode, scenMat.neutron_dose) for scenMat in scen_bckg_materials)) + \
-            ''.join(sorted(infl.name for infl in influences))
+            ''.join(sorted(infl.name for infl in influences)) + ('' if not shield_thick else shield_mat) + f'{shield_thick}'
         try:
             return hashlib.md5(s.encode('utf-8')).hexdigest()[:6].upper()
         except ValueError:
             return hashlib.md5(s.encode('utf-8'),usedforsecurity=False).hexdigest()[:6].upper()
+
+    def get_label(self) -> str:
+        """
+        Return a simple readable label with scenario definition
+        Note: label does not include neutron_dose or influences
+        """
+        s = ('_'.join(sorted(f'{sm.material.name}({sm.dose:.2e}{sm.fd_mode[0]})' for sm in self.scen_materials)) +
+             '__' +
+             '_'.join(sorted(f'{sm.material.name}({sm.dose:.2e}{sm.fd_mode[0]})' for sm in self.scen_bckg_materials)) +
+             f'_{int(self.acq_time):d}s' +
+             f'_{int(self.replication):d}'
+        )
+        return s
 
     def get_material_names_no_shielding(self) -> Set[str]:
         return set(name for scenMat in self.scen_materials for name in scenMat.material.name_no_shielding())
@@ -247,17 +268,19 @@ class Detector(Base):
     ecal2        = mapped_column(Float)
     ecal3        = mapped_column(Float)
     includeSecondarySpectrum = mapped_column(Boolean)
-    secondary_type = mapped_column(Integer)    # 0=long_back from scen, 1=long_back from basespec, 2=long_back from file
+    secondary_type = mapped_column(Integer)    # 0=long_back from basespec, 1=long_back from scen, 2=long_back from file
     secondary_classcode = mapped_column(String)
     sample_intrinsic = mapped_column(Boolean)
     intrinsic_classcode = mapped_column(String)
+    shielding_drf   = mapped_column(String)
     influences          = relationship('Influence', secondary=det_infl_assoc_tbl, cascade='all', lazy='joined', backref='detectors')
-    base_spectra : Mapped[List['BaseSpectrum']] = relationship('BaseSpectrum',backref='detectors', lazy='joined')
-    base_spectra_xyz : Mapped[List['BaseSpectrumXYZ']] = relationship('BaseSpectrumXYZ',backref='detectors')
-    bckg_spectra = relationship('BackgroundSpectrum',backref='detectors')
+    base_spectra : Mapped[List['BaseSpectrum']] = relationship('BaseSpectrum',primaryjoin=lambda: and_(BaseSpectrum.detector_name == Detector.name,BaseSpectrum.spectrum_type == 'base_spectrum'),backref='detectors', lazy='joined', foreign_keys='BaseSpectrum.detector_name')
+    base_spectra_xyz : Mapped[List['BaseSpectrumXYZ']] = relationship('BaseSpectrumXYZ',backref='detectors', foreign_keys='BaseSpectrumXYZ.detector_name')
+    bckg_spectrum_id = mapped_column(Integer, ForeignKey('spectra.id'), nullable=True) #need a key here, since we can't say that whatever Spectrum has detector_name = this detector is the bckg spectrum for this one.
+    bckg_spectrum : Mapped[Optional['Spectrum']] = relationship('Spectrum', foreign_keys=bckg_spectrum_id, post_update=True) #spectrum that will be filled into the "included secondary" slot during spectral generation / templating
     bckg_spectra_dwell = mapped_column(Integer, default=0)
     bckg_spectra_resample = mapped_column(Boolean, default=True)  # resampling the background at each replication?
-    secondary_spectra : Mapped[List['SecondarySpectrum']] = relationship('SecondarySpectrum',backref='detectors')
+    secondary_spectra : Mapped[List['SecondarySpectrum']] = relationship('SecondarySpectrum',backref='detectors', foreign_keys='SecondarySpectrum.detector_name')
     replays: Mapped[List['Replay']] = relationship('Replay', secondary=replay_detector_assoc_tbl, back_populates='detectors', lazy='joined')
 
     __table_args__ =  (UniqueConstraint('name'),)
@@ -389,18 +412,34 @@ class Spectrum(Base):
     ecal3         = mapped_column(Float)
     spectrum_type = mapped_column(Integer)
     neutrons = mapped_column(Float, nullable=True, default=0)
+
+    detector_name = mapped_column(String, ForeignKey('detectors.name', ondelete='cascade', onupdate='cascade'))
+
     __mapper_args__ = {
         'polymorphic_identity': 'spectrum',
         'polymorphic_on': spectrum_type
     }
 
+    def __init__(self, other: 'Spectrum' = None, **kwargs):
+        """
+        Optionally initialize this instance by copying attributes from another Spectrum instance.
+        Keyword arguments override any copied values.
+        """
+        if other is not None:
+            # Copy all column attributes except 'id' by default
+            for key in inspect(self.__class__).columns.keys():
+                if key != 'id' and hasattr(other, key):
+                    setattr(self, key, getattr(other, key))
+        # Override with any explicitly provided kwargs
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
     @declared_attr
     def material(cls): return relationship('Material')
-
-    @declared_attr
-    def detector_name(cls):
-        return mapped_column(String, ForeignKey('detectors.name', ondelete='cascade', onupdate='cascade'))
+    #
+    # @declared_attr
+    # def detector_name(cls):
+    #     return mapped_column(String, ForeignKey('detectors.name', ondelete='cascade', onupdate='cascade'))
 
     def is_spectrum_float(self):
         """Checks if spectrum has floats in it or not"""
@@ -409,7 +448,6 @@ class Spectrum(Base):
             if c and (c < 1 or int(c) % c):
                 return True
         return False
-
 
     @declared_attr
     def material_name(cls): return mapped_column(String, ForeignKey('materials.name', ondelete='cascade'), nullable=True)
@@ -464,7 +502,7 @@ class BaseSpectrum(Spectrum):
     __mapper_args__ = {
         'polymorphic_identity': 'base_spectrum',
     }
-    id = Column(String, ForeignKey('spectra.id', ondelete='CASCADE'), primary_key=True)
+    id = Column(Integer, ForeignKey('spectra.id', ondelete='CASCADE'), primary_key=True)
     rase_sensitivity = mapped_column(Float)
     flux_sensitivity = mapped_column(Float)
     neutron_sensitivity = mapped_column(Float, nullable=True, default=0)
@@ -484,30 +522,28 @@ class BaseSpectrumXYZ(Spectrum):
     __mapper_args__ = {
         'polymorphic_identity': 'base_spectrum_xyz',
     }
-    id = Column(String, ForeignKey('spectra.id', ondelete='CASCADE'), primary_key=True)
+    id = Column(Integer, ForeignKey('spectra.id', ondelete='CASCADE'), primary_key=True)
     sensitivity   = mapped_column(Float)
     x             = mapped_column(Float)  # units of cm
     y             = mapped_column(Float)  # units of cm
     z             = mapped_column(Float)  # units of cm
 
 
-class BackgroundSpectrum(Spectrum):
-    __tablename__ = 'background_spectra'
+class ShieldedSpectrum(BaseSpectrum):
+    __tablename__ = 'shielded_spectra'
     __mapper_args__ = {
-        'polymorphic_identity': 'background_spectrum',
+        'polymorphic_identity': 'shielded_spectrum',
     }
-    id = Column(String, ForeignKey('spectra.id', ondelete='CASCADE'), primary_key=True)
-    classcode = mapped_column(String)
-    sensitivity = mapped_column(Float)  # aka static efficiency ##TODO: is this ever used?
-    # def __init__(self, material, filename, realtime, livetime,baseCounts,ecal):
-    #     self.material=material ##TODO: do we need an init here, or will it be taken care of automatically?
+    id = Column(Integer, ForeignKey('base_spectra.id', ondelete='CASCADE'), primary_key=True)
+    shielding_material = mapped_column(String)
+    shielding_thickness = mapped_column(Float, nullable=False, default=0)
 
 class SecondarySpectrum(Spectrum):
     __tablename__ = 'secondary_spectra'
     __mapper_args__ = {
         'polymorphic_identity': 'secondary_spectrum',
     }
-    id = mapped_column(String, ForeignKey('spectra.id', ondelete='CASCADE'), primary_key=True)
+    id = mapped_column(Integer, ForeignKey('spectra.id', ondelete='CASCADE'), primary_key=True)
     classcode = mapped_column(String)  # aka static efficiency
     # def __init__(self, material, filename, realtime, livetime,baseCounts,ecal):
     #     self.material=material ##TODO: do we need an init here, or will it be taken care of automatically?
@@ -547,6 +583,14 @@ class MaterialSchema(SQLAlchemyAutoSchema):
         model = Material
         load_instance = True
 
+class SpectrumSchema(SQLAlchemyAutoSchema):
+    class Meta:
+        model=Spectrum
+        load_instance=True
+        include_relationships = True
+        exclude = ("id","spectrum_type")
+
+    material = fields.Nested(MaterialSchema)
 
 class BaseSpectrumSchema(SQLAlchemyAutoSchema):
     class Meta:
@@ -563,15 +607,6 @@ class SecondarySpectrumSchema(SQLAlchemyAutoSchema):
         load_instance=True
         include_relationships = True
         exclude = ("id","spectrum_type","material","filename")
-
-
-class BackgroundSpectrumSchema(SQLAlchemyAutoSchema):
-    class Meta:
-        model=BackgroundSpectrum
-        load_instance=True
-        include_relationships = True
-        exclude = ("id","spectrum_type")
-    material = fields.Nested(MaterialSchema)
 
 class ReplaySchema(SQLAlchemyAutoSchema):
     class Meta:
@@ -604,7 +639,7 @@ class DetectorSchema(SQLAlchemyAutoSchema):
     replays = fields.Nested(ReplaySchema, allow_none=True, many=True, exclude=('detectors',))
     influences = fields.Nested(InfluenceSchema, many=True,)
     secondary_spectra = fields.Nested(SecondarySpectrumSchema, many=True, exclude=('detectors',))
-    bckg_spectra = fields.Nested(BackgroundSpectrumSchema, many=True, exclude=('detectors','material'))
+    bckg_spectrum = fields.Nested(SpectrumSchema, allow_none=True, many=False, exclude=('material',))
 
 # class ProxySource(Base): #removed for the moment, since I am trying to specify proxies in the train set instead
 #     __tablename__ = 'proxy_sources'
@@ -613,3 +648,53 @@ class DetectorSchema(SQLAlchemyAutoSchema):
 #     proxy         = mapped_column(JSON) #dict
 
 # from dynamic.dynamic_table_def import DynamicPathConfig, DynamicScenario
+
+
+class DBEventHandlerDataView:
+    def __init__(self, datadir_view_manager: DataDirViewManager):
+        self.datadir_view_manager = datadir_view_manager
+
+        # Register event listeners
+        event.listen(Detector, 'after_delete', self.on_detector_delete)
+        event.listen(Scenario, 'after_delete', self.on_scenario_delete)
+        event.listen(Replay, 'after_delete', self.on_replay_delete)
+        event.listen(Detector, 'after_insert', self.on_detector_insert)
+        event.listen(Scenario, 'after_insert', self.on_scenario_insert)
+        event.listen(Replay, 'after_insert', self.on_replay_insert)
+        event.listen(Detector.name, 'set', self.on_detector_name_change)
+        event.listen(Replay.name, 'set', self.on_replay_name_change)
+
+    def on_scenario_delete(self, mapper, connection, target):
+        # print(f"Scenario {target.id} - {target.get_label()} was deleted")
+        self.datadir_view_manager.delete_scenario(target.id)
+
+    def on_replay_delete(self, mapper, connection, target):
+        # print(f"Replay {target.id} - {target.name} was delete")
+        self.datadir_view_manager.delete_replay(target.id)
+
+    def on_detector_delete(self, mapper, connection, target):
+        # print(f"Detector {target.id} - {target.name} was delete")
+        self.datadir_view_manager.delete_detector(target.id)
+
+    def on_detector_name_change(self, target, value, old_value, initiator):
+        # print(f"Detector name changed from {old_value} to {value}")
+        self.datadir_view_manager.update_detector(target.id, value)
+
+    def on_replay_name_change(self, target, value, old_value, initiator):
+        # print(f"Replay name changed from {old_value} to {value}")
+        self.datadir_view_manager.update_replay(target.id, value)
+
+    def on_detector_insert(self, mapper, connection, target):
+        # print(f"Detector {target.id} added with name {target.name}")
+        self.datadir_view_manager.add_map_item('detector', target.id, target.name)
+
+    def on_replay_insert(self, mapper, connection, target):
+        # print(f"Replay {target.id} added with name {target.name}")
+        self.datadir_view_manager.add_map_item('replay', target.id, target.name)
+
+    def on_scenario_insert(self, mapper, connection, target):
+        # Reminder: any change to a scenario in the RASE GUI results in a new record being inserted in the db
+        #
+        # print(f"Scenario {target.id} added with name {target.get_label()}")
+        self.datadir_view_manager.update_scenario(target.id, target.get_label())
+        # self.datadir_view_manager.add_map_item('scenario', target.id, target.get_label())

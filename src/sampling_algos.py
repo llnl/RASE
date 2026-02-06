@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -103,6 +103,9 @@ def generate_sample_counts_poisson(scenario, detector, countsDoseAndSensitivity,
     for counts, dose, sensitivity in countsDoseAndSensitivity:
         counts[counts < 0] = 0
         counts = counts.astype(float) * (scenario.acq_time * dose * sensitivity) / sum(counts.astype(float))
+        counts[np.isnan(counts)] = 0
+        counts = abs(counts) # interestingly, with the shielding algorithm sometimes counts will yield -0s, which
+                             # aren't caught by the above conversion but nevertheless breaks the poisson algorithm
         counts = np.random.poisson(counts)  # Poisson noise
         sampleCounts += counts
     return sampleCounts.astype(int)

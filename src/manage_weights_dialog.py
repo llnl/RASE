@@ -1,5 +1,5 @@
 ###############################################################################
-# Copyright (c) 2018-2024 Lawrence Livermore National Security, LLC.
+# Copyright (c) 2018-2026 Lawrence Livermore National Security, LLC.
 # Produced at the Lawrence Livermore National Laboratory
 #
 # Written by J. Brodsky, J. Chavez, S. Czyz, G. Kosinovsky, V. Mozin,
@@ -7,7 +7,7 @@
 #
 # RASE-support@llnl.gov.
 #
-# LLNL-CODE-2001375, LLNL-CODE-829509
+# LLNL-CODE-2014600, LLNL-CODE-829509
 #
 # All rights reserved.
 #
@@ -51,7 +51,7 @@ COLUMNS = [NAME, TPWF, FPWF, FNWF]
 
 # translation_tag = 'mwgt_d'
 
-class ManageWeightsDialog(ui_manage_weights_dialog.Ui_Dialog, QDialog):
+class ManageWeightsDialog(ui_manage_weights_dialog.Ui_ManageWeightsDialog, QDialog):
     def __init__(self, parent=None):
         QDialog.__init__(self)
         self.parent = parent
