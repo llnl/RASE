@@ -165,7 +165,7 @@ base_spectra:
   rase_sensitivity: 1583.0937201129527
   realtime: 3600.0
 base_spectra_xyz: []
-bckg_spectra: []
+bckg_spectrum: null
 bckg_spectra_dwell: 0
 bckg_spectra_resample: true
 chan_count: 1024
