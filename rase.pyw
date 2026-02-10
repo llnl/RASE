@@ -39,6 +39,10 @@ import traceback
 import os
 import logging
 
+# If running from a pyinstaller bundle, display splash screen while unpacking
+if getattr(sys, 'frozen', False):
+    import pyi_splash
+
 from PySide6.QtCore import QCoreApplication
 from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -100,7 +104,15 @@ if __name__ == '__main__':
 
     qt_install_translator()
 
+    if getattr(sys, 'frozen', False):
+        pyi_splash.update_text('Updating RASE folders and loading main dialog')
+
     win = Rase(sys.argv)
     win.show()
+
+    if getattr(sys, 'frozen', False):
+        pyi_splash.update_text('Ready!')
+        pyi_splash.close()
+
     sys.exit(app.exec())
 

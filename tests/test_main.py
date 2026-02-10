@@ -467,9 +467,9 @@ class Test_Workflow_GUI:
         QTimer.singleShot(1000, close_dialog)
         result_super_map, scenario_stats_df = calculateScenarioStats(sim_context_list, gui=w)
         assert len(scenario_stats_df) == 2
-        assert scenario_stats_df['PID'][0] == 1.0
-        assert scenario_stats_df['PID'][1] == 0.0
-        assert scenario_stats_df['wTP'][0] == 0.25 #0.25 because fixed_replay gives confidence = 5 and the confidence table update makes reported 20 = weight 1.
+        assert scenario_stats_df['PID'].iloc[0] == 1.0
+        assert scenario_stats_df['PID'].iloc[1] == 0.0
+        assert scenario_stats_df['wTP'].iloc[0] == 0.25 #0.25 because fixed_replay gives confidence = 5 and the confidence table update makes reported 20 = weight 1.
 
 
 # Sampling testing

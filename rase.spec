@@ -33,9 +33,21 @@ a = Analysis(['rase.pyw'],
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 
+splash = Splash(
+                'RASE_splashscreen.png',
+                binaries=a.binaries,
+                datas=a.datas,
+                text_pos=(20, 250), # This is pixel relative position from the upper left corner moving down-right
+                text_size=10,
+                minify_script=True,
+                always_on_top=True,
+            )
+
 exe_args = (a.scripts, a.binaries, a.zipfiles, a.datas) if platform.system() == 'Windows' else (a.scripts, [])
 exe = EXE(pyz,
           *exe_args,
+          splash,
+          splash.binaries,
           exclude_binaries=exclude_binaries,
           name='rase',
           debug=False,

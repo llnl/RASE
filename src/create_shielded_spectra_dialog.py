@@ -227,8 +227,7 @@ class ShieldingModel(QAbstractItemModel):
         return dict(zip(self.col_names, (self.index(0, r) for r in range(len(self.col_names)))))
 
     def reset_data(self):
-        df = pd.DataFrame(columns=self.col_names)
-        df.loc[0] = ''
+        df = pd.DataFrame([['']*len(self.col_names)], columns=self.col_names, dtype=object)
         return df
 
     def set_config_path(self, path=None):
@@ -249,7 +248,7 @@ class ShieldingModel(QAbstractItemModel):
         self.set_thickness()
 
     def set_drfs_from_chnum(self):
-        if self._data['ch_num'][0] not in self.config.keys():
+        if float(self._data['ch_num'][0]) not in self.config.keys():
             return
         self.drfs = list(k for k in self.config[self._data['ch_num'][0]].keys() if type(
                             self.config[self._data['ch_num'][0]][k]) == dict)

@@ -512,7 +512,7 @@ class ScenarioModel(QAbstractItemModel):
                                                        'defined scenario is already in the database; '
                                                        'adding scenario to additional groups.')
                         else:
-                            session.add(Scenario(float(acqTime), self.replication, scenMaterials,
+                            session.add(Scenario(float(acqTime), int(self.replication.replace(',','')), scenMaterials,
                                      bcgkScenMaterials, list(self.modelInfluences.selected_influences),
                                      scen_groups, self.shielding_material, shield_thickness, self.comment))
                     except AttributeError:
@@ -651,7 +651,7 @@ class ScenarioModel(QAbstractItemModel):
         @return:
         """
         for key, value in attributes.items():
-            self._data.loc[key,0] = str(value)
+            self._data.loc[0,key] = str(value)
 
     def index(self, row, column, parent=QModelIndex()):
         if not parent.isValid() and row == 0:
@@ -699,19 +699,19 @@ class ScenarioModel(QAbstractItemModel):
                     # only grab the first shielding material in the list
                     # because there can only be one shield per scen
 
-                repl = str(max(repl_list))
-                acqtime = ','.join(acqtime_list) if len(acqtime_list) > 1 else acqtime_list[0]
-                if len(comment_list) == 0:
-                    comment_list = ['']
-                comment = ', '.join(comment_list) if len(comment_list) > 1 else comment_list[0]
-                if shield_thick_list:
-                    shielding_thickness = ','.join(shield_thick_list) if len(shield_thick_list) > 1 else shield_thick_list[0]
+            repl = str(max(repl_list))
+            acqtime = ','.join(acqtime_list) if len(acqtime_list) > 1 else acqtime_list[0]
+            if len(comment_list) == 0:
+                comment_list = ['']
+            comment = ', '.join(comment_list) if len(comment_list) > 1 else comment_list[0]
+            if shield_thick_list:
+                shielding_thickness = ','.join(shield_thick_list) if len(set(shield_thick_list)) > 1 else shield_thick_list[0]
 
         elif self.id and type(self.id) == str:
             scen = session.query(Scenario).filter_by(id=self.id).first()
             if scen:
-                repl = scen.replication
-                acqtime = scen.acq_time
+                repl = str(scen.replication)
+                acqtime = str(scen.acq_time)
                 comment = scen.comment
                 shielding_material = scen.shielding_material
                 shielding_thickness = str(scen.shielding_thickness or '')

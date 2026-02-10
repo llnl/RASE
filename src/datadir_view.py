@@ -247,8 +247,9 @@ class DataDirViewManager:
 
         if self.is_windows:
             # Use mklink /J for junctions on Windows
+            from src.rase import popen_startupinfo
             subprocess.run(["cmd", "/c", "mklink", "/J", str(target), str(source)],
-                           check=True, capture_output=True)
+                           check=True, capture_output=True, startupinfo=popen_startupinfo)
         else:
             # Use symbolic links on Unix-based systems
             os.symlink(source, target, target_is_directory=True)

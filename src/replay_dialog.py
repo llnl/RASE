@@ -337,7 +337,10 @@ class ConfidenceTableModel(QAbstractTableModel):
         return self._data
 
     def _set_empty_data(self):
-        df = pd.DataFrame(np.empty((10, 2), dtype=str), columns=self._colheaders)
+        df = pd.DataFrame(
+            {self._colheaders[0]: pd.Series([""] * 10, dtype=str),
+             self._colheaders[1]: pd.Series([np.nan] * 10, dtype=float)}
+        )
         return df
 
     def setDataFromTable(self, data):
@@ -368,13 +371,14 @@ class ConfidenceTableModel(QAbstractTableModel):
         row = index.row()
         col = index.column()
         if role == Qt.DisplayRole or role == Qt.EditRole:
-            return self._data.iloc[row, col]
+            return str(self._data.iloc[row, col]) if not (col==1 and str(self._data.iloc[row, col])=='nan') else ''
 
     def setData(self, index, value, role=Qt.EditRole):
         if not index.isValid():
             return False
         if role == Qt.EditRole:
-            self._data.iloc[index.row(), index.column()] = value
+            v = float(value) if index.column() == 1 else str(value)
+            self._data.iloc[index.row(), index.column()] = v
             return True
         else:
             return False
@@ -405,21 +409,21 @@ class ConfidenceTableModel(QAbstractTableModel):
                 self._data.loc[1] = [self._data.loc[0]['Reported'] + 1, 1]
             else:
                 previousval = -1
-                maxval = self._data.loc[len(self._data)-1][0]
+                maxval = self._data.loc[len(self._data)-1]['Reported']
                 rowstokeep = 0
                 rows_to_remove = []
                 for row in self._data.iterrows():
                     if previousval < 0:
-                        previousval = row[1][0]
+                        previousval = row[1]['Reported']
                         rowstokeep += 1
                         continue
-                    if row[1][0] > maxval:
+                    if row[1]['Reported'] > maxval:
                         rows_to_remove.append(row[0])
-                    elif row[1][0] < previousval and rowstokeep >= 2:
+                    elif row[1]['Reported'] < previousval and rowstokeep >= 2:
                         rows_to_remove.append(row[0])
                     else:
                         rowstokeep += 1
-                        previousval = row[1][0]
+                        previousval = row[1]['Reported']
                 self._data.drop(rows_to_remove, inplace=True)
                 self._data.reset_index(drop=True, inplace=True)
 
