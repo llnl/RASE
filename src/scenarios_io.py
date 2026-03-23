@@ -199,12 +199,15 @@ class ScenariosIO:
                 acq_time.text = str(row['acq_time'])
                 replication = ET.SubElement(scenario, 'replication')
                 replication.text = str(row['replications'])
-                comment = ET.SubElement(scenario, 'comment')
-                comment.text = row['comment']
-                shielding_material = ET.SubElement(scenario, 'shielding_material')
-                shielding_material.text = row['shielding_material']
-                shielding_thickness = ET.SubElement(scenario, 'shielding_thickness')
-                shielding_thickness.text = row['shielding_thickness']
+                if 'comment' in row and not pd.isna(row['comment']):
+                    comment = ET.SubElement(scenario, 'comment')
+                    comment.text = row['comment']
+                if 'shielding_material' in row and not pd.isna(row['shielding_material']):
+                    shielding_material = ET.SubElement(scenario, 'shielding_material')
+                    shielding_material.text = row['shielding_material']
+                if 'shielding_thickness' in row and not pd.isna(row['shielding_thickness']):
+                    shielding_thickness = ET.SubElement(scenario, 'shielding_thickness')
+                    shielding_thickness.text = str(row['shielding_thickness'])
             else:
                 return False
             # if source materials are defined

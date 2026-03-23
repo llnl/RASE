@@ -48,6 +48,7 @@ from PySide6.QtGui import QRegularExpressionValidator, QStandardItemModel, QStan
     QAction, QValidator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import FlushError
+from src.delegates import OpaqueLineEditDelegate
 from src.qt_utils import DoubleValidator, IntValidator, RegExpValidator
 from src.table_def import Session, Influence, ScenarioGroup, Material, ScenarioMaterial, \
     ScenarioBackgroundMaterial, Scenario, Detector, BaseSpectrum
@@ -473,8 +474,10 @@ class ScenarioModel(QAbstractItemModel):
         # cartesian product to break out scenarios from scenario group
         for acqTime in self.getSet(self.acq_time):
             for shield_thickness in self.getSet(self.shielding_thickness):
-                if not shield_thickness:
-                    self.shielding_material = ''
+                if float(shield_thickness) > 0:
+                    shielding_material = self.shielding_material
+                else:
+                    shielding_material = ''
                 if integrity_error:
                     break
                 mm = product(*materials_doses[0])
@@ -497,7 +500,7 @@ class ScenarioModel(QAbstractItemModel):
                         # the scenario groups
                         scen_hash = Scenario.scenario_hash(float(acqTime), scenMaterials,
                                            bcgkScenMaterials, self.modelInfluences.selected_influences,
-                                           self.shielding_material, shield_thickness)
+                                           shielding_material, shield_thickness)
                         scen_exists = session.query(Scenario).filter_by(id=scen_hash).first()
                         add_groups = False
                         if scen_exists:
@@ -514,7 +517,7 @@ class ScenarioModel(QAbstractItemModel):
                         else:
                             session.add(Scenario(float(acqTime), int(self.replication.replace(',','')), scenMaterials,
                                      bcgkScenMaterials, list(self.modelInfluences.selected_influences),
-                                     scen_groups, self.shielding_material, shield_thickness, self.comment))
+                                     scen_groups, shielding_material, shield_thickness, self.comment))
                     except AttributeError:
                         error_message = self.rollback_database(materials_doses, True)
                     except (IntegrityError, FlushError):
@@ -974,7 +977,7 @@ class SourceTableModel(QAbstractTableModel):
 
 
     def update_scenario(self):
-        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount(), self.columnCount() - 1))
+        self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount() - 1, self.columnCount() - 1))
 
     def any_neutrons_in_table(self):
         return sum([sum(float(q) for q in k.split(',') if q!='') for k in self._data.iloc[:, INTENSITY_NEUTRON]])
@@ -1106,10 +1109,10 @@ class ScenInfluencesListModel(QAbstractListModel):
             return self.influences[index.row()]
 
 
-class MaterialDoseDelegate(QItemDelegate):
+class MaterialDoseDelegate(OpaqueLineEditDelegate):
     def __init__(self, parent, materialCol, intensityCol=-1, unitsCol=2, neutronCol=3, selected_detname=None,
                  editable=False, auto_s=False, tables=None):
-        super(MaterialDoseDelegate, self).__init__(parent)
+        super(MaterialDoseDelegate, self).__init__()
         self.tblMat = parent
         self.tables = tables
         self.matCol = materialCol
@@ -1123,60 +1126,65 @@ class MaterialDoseDelegate(QItemDelegate):
 
     def createEditor(self, parent, option, index):
         if index.column() == self.matCol:
-            # generate material list
-            fd_units = ''
-            for key, val in units_labels.items():
-                if self.tblMat.data(self.tblMat.index(index.row(), UNITS)) == val:
-                    fd_units = key
-                    break
-            material_list = []
-            if not self.selected_detname:
-                for detector in Session().query(Detector):
-                    for baseSpectrum in detector.base_spectra:
-                        if baseSpectrum.material.name not in material_list:
-                            if ((isinstance(baseSpectrum.rase_sensitivity, float) and (fd_units == 'DOSE')) or
-                                (isinstance(baseSpectrum.flux_sensitivity, float) and (fd_units == 'FLUX')) or
-                                    not fd_units):
-                                material_list.append(baseSpectrum.material.name)
-                material_list = sorted(material_list)
-            else:
-                detector = Session().query(Detector).filter_by(name=self.selected_detname).first()
-                material_list = sorted([baseSpectrum.material.name for baseSpectrum in detector.base_spectra if
-                                        ((isinstance(baseSpectrum.rase_sensitivity, float) and (fd_units == 'DOSE')) or
-                                         (isinstance(baseSpectrum.flux_sensitivity, float) and (fd_units == 'FLUX')) or
-                                            not fd_units)])
-
-            intrinsic_material_present = False
-            for table in self.tables:
-                for row in range(table.rowCount()):
-                    if row == index.row() and table is self.tblMat:
-                        continue
-                    item = table.data(table.index(row, self.matCol))
-                    # remove any materials already used
-                    if item in material_list:
-                        material_list.remove(item)
-                    # check if at least one material include intrinsic source
-                    if item and Session().get(Material, item).include_intrinsic:
-                        intrinsic_material_present = True
-            if intrinsic_material_present:  # only one material with intrinsic source is allowed
-                for material in material_list:
-                    if Session().get(Material, material).include_intrinsic:
-                        material_list.remove(material)
-
-            #create and populate comboEdit
-            comboEdit = QComboBox(parent)
-            comboEdit.setEditable(self.editable)
-            comboEdit.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-            comboEdit.setMaxVisibleItems(25)
-            comboEdit.addItem('')
-            comboEdit.addItems(material_list)
-            return comboEdit
+            editor = self.matColEditor(parent, index)
         elif index.column() in [self.intensityCol, self.neutronCol]:
-            return self.intensityEditor(parent, index)
+            editor = self.intensityEditor(parent, index)
         elif index.column() == self.unitsCol:
-            return self.comboEditor(parent, index, units_labels)
+            editor = self.comboEditor(parent, index, units_labels)
         else:
             return super(MaterialDoseDelegate, self).createEditor(parent, option, index)
+        self.opaque_background(editor)
+        return editor
+
+    def matColEditor(self, parent, index):
+        # first, generate material list
+        fd_units = ''
+        for key, val in units_labels.items():
+            if self.tblMat.data(self.tblMat.index(index.row(), UNITS)) == val:
+                fd_units = key
+                break
+        material_list = []
+        if not self.selected_detname:
+            for detector in Session().query(Detector):
+                for baseSpectrum in detector.base_spectra:
+                    if baseSpectrum.material.name not in material_list:
+                        if ((isinstance(baseSpectrum.rase_sensitivity, float) and (fd_units == 'DOSE')) or
+                                (isinstance(baseSpectrum.flux_sensitivity, float) and (fd_units == 'FLUX')) or
+                                not fd_units):
+                            material_list.append(baseSpectrum.material.name)
+            material_list = sorted(material_list)
+        else:
+            detector = Session().query(Detector).filter_by(name=self.selected_detname).first()
+            material_list = sorted([baseSpectrum.material.name for baseSpectrum in detector.base_spectra if
+                                    ((isinstance(baseSpectrum.rase_sensitivity, float) and (fd_units == 'DOSE')) or
+                                     (isinstance(baseSpectrum.flux_sensitivity, float) and (fd_units == 'FLUX')) or
+                                     not fd_units)])
+
+        intrinsic_material_present = False
+        for table in self.tables:
+            for row in range(table.rowCount()):
+                if row == index.row() and table is self.tblMat:
+                    continue
+                item = table.data(table.index(row, self.matCol))
+                # remove any materials already used
+                if item in material_list:
+                    material_list.remove(item)
+                # check if at least one material include intrinsic source
+                if item and Session().get(Material, item).include_intrinsic:
+                    intrinsic_material_present = True
+        if intrinsic_material_present:  # only one material with intrinsic source is allowed
+            for material in material_list:
+                if Session().get(Material, material).include_intrinsic:
+                    material_list.remove(material)
+
+        # create and populate comboEdit
+        comboEdit = QComboBox(parent)
+        comboEdit.setEditable(self.editable)
+        comboEdit.setSizeAdjustPolicy(QComboBox.AdjustToContents)
+        comboEdit.setMaxVisibleItems(25)
+        comboEdit.addItem('')
+        comboEdit.addItems(material_list)
+        return comboEdit
 
     def intensityEditor(self, parent, index):
         mat_name = self.tblMat.data(self.tblMat.index(index.row(), self.matCol), Qt.DisplayRole)
@@ -1208,17 +1216,6 @@ class MaterialDoseDelegate(QItemDelegate):
             editor.setValidator(RegExpSetValidator(editor, self.auto_s))
             return editor
 
-    def setModelData(self, editor, model, index):
-        if index.column() == self.unitsCol:
-            self.tblMat.setData(index, editor.currentData(Qt.UserRole))
-        if index.column() == self.matCol:
-            self.tblMat.setData(index, editor.currentText())
-        if index.column() in [self.intensityCol, self.neutronCol]:
-            if type(editor) == QLineEdit:
-                self.tblMat.setData(index, editor.text())
-            elif type(editor) == QComboBox:
-                self.tblMat.setDataFromComboBox(index, editor)
-
     def comboEditor(self, parent, index, map):
         self.tblMat.setData(index, '', Qt.UserRole)
         model = QStandardItemModel(0, 1)
@@ -1231,6 +1228,17 @@ class MaterialDoseDelegate(QItemDelegate):
         comboEdit.setModel(model)
         comboEdit.setCurrentIndex(comboEdit.findData(self.tblMat.data(index)))
         return comboEdit
+
+    def setModelData(self, editor, model, index):
+        if index.column() == self.unitsCol:
+            self.tblMat.setData(index, editor.currentData(Qt.UserRole))
+        if index.column() == self.matCol:
+            self.tblMat.setData(index, editor.currentText())
+        if index.column() in [self.intensityCol, self.neutronCol]:
+            if type(editor) == QLineEdit:
+                self.tblMat.setData(index, editor.text())
+            elif type(editor) == QComboBox:
+                self.tblMat.setDataFromComboBox(index, editor)
 
 
 class ScenarioRange(ui_scenario_range_dialog.Ui_ScenarioRangeDefinitionDialog, QDialog):

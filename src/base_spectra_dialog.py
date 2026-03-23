@@ -43,6 +43,7 @@ from PySide6.QtCore import Qt, Slot, QAbstractTableModel, QEvent
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QHeaderView, QApplication, QItemDelegate
 
+from src.delegates import OpaqueLineEditDelegate
 from .spectrum_file_reading import readSpectrumFile, yield_spectra
 from .spectrum_file_reading import all_spec as read_spec
 from .rase_functions import get_or_create_material, get_ET_from_file
@@ -60,6 +61,7 @@ class BaseSpectraDialog(ui_import_base_spectra_dialog.Ui_ImportBaseSpectraDialog
         self.model = BaseSpectraLoadModel()
         self.setupUi(self)
         self.tblSpectra.setModel(self.model)
+        self.tblSpectra.setItemDelegate(OpaqueLineEditDelegate())
         delegate = CheckBoxDelegate(None)
         self.tblSpectra.setItemDelegateForColumn(2, delegate)
         self.settings = RaseSettings()

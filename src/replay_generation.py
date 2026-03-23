@@ -312,8 +312,8 @@ class TranslationGeneration(Translatable):
                     shutil.rmtree(output_dir, ignore_errors=True)
                     return False
 
-        if datadir_view_manager:
-            datadir_view_manager.resync_single_view(detector.id, scenario.id, replay.id)
+            if datadir_view_manager:
+                datadir_view_manager.resync_single_view(detector.id, scenario.id, replay.id)
 
         self._gui_set_value(self.n + 1)
         return True

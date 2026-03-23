@@ -40,6 +40,7 @@ from PySide6.QtCore import Slot, Qt, QModelIndex, QAbstractTableModel, QRegularE
     QCoreApplication
 from PySide6.QtWidgets import QDialog, QFileDialog, QMessageBox, QItemDelegate, QLineEdit, \
     QTableView, QSizePolicy, QDialogButtonBox, QVBoxLayout
+from src.delegates import OpaqueLineEditDelegate
 from src.qt_utils import RegExpValidator, Translatable
 from src.rase_settings import RaseSettings
 from src.webid_utils import get_DRFList_from_webid
@@ -428,9 +429,9 @@ class ConfidenceTableModel(QAbstractTableModel):
                 self._data.reset_index(drop=True, inplace=True)
 
 
-class ConfidenceTableDelegate(QItemDelegate):
+class ConfidenceTableDelegate(OpaqueLineEditDelegate):
     def __init__(self, parent, mode='discrete'):
-        super(ConfidenceTableDelegate, self).__init__(parent)
+        super(ConfidenceTableDelegate, self).__init__()
         self.table = parent
         self.mode = mode
         self.settings = RaseSettings()
@@ -448,6 +449,7 @@ class ConfidenceTableDelegate(QItemDelegate):
     def customEditor(self, parent, index, reg_ex):
         editor = QLineEdit(parent)
         editor.setValidator(RegExpValidator(reg_ex, parent))
+        self.opaque_background(editor)
         return editor
 
     def setModelData(self, editor, model, index):

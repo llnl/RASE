@@ -951,9 +951,10 @@ class InfluenceListModel(QAbstractListModel):
         self.layoutChanged.emit()
 
     def remove_influence(self, index):
-        self.layoutAboutToBeChanged.emit()
-        self.influences.pop(index.row())
-        self.layoutChanged.emit()
+        if len(self.influences):
+            self.layoutAboutToBeChanged.emit()
+            self.influences.pop(index.row())
+            self.layoutChanged.emit()
 
     def rowCount(self, index=None):
         return len(self.influences)

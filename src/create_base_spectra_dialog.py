@@ -43,9 +43,9 @@ from PySide6.QtCore import Slot, Qt, QRegularExpression, QTemporaryDir, QCoreApp
 from PySide6.QtGui import QRegularExpressionValidator, QColor
 from PySide6.QtWidgets import QDialog, QFileDialog, QTableWidgetItem, QDialogButtonBox, QMessageBox, \
     QAbstractItemView, QWidget, QTableWidget, QPushButton, QVBoxLayout, QHBoxLayout
+from src.delegates import OpaqueLineEditDelegate, DoubleOrEmptyDelegate
 from src.rase_settings import RaseSettings
 from .pcf_tools import readpcf, PCFtoN42Writer
-from .qt_utils import DoubleOrEmptyDelegate
 from .ui_generated import ui_create_base_spectra_dialog
 from src.spectrum_file_reading import BaseSpectraFormatException
 import traceback
@@ -81,6 +81,7 @@ class CreateBaseSpectraTableWidget(QWidget):
 
         self.sourceTable = QTableWidget(self)
         self.sourceTable.setColumnCount(len(ColNum))
+        self.sourceTable.setItemDelegate(OpaqueLineEditDelegate())
         self._dbl_empty_delegate = DoubleOrEmptyDelegate()
         self.sourceTable.setHorizontalHeaderItem(ColNum.folder, QTableWidgetItem(self.tr('Folder')))
         self.sourceTable.setColumnHidden(ColNum.folder, True)

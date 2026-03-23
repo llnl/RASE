@@ -116,16 +116,6 @@ class RegExpValidator(QtGui.QRegularExpressionValidator):
         return state, input, pos
 
 
-class DoubleOrEmptyDelegate(QtWidgets.QItemDelegate):
-    def __init__(self):
-        QtWidgets.QItemDelegate.__init__(self)
-
-    def createEditor(self, parent, option, index):
-        editor = QtWidgets.QLineEdit(parent)
-        editor.setValidator(DoubleAndEmptyValidator(bottom=0))
-        return editor
-
-
 class DoubleAndEmptyValidator(QtGui.QDoubleValidator):
     """
     Validate double values or empty string.

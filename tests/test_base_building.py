@@ -26,7 +26,7 @@ examplepath = Path(__file__).parent.parent/'baseSpectra/genericNaI'
 templatepath = Path(__file__).parent.parent/'n42Templates/Symetrica_SL23N_template.n42'
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='class')
 def basefolder(temp_data_dir):
     folder = Path(temp_data_dir) / 'base_spectra'
     folder.mkdir(exist_ok=True)

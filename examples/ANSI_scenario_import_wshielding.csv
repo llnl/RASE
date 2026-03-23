@@ -1,0 +1,11 @@
+s_fd_mode,s_material,s_intensity,b_fd_mode,b_material,b_intensity,acq_time,replications,comment,shielding_material,shielding_thickness
+DOSE,Am241,0.11,DOSE,Bgnd,0.06,120,25,Comment1,Aluminum,1.0
+DOSE,Ba133,0.11,DOSE,Bgnd,0.06,120,25,Comment2,Aluminum,1.0
+DOSE,Co60,0.11,DOSE,Bgnd,0.06,120,25,Comment3,Aluminum,1.0
+DOSE,Cs137,0.11,DOSE,Bgnd,0.06,120,25,Comment4,Aluminum,1.0
+DOSE,Ga67,0.11,DOSE,Bgnd,0.06,120,25,Comment5,Aluminum,1.0
+DOSE,I131,0.11,DOSE,Bgnd,0.06,120,25,Comment6,Aluminum,1.0
+DOSE,Tc99m,0.11,DOSE,Bgnd,0.06,120,25,Comment7,Aluminum,1.0
+DOSE,Tl201,0.11,DOSE,Bgnd,0.06,120,25,Comment8,Aluminum,1.0
+DOSE,Ra226,0.11,DOSE,Bgnd,0.06,120,25,Comment9,Aluminum,1.0
+DOSE,Th232,0.11,DOSE,Bgnd,0.06,120,25,Comment10,Aluminum,1.0

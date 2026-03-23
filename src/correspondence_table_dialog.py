@@ -41,10 +41,11 @@ import re
 
 from PySide6.QtCore import Slot, Qt
 from PySide6.QtWidgets import QTableWidgetItem, QDialog, QFileDialog, \
-    QMessageBox, QHeaderView, QItemDelegate, QComboBox, QMenu
+    QMessageBox, QHeaderView, QMenu
 from PySide6.QtGui import QAction
 
-from src.rase_settings import RaseSettings
+from src.delegates import OpaqueLineEditDelegate, MatSingletonComboDelegate
+from .rase_settings import RaseSettings
 from .table_def import CorrespondenceTableElement, CorrespondenceTable, Session, Material
 from .ui_generated import ui_correspondence_table_dialog
 
@@ -104,7 +105,8 @@ class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_CorrTableDialo
         else:
             self.NUM_ROWS = corTableRows.count()
 
-        self.tblCCCLists.setItemDelegate(Delegate(self.tblCCCLists, isotopeCol=0))
+        self.tblCCCLists.setItemDelegate(OpaqueLineEditDelegate())
+        self.tblCCCLists.setItemDelegate(MatSingletonComboDelegate(self.tblCCCLists, 0))
         self.tblCCCLists.setRowCount(self.NUM_ROWS)
         self.tblCCCLists.setColumnCount(self.NUM_COLS)
         self.columnLabels = [self.tr('Source'), self.tr('Correct ID'), self.tr('Allowed ID')]
@@ -343,35 +345,6 @@ class CorrespondenceTableDialog(ui_correspondence_table_dialog.Ui_CorrTableDialo
                                                     corrList2=l2)
         Session().add(corrTsbleEntry)
         return table
-
-
-class Delegate(QItemDelegate):
-    def __init__(self, tblCorr, isotopeCol, editable=False):
-        QItemDelegate.__init__(self)
-        self.tblCorr = tblCorr
-        self.isotopeCol = isotopeCol
-        self.editable = editable
-
-    def createEditor(self, parent, option, index):
-        if index.column() == self.isotopeCol:
-            # generate list of unique material names
-            materialList = sorted(set([name for material in Session().query(Material) for name in
-                                       material.name_no_shielding()]))
-
-            # remove any materials already used
-            for row in range(self.tblCorr.rowCount()):
-                item = self.tblCorr.item(row, self.isotopeCol)
-                if item and item.text() in materialList:
-                    materialList.remove(item.text())
-
-            # create and populate comboEdit
-            comboEdit = QComboBox(parent)
-            comboEdit.setEditable(self.editable)
-            comboEdit.addItem('')
-            comboEdit.addItems(materialList)
-            return comboEdit
-        else:
-            return super(Delegate, self).createEditor(parent, option, index)
 
 
 class CorrespondenceData:

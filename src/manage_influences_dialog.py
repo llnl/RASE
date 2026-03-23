@@ -40,6 +40,7 @@ from PySide6.QtWidgets import QDialog, QFileDialog, QTableWidgetItem, QAbstractI
 from PySide6.QtWidgets import QHeaderView, QMessageBox
 from PySide6.QtCore import Slot, Qt
 
+from src.delegates import OpaqueLineEditDelegate
 from .table_def import Session, DetectorInfluence, Influence, Scenario, ScenarioMaterial, ScenarioBackgroundMaterial
 from .ui_generated import ui_manage_influences_dialog
 from src.rase_settings import RaseSettings
@@ -61,6 +62,7 @@ class ManageInfluencesDialog(ui_manage_influences_dialog.Ui_ManageInfluencesDial
         self.settings = RaseSettings()
         self.setupUi(self)
         self.setInfluencesTable()
+        self.tblInfluences.setItemDelegate(OpaqueLineEditDelegate())
         self.btnDeleteSelectedInfluences.clicked.connect(self.deleteSelectedInfluences)
         self.buttonExport.clicked.connect(self.handleExport)
         self.buttonImport.clicked.connect(self.handleImport)

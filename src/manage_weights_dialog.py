@@ -40,9 +40,9 @@ from PySide6.QtWidgets import QDialog, QFileDialog, QTableWidgetItem, QAbstractI
 from PySide6.QtWidgets import QHeaderView, QMessageBox
 from PySide6.QtCore import Slot, Qt
 
+from src.delegates import MatSingletonComboDelegate, OpaqueLineEditDelegate
 from .table_def import Session, MaterialWeight
 from .ui_generated import ui_manage_weights_dialog
-from .correspondence_table_dialog import Delegate
 from src.rase_settings import RaseSettings
 
 NUM_COL = 4
@@ -75,7 +75,8 @@ class ManageWeightsDialog(ui_manage_weights_dialog.Ui_ManageWeightsDialog, QDial
         materials = list(self.session.query(MaterialWeight))
         if self.tblWeights:
             self.tblWeights.clear()
-        self.tblWeights.setItemDelegate(Delegate(self.tblWeights, isotopeCol=NAME))
+        self.tblWeights.setItemDelegate(OpaqueLineEditDelegate())
+        self.tblWeights.setItemDelegateForColumn(NAME, MatSingletonComboDelegate(self.tblWeights, NAME))
         self.tblWeights.setColumnCount(NUM_COL)
         self.tblWeights.setRowCount(len(materials))
         self.tblWeights.setHorizontalHeaderLabels([self.tr('Material Name'), self.tr('True Positive\nWeighting Factor'),
@@ -89,7 +90,7 @@ class ManageWeightsDialog(ui_manage_weights_dialog.Ui_ManageWeightsDialog, QDial
 
 
         for material in materials:
-            item = QTableWidgetItem(QTableWidgetItem(material.name))
+            item = QTableWidgetItem(material.name)
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsEnabled)
             self.tblWeights.setItem(row, NAME, item)
             for (col, weight) in zip(COLUMNS[TPWF:], [str(material.TPWF), str(material.FPWF), str(material.FNWF)]):
